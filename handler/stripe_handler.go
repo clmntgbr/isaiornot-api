@@ -39,37 +39,40 @@ func NewStripeHandler(
 
 func (h *StripeHandler) Execute(c fiber.Ctx) error {
 	event := c.Locals("payload").(stripe.Event)
-	ctx := c.Context()
 
-	var err error
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := h.dispatch(ctx, event); err != nil {
+			log.Printf("failed to handle stripe event %s: %v", event.Type, err)
+		}
+	}()
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
+func (h *StripeHandler) dispatch(ctx context.Context, event stripe.Event) error {
 	switch event.Type {
 	case "checkout.session.completed":
-		err = h.handleCheckoutCompleted(ctx, event)
+		return h.handleCheckoutCompleted(ctx, event)
 
 	case "customer.subscription.updated":
-		err = h.handleSubscriptionUpdated(ctx, event)
+		return h.handleSubscriptionUpdated(ctx, event)
 
 	case "customer.subscription.deleted":
-		err = h.handleSubscriptionDeleted(ctx, event)
+		return h.handleSubscriptionDeleted(ctx, event)
 
 	case "invoice.payment_succeeded":
-		err = h.handleInvoicePaymentSucceeded(ctx, event)
+		return h.handleInvoicePaymentSucceeded(ctx, event)
 
 	case "invoice.payment_failed":
-		err = h.handleInvoicePaymentFailed(ctx, event)
+		return h.handleInvoicePaymentFailed(ctx, event)
 
 	default:
 		log.Printf("unhandled stripe event type: %s", event.Type)
+		return nil
 	}
-
-	if err != nil {
-		log.Printf("failed to handle stripe event %s: %v", event.Type, err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "failed to handle stripe event",
-		})
-	}
-
-	return c.SendStatus(fiber.StatusOK)
 }
 
 func (h *StripeHandler) handleCheckoutCompleted(ctx context.Context, event stripe.Event) error {
