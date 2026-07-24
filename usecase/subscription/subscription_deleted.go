@@ -5,7 +5,6 @@ import (
 	"errors"
 	"go-api/domain/entity"
 	"go-api/domain/repository"
-	"log"
 	"time"
 )
 
@@ -37,7 +36,6 @@ func (u *SubscriptionDeletedUseCase) Execute(ctx context.Context, stripeSubscrip
 		return errors.New("failed to get subscription")
 	}
 	if subscription == nil {
-		log.Printf("subscription deleted: no local subscription for stripe sub %s, skipping", stripeSubscriptionID)
 		return nil
 	}
 
@@ -64,6 +62,5 @@ func (u *SubscriptionDeletedUseCase) Execute(ctx context.Context, stripeSubscrip
 
 	u.notifier.Notify(ctx, subscription.ID)
 
-	log.Printf("subscription deleted: stripe sub %s reverted to free plan", stripeSubscriptionID)
 	return nil
 }

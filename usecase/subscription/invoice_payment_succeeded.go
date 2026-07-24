@@ -5,7 +5,6 @@ import (
 	"errors"
 	"go-api/domain/entity"
 	"go-api/domain/repository"
-	"log"
 	"time"
 )
 
@@ -26,6 +25,7 @@ func NewInvoicePaymentSucceededUseCase(
 
 type InvoicePaymentSucceededInput struct {
 	StripeSubscriptionID string
+	StripeCustomerID     string
 	BillingReason        string
 	PeriodStart          time.Time
 	PeriodEnd            time.Time
@@ -40,12 +40,24 @@ func (u *InvoicePaymentSucceededUseCase) Execute(ctx context.Context, input Invo
 	if err != nil {
 		return errors.New("failed to get subscription")
 	}
+
+	if subscription == nil && input.StripeCustomerID != "" {
+		subscription, err = (*u.subscriptionRepo).GetByStripeCustomerID(ctx, input.StripeCustomerID)
+		if err != nil {
+			return errors.New("failed to get subscription by customer")
+		}
+	}
+
 	if subscription == nil {
-		log.Printf("invoice payment succeeded: no local subscription for stripe sub %s, skipping", input.StripeSubscriptionID)
 		return nil
 	}
 
+	subscription.StripeSubscriptionID = input.StripeSubscriptionID
+	if input.StripeCustomerID != "" {
+		subscription.StripeCustomerID = input.StripeCustomerID
+	}
 	subscription.SubscriptionStatus = entity.SubscriptionStatusActive
+	subscription.CancelAtPeriodEnd = false
 	if !input.PeriodStart.IsZero() {
 		subscription.SubscriptionStartDate = input.PeriodStart
 	}
@@ -57,13 +69,10 @@ func (u *InvoicePaymentSucceededUseCase) Execute(ctx context.Context, input Invo
 		return errors.New("failed to update subscription")
 	}
 
-	if input.BillingReason == "subscription_cycle" {
-		log.Printf("invoice payment succeeded: new billing period for stripe sub %s", input.StripeSubscriptionID)
+	u.notifier.Notify(ctx, subscription.ID)
+	if input.BillingReason != "subscription_create" {
+		u.notifier.NotifyPaymentSucceededAfter(subscription.ID)
 	}
 
-	u.notifier.Notify(ctx, subscription.ID)
-	u.notifier.NotifyPaymentSucceededAfter(subscription.ID)
-
-	log.Printf("invoice payment succeeded: stripe sub %s confirmed active", input.StripeSubscriptionID)
 	return nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"go-api/domain/repository"
-	"log"
 	"time"
 )
 
@@ -28,6 +27,7 @@ func NewSubscriptionUpdatedUseCase(
 
 type SubscriptionUpdatedInput struct {
 	StripeSubscriptionID string
+	StripeCustomerID     string
 	StripePriceID        string
 	Status               string
 	CancelAtPeriodEnd    bool
@@ -44,9 +44,21 @@ func (u *SubscriptionUpdatedUseCase) Execute(ctx context.Context, input Subscrip
 	if err != nil {
 		return errors.New("failed to get subscription")
 	}
+
+	if subscription == nil && input.StripeCustomerID != "" {
+		subscription, err = (*u.subscriptionRepo).GetByStripeCustomerID(ctx, input.StripeCustomerID)
+		if err != nil {
+			return errors.New("failed to get subscription by customer")
+		}
+	}
+
 	if subscription == nil {
-		log.Printf("subscription updated: no local subscription for stripe sub %s, skipping", input.StripeSubscriptionID)
 		return nil
+	}
+
+	subscription.StripeSubscriptionID = input.StripeSubscriptionID
+	if input.StripeCustomerID != "" {
+		subscription.StripeCustomerID = input.StripeCustomerID
 	}
 
 	if input.StripePriceID != "" {
@@ -74,6 +86,5 @@ func (u *SubscriptionUpdatedUseCase) Execute(ctx context.Context, input Subscrip
 
 	u.notifier.Notify(ctx, subscription.ID)
 
-	log.Printf("subscription updated: stripe sub %s -> status %s (cancel_at_period_end=%t)", input.StripeSubscriptionID, subscription.SubscriptionStatus, input.CancelAtPeriodEnd)
 	return nil
 }

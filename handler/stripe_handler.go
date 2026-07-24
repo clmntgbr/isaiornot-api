@@ -70,7 +70,6 @@ func (h *StripeHandler) dispatch(ctx context.Context, event stripe.Event) error 
 		return h.handleInvoicePaymentFailed(ctx, event)
 
 	default:
-		log.Printf("unhandled stripe event type: %s", event.Type)
 		return nil
 	}
 }
@@ -109,6 +108,7 @@ func (h *StripeHandler) handleSubscriptionUpdated(ctx context.Context, event str
 
 	return h.subscriptionUpdatedUseCase.Execute(ctx, subscription.SubscriptionUpdatedInput{
 		StripeSubscriptionID: data.ID,
+		StripeCustomerID:     data.CustomerID,
 		StripePriceID:        data.PriceID,
 		Status:               data.Status,
 		CancelAtPeriodEnd:    data.CancelAtPeriodEnd,
@@ -134,6 +134,7 @@ func (h *StripeHandler) handleInvoicePaymentSucceeded(ctx context.Context, event
 
 	return h.invoicePaymentSucceededUseCase.Execute(ctx, subscription.InvoicePaymentSucceededInput{
 		StripeSubscriptionID: subscriptionIDFromInvoice(&invoice),
+		StripeCustomerID:     customerIDFromInvoice(&invoice),
 		BillingReason:        string(invoice.BillingReason),
 		PeriodStart:          unixToTime(invoice.PeriodStart),
 		PeriodEnd:            unixToTime(invoice.PeriodEnd),
@@ -146,7 +147,10 @@ func (h *StripeHandler) handleInvoicePaymentFailed(ctx context.Context, event st
 		return err
 	}
 
-	return h.invoicePaymentFailedUseCase.Execute(ctx, subscriptionIDFromInvoice(&invoice))
+	return h.invoicePaymentFailedUseCase.Execute(ctx, subscription.InvoicePaymentFailedInput{
+		StripeSubscriptionID: subscriptionIDFromInvoice(&invoice),
+		StripeCustomerID:     customerIDFromInvoice(&invoice),
+	})
 }
 
 func subscriptionIDFromInvoice(invoice *stripe.Invoice) string {
@@ -154,6 +158,13 @@ func subscriptionIDFromInvoice(invoice *stripe.Invoice) string {
 		invoice.Parent.SubscriptionDetails != nil &&
 		invoice.Parent.SubscriptionDetails.Subscription != nil {
 		return invoice.Parent.SubscriptionDetails.Subscription.ID
+	}
+	return ""
+}
+
+func customerIDFromInvoice(invoice *stripe.Invoice) string {
+	if invoice.Customer != nil {
+		return invoice.Customer.ID
 	}
 	return ""
 }

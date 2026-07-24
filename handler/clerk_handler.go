@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	clerkdto "go-api/infrastructure/clerk"
 	"go-api/usecase/user"
 	"log"
@@ -36,8 +35,6 @@ func NewClerkHandler(
 func (h *ClerkHandler) Execute(c fiber.Ctx) error {
 	clerkEvent := c.Locals("payload").(clerkdto.ClerkEvent)
 	validate := validator.New()
-
-	fmt.Printf("Clerk event type: %s", clerkEvent.Type)
 
 	switch clerkEvent.Type {
 	case "user.created":
@@ -101,7 +98,6 @@ func (h *ClerkHandler) Execute(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusNoContent)
 
 	default:
-		log.Printf("Unhandled event type: %s", clerkEvent.Type)
 		return c.SendStatus(fiber.StatusOK)
 	}
 }
@@ -116,7 +112,6 @@ func (h *ClerkHandler) CreateUser(c fiber.Ctx, data clerkdto.ClerkUserCreated) e
 	}
 
 	if user != nil {
-		log.Printf("User with Clerk ID %s already exists, skipping creation", data.ID)
 		return nil
 	}
 
@@ -129,7 +124,6 @@ func (h *ClerkHandler) CreateUser(c fiber.Ctx, data clerkdto.ClerkUserCreated) e
 			})
 		}
 
-		log.Printf("Successfully created user with Clerk ID %s", data.ID)
 		return nil
 	}
 
@@ -166,7 +160,6 @@ func (h *ClerkHandler) UpdateUser(c fiber.Ctx, data clerkdto.ClerkUserUpdated) e
 		})
 	}
 
-	log.Printf("Successfully updated user with Clerk ID %s", data.ID)
 	return nil
 }
 
@@ -178,6 +171,5 @@ func (h *ClerkHandler) DeleteUser(c fiber.Ctx, data clerkdto.ClerkUserDeleted) e
 		})
 	}
 
-	log.Printf("Successfully deleted user with Clerk ID %s", data.ID)
 	return nil
 }

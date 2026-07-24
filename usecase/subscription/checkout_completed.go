@@ -6,7 +6,6 @@ import (
 	"go-api/domain/entity"
 	"go-api/domain/repository"
 	"go-api/infrastructure/stripe"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -126,7 +125,7 @@ func (u *CheckoutCompletedUseCase) Execute(ctx context.Context, input CheckoutCo
 	}
 
 	u.notifier.Notify(ctx, subscription.ID)
+	u.notifier.NotifyPaymentSucceededAfter(subscription.ID)
 
-	log.Printf("checkout completed: user %s subscribed to plan %s (stripe sub %s)", user.ID, plan.Slug, subData.ID)
 	return nil
 }

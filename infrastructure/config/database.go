@@ -43,7 +43,5 @@ func ConnectDatabase(cfg *Config) *gorm.DB {
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
 
-	log.Println("database connection pool configured")
-
 	return db
 }

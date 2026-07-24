@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 
 	"go-api/domain/entity"
 	"go-api/domain/enum"
@@ -159,7 +158,6 @@ func (u *ProcessUploadedMediaUseCase) processVideo(ctx context.Context, userID u
 		}
 	}
 
-	log.Printf("video processed: analysis=%s frames=%d", analysisID, len(frames))
 	return nil
 }
 

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stripe/stripe-go/v82"
@@ -40,8 +39,6 @@ func (m *StripeMiddleware) Protected() fiber.Handler {
 				"error": "invalid signature",
 			})
 		}
-
-		fmt.Println("payload:", string(payload))
 
 		var event stripe.Event
 		if err := json.Unmarshal(payload, &event); err != nil {

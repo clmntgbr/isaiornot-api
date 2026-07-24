@@ -3,7 +3,6 @@ package pipeline
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"go-api/domain/repository"
 	"go-api/infrastructure/config"
@@ -57,8 +56,6 @@ func (d *Dispatcher) HandleStageDone(ctx context.Context, message rabbitmq.Stage
 	if queueName == "" {
 		return fmt.Errorf("unknown stage %q", next)
 	}
-
-	log.Printf("pipeline: stage %q done for media %s, dispatching %q", message.Stage, message.MediaID, next)
 
 	return d.publisher.Publish(ctx, queueName, analyzeMessage)
 }

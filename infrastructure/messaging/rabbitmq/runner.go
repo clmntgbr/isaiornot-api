@@ -99,13 +99,6 @@ func (w *Worker) Start() error {
 		)
 	}
 
-	log.Println("Successfully connected to RabbitMQ")
-	log.Printf(
-		"[*] Waiting for messages on queue %q (exchange %q)",
-		w.queueName,
-		w.env.ExchangeName,
-	)
-
 	for message := range messages {
 		if err := w.handler.HandleMessage(context.Background(), &message); err != nil {
 			log.Printf(

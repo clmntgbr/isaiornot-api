@@ -19,9 +19,6 @@ func dialWithRetry(url string) (*amqp.Connection, error) {
 	for attempt := 1; attempt <= dialMaxAttempts; attempt++ {
 		conn, err := amqp.Dial(url)
 		if err == nil {
-			if attempt > 1 {
-				log.Printf("connected to RabbitMQ after %d attempts", attempt)
-			}
 			return conn, nil
 		}
 

@@ -46,8 +46,6 @@ func (n *Notifier) notifyAfter(subscriptionID uuid.UUID, eventType string, delay
 	go func() {
 		time.Sleep(delay)
 
-		log.Printf("subscription notifier: sending delayed %s for subscription %s (after %s)", eventType, subscriptionID, delay)
-
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 

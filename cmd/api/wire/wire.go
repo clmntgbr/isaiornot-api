@@ -45,13 +45,11 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	if err != nil {
 		log.Fatalf("failed to create JWKS provider: %v", err)
 	}
-	log.Println("🚀 JWKS provider created")
 
 	storageClient, err := storage.NewMinIOStorage(env)
 	if err != nil {
 		log.Fatalf("failed to create storage client: %v", err)
 	}
-	log.Println("🚀 Storage client created")
 
 	userRepo := repoGorm.NewUserRepository(db)
 	mediaRepo := repoGorm.NewMediaRepository(db)

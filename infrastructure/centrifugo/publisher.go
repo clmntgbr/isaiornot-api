@@ -3,7 +3,6 @@ package centrifugo
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	"go-api/infrastructure/config"
@@ -45,7 +44,6 @@ func (p *Publisher) PublishToUser(ctx context.Context, userID uuid.UUID, event M
 		return fmt.Errorf("failed to publish to centrifugo channel %q: %w", channel, err)
 	}
 
-	log.Printf("centrifugo: published %s to %s", event.Type, channel)
 	return nil
 }
 
@@ -60,6 +58,5 @@ func (p *Publisher) PublishSubscriptionToUser(ctx context.Context, userID uuid.U
 		return fmt.Errorf("failed to publish to centrifugo channel %q: %w", channel, err)
 	}
 
-	log.Printf("centrifugo: published %s to %s", event.Type, channel)
 	return nil
 }
