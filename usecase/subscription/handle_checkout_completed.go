@@ -117,8 +117,9 @@ func (u *HandleCheckoutCompletedUseCase) Execute(ctx context.Context, input Hand
 		}
 	}
 
+	// payment_succeeded is notified from invoice.payment_succeeded only (fires on
+	// both the first payment and renewals), so we avoid a duplicate here.
 	u.notifier.Notify(ctx, subscription.ID)
-	u.notifier.NotifyPaymentSucceededAfter(subscription.ID)
 
 	log.Printf("checkout completed: user %s subscribed to plan %s (stripe sub %s)", user.ID, plan.Slug, subData.ID)
 	return nil
