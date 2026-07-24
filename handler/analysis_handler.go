@@ -49,7 +49,7 @@ func (h *AnalysisHandler) GeneratePresignedUploadUrl(c fiber.Ctx) error {
 		})
 	}
 
-	url, err := h.generatePresignedUploadUrlUseCase.Execute(c.Context(), user.ID, request)
+	result, err := h.generatePresignedUploadUrlUseCase.Execute(c.Context(), user.ID, request)
 	if err != nil {
 		if errors.Is(err, analysis.ErrUnsupportedMediaType) {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -64,7 +64,7 @@ func (h *AnalysisHandler) GeneratePresignedUploadUrl(c fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(presenter.NewGeneratePresignedUploadUrlDetailResponse(url))
+	return c.JSON(presenter.NewGeneratePresignedUploadUrlDetailResponse(result.URL, result.AnalysisID.String()))
 }
 
 func (h *AnalysisHandler) GetAnalyses(c fiber.Ctx) error {

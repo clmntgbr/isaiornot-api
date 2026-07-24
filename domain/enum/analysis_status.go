@@ -6,4 +6,5 @@ const (
 	AnalysisStatusUploaded   AnalysisStatus = "uploaded"
 	AnalysisStatusProcessing AnalysisStatus = "processing"
 	AnalysisStatusAnalyzed   AnalysisStatus = "analyzed"
+	AnalysisStatusFailed     AnalysisStatus = "failed"
 )

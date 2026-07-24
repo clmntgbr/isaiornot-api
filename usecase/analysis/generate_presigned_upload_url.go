@@ -4,18 +4,23 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"time"
 
 	"go-api/domain/entity"
 	"go-api/domain/enum"
 	"go-api/domain/repository"
 	mediadto "go-api/infrastructure/media"
 	"go-api/infrastructure/storage"
-	"time"
 
 	"github.com/google/uuid"
 )
 
 var ErrUnsupportedMediaType = errors.New("unsupported media type")
+
+type PresignUploadResult struct {
+	URL        string
+	AnalysisID uuid.UUID
+}
 
 type GeneratePresignedUploadUrlUseCase struct {
 	storage      *storage.MinIOStorage
@@ -35,9 +40,14 @@ func NewGeneratePresignedUploadUrlUseCase(
 	}
 }
 
-func (uc *GeneratePresignedUploadUrlUseCase) Execute(ctx context.Context, userID uuid.UUID, input mediadto.PresignUploadInput) (string, error) {
+func (uc *GeneratePresignedUploadUrlUseCase) Execute(ctx context.Context, userID uuid.UUID, input mediadto.PresignUploadInput) (*PresignUploadResult, error) {
 	if err := mediadto.ValidatePresignUploadInput(input); err != nil {
-		return "", errors.Join(ErrUnsupportedMediaType, err)
+		return nil, errors.Join(ErrUnsupportedMediaType, err)
+	}
+
+	contentType := input.ContentType
+	if contentType == "" {
+		contentType = mediadto.ContentTypeFromKey(input.Filename, "")
 	}
 
 	fileKey := mediadto.NewFileKey(input.Filename)
@@ -50,7 +60,7 @@ func (uc *GeneratePresignedUploadUrlUseCase) Execute(ctx context.Context, userID
 		Statuses: []enum.AnalysisStatus{enum.AnalysisStatusUploaded},
 	}
 	if err := (*uc.analysisRepo).Create(ctx, &analysisEntity); err != nil {
-		return "", errors.New("failed to create analysis")
+		return nil, errors.New("failed to create analysis")
 	}
 
 	media := entity.Media{
@@ -58,19 +68,22 @@ func (uc *GeneratePresignedUploadUrlUseCase) Execute(ctx context.Context, userID
 		UserID:      userID,
 		Key:         fileKey,
 		Filename:    filename,
-		ContentType: input.ContentType,
+		ContentType: contentType,
 		Size:        0,
 		Status:      enum.MediaStatusProcessing,
 		Statuses:    []enum.MediaStatus{enum.MediaStatusProcessing},
 	}
 	if err := (*uc.mediaRepo).Create(ctx, &media); err != nil {
-		return "", errors.New("failed to create media")
+		return nil, errors.New("failed to create media")
 	}
 
 	url, err := uc.storage.PresignedPutURL(ctx, objectKey, 15*time.Minute)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return url, nil
+	return &PresignUploadResult{
+		URL:        url,
+		AnalysisID: analysisEntity.ID,
+	}, nil
 }

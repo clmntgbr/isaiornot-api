@@ -10,14 +10,16 @@ import (
 const (
 	EventAnalysisStarted   = "analysis_started"
 	EventAnalysisCompleted = "analysis_completed"
+	EventAnalysisFailed    = "analysis_failed"
 )
 
 type MediaEvent struct {
 	Type       string          `json:"type"`
 	AnalysisID string          `json:"analysisId"`
-	MediaID    string          `json:"mediaId"`
+	MediaID    string          `json:"mediaId,omitempty"`
 	UserID     string          `json:"userId"`
 	Status     string          `json:"status"`
+	Message    string          `json:"message,omitempty"`
 	FinalScore float64         `json:"finalScore,omitempty"`
 	Confidence string          `json:"confidence,omitempty"`
 	Verdict    string          `json:"verdict,omitempty"`
@@ -79,6 +81,27 @@ func NewAnalysisCompletedEvent(analysis *entity.Analysis, media *entity.Media, s
 	}
 
 	return event, nil
+}
+
+func NewAnalysisFailedEvent(analysis *entity.Analysis) (MediaEvent, error) {
+	if analysis == nil {
+		return MediaEvent{}, ErrInvalidMedia
+	}
+
+	mediaID := ""
+	if len(analysis.Medias) > 0 {
+		mediaID = analysis.Medias[0].ID.String()
+	}
+
+	return MediaEvent{
+		Type:       EventAnalysisFailed,
+		AnalysisID: analysis.ID.String(),
+		MediaID:    mediaID,
+		UserID:     analysis.UserID.String(),
+		Status:     string(analysis.Status),
+		Message:    analysis.Message,
+		UpdatedAt:  analysis.UpdatedAt,
+	}, nil
 }
 
 func (e MediaEvent) Marshal() ([]byte, error) {

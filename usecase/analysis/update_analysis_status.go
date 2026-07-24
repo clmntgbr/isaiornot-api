@@ -28,6 +28,10 @@ func (u *UpdateAnalysisStatusUseCase) Execute(ctx context.Context, analysisID uu
 		return errors.New("failed to get analysis")
 	}
 
+	if analysis.Status == enum.AnalysisStatusFailed {
+		return nil
+	}
+
 	status := ResolveStatus(analysis.Medias)
 	if analysis.Status == status {
 		return nil
@@ -35,6 +39,7 @@ func (u *UpdateAnalysisStatusUseCase) Execute(ctx context.Context, analysisID uu
 
 	analysis.Statuses = append(analysis.Statuses, status)
 	analysis.Status = status
+	analysis.Message = ""
 
 	if err := (*u.analysisRepo).Update(ctx, analysis); err != nil {
 		return errors.New("failed to update analysis status")

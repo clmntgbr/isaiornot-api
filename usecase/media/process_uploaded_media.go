@@ -13,20 +13,24 @@ import (
 	mediadto "go-api/infrastructure/media"
 	"go-api/infrastructure/storage"
 	"go-api/infrastructure/video"
+	"go-api/usecase/analysis"
+	"go-api/usecase/subscription"
 	"go-api/usecase/thumbnail"
 
 	"github.com/google/uuid"
 )
 
 type ProcessUploadedMediaUseCase struct {
-	storage                  *storage.MinIOStorage
-	mediaRepo                *repository.MediaRepository
-	createMediaUseCase       *CreateMediaUseCase
-	generateThumbnailUseCase *GenerateThumbnailUseCase
-	updateMediaStatusUseCase *UpdateMediaStatusUseCase
-	publishMetadataUseCase   *PublishMetadataUseCase
-	frameExtractor           *video.FrameExtractor
-	imageThumbnailUseCase    *thumbnail.GenerateImageThumbnailUseCase
+	storage                    *storage.MinIOStorage
+	mediaRepo                  *repository.MediaRepository
+	createMediaUseCase         *CreateMediaUseCase
+	generateThumbnailUseCase   *GenerateThumbnailUseCase
+	updateMediaStatusUseCase   *UpdateMediaStatusUseCase
+	publishMetadataUseCase     *PublishMetadataUseCase
+	assertUploadAllowedUseCase *subscription.AssertUploadAllowedUseCase
+	failAnalysisUseCase        *analysis.FailAnalysisUseCase
+	frameExtractor             *video.FrameExtractor
+	imageThumbnailUseCase      *thumbnail.GenerateImageThumbnailUseCase
 }
 
 func NewProcessUploadedMediaUseCase(
@@ -36,18 +40,22 @@ func NewProcessUploadedMediaUseCase(
 	generateThumbnailUseCase *GenerateThumbnailUseCase,
 	updateMediaStatusUseCase *UpdateMediaStatusUseCase,
 	publishMetadataUseCase *PublishMetadataUseCase,
+	assertUploadAllowedUseCase *subscription.AssertUploadAllowedUseCase,
+	failAnalysisUseCase *analysis.FailAnalysisUseCase,
 	frameExtractor *video.FrameExtractor,
 	imageThumbnailUseCase *thumbnail.GenerateImageThumbnailUseCase,
 ) *ProcessUploadedMediaUseCase {
 	return &ProcessUploadedMediaUseCase{
-		storage:                  storage,
-		mediaRepo:                mediaRepo,
-		createMediaUseCase:       createMediaUseCase,
-		generateThumbnailUseCase: generateThumbnailUseCase,
-		updateMediaStatusUseCase: updateMediaStatusUseCase,
-		publishMetadataUseCase:   publishMetadataUseCase,
-		frameExtractor:           frameExtractor,
-		imageThumbnailUseCase:    imageThumbnailUseCase,
+		storage:                    storage,
+		mediaRepo:                  mediaRepo,
+		createMediaUseCase:         createMediaUseCase,
+		generateThumbnailUseCase:   generateThumbnailUseCase,
+		updateMediaStatusUseCase:   updateMediaStatusUseCase,
+		publishMetadataUseCase:     publishMetadataUseCase,
+		assertUploadAllowedUseCase: assertUploadAllowedUseCase,
+		failAnalysisUseCase:        failAnalysisUseCase,
+		frameExtractor:             frameExtractor,
+		imageThumbnailUseCase:      imageThumbnailUseCase,
 	}
 }
 
@@ -60,15 +68,25 @@ func (u *ProcessUploadedMediaUseCase) Execute(ctx context.Context, userID uuid.U
 	}
 
 	if mediadto.IsVideoContentType(contentType) {
-		return u.processVideo(ctx, userID, sourceMedia)
+		return u.processVideo(ctx, userID, sourceMedia, contentType, size)
 	}
 
-	return u.processImage(ctx, userID, sourceMedia)
+	return u.processImage(ctx, userID, sourceMedia, contentType, size)
 }
 
-func (u *ProcessUploadedMediaUseCase) processImage(ctx context.Context, userID uuid.UUID, media *entity.Media) error {
+func (u *ProcessUploadedMediaUseCase) processImage(
+	ctx context.Context,
+	userID uuid.UUID,
+	media *entity.Media,
+	contentType string,
+	size int64,
+) error {
 	if err := u.generateThumbnailUseCase.Execute(ctx, userID, media.ID); err != nil {
 		return fmt.Errorf("failed to generate thumbnail: %w", err)
+	}
+
+	if err := u.assertBeforePipeline(ctx, userID, media.AnalysisID, contentType, size); err != nil {
+		return err
 	}
 
 	if err := u.updateMediaStatusUseCase.Execute(ctx, media.ID, enum.MediaStatusUploaded); err != nil {
@@ -82,7 +100,13 @@ func (u *ProcessUploadedMediaUseCase) processImage(ctx context.Context, userID u
 	return nil
 }
 
-func (u *ProcessUploadedMediaUseCase) processVideo(ctx context.Context, userID uuid.UUID, sourceMedia *entity.Media) error {
+func (u *ProcessUploadedMediaUseCase) processVideo(
+	ctx context.Context,
+	userID uuid.UUID,
+	sourceMedia *entity.Media,
+	contentType string,
+	size int64,
+) error {
 	objectKey := mediadto.NewObjectKey(userID, sourceMedia.Key)
 	reader, err := u.storage.Get(ctx, objectKey)
 	if err != nil {
@@ -105,6 +129,7 @@ func (u *ProcessUploadedMediaUseCase) processVideo(ctx context.Context, userID u
 
 	baseFilename := sourceMedia.Filename
 	analysisID := sourceMedia.AnalysisID
+	frameMedias := make([]*entity.Media, 0, len(frames))
 
 	for i, frame := range frames {
 		frameKey := mediadto.NewFrameFileKey()
@@ -149,6 +174,14 @@ func (u *ProcessUploadedMediaUseCase) processVideo(ctx context.Context, userID u
 			return fmt.Errorf("failed to store thumbnail for frame %d: %w", i, err)
 		}
 
+		frameMedias = append(frameMedias, frameMedia)
+	}
+
+	if err := u.assertBeforePipeline(ctx, userID, analysisID, contentType, size); err != nil {
+		return err
+	}
+
+	for i, frameMedia := range frameMedias {
 		if err := u.updateMediaStatusUseCase.Execute(ctx, frameMedia.ID, enum.MediaStatusUploaded); err != nil {
 			return fmt.Errorf("failed to update frame %d status: %w", i, err)
 		}
@@ -158,6 +191,31 @@ func (u *ProcessUploadedMediaUseCase) processVideo(ctx context.Context, userID u
 		}
 	}
 
+	return nil
+}
+
+func (u *ProcessUploadedMediaUseCase) assertBeforePipeline(
+	ctx context.Context,
+	userID uuid.UUID,
+	analysisID uuid.UUID,
+	contentType string,
+	size int64,
+) error {
+	if err := u.assertUploadAllowedUseCase.Execute(ctx, subscription.AssertUploadAllowedInput{
+		UserID:              userID,
+		ContentType:         contentType,
+		Size:                size,
+		MediaAlreadyCounted: true,
+	}); err != nil {
+		message := err.Error()
+		if errors.Is(err, subscription.ErrSubscriptionNotFound) {
+			message = "No active subscription found"
+		}
+		if failErr := u.failAnalysisUseCase.Execute(ctx, analysisID, message); failErr != nil {
+			return failErr
+		}
+		return nil
+	}
 	return nil
 }
 

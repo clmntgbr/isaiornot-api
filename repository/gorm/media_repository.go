@@ -65,20 +65,22 @@ func (r *mediaRepository) GetByKey(ctx context.Context, key string) (*entity.Med
 
 func (r *mediaRepository) CountUsageInPeriod(ctx context.Context, userID uuid.UUID, from, to time.Time) (*repository.MediaUsageCounts, error) {
 	base := dbWithContext(ctx, r.db).Model(&entity.Media{}).
-		Where("user_id = ? AND created_at >= ? AND created_at < ?", userID, from, to)
+		Joins("JOIN analyses ON analyses.id = medias.analysis_id").
+		Where("medias.user_id = ? AND medias.created_at >= ? AND medias.created_at < ?", userID, from, to).
+		Where("analyses.status <> ?", "failed")
 
 	var images int64
 	if err := base.Session(&gorm.Session{}).
-		Where("content_type LIKE ? AND key NOT LIKE ?", "image/%", "frames/%").
+		Where("medias.content_type LIKE ? AND medias.key NOT LIKE ?", "image/%", "frames/%").
 		Count(&images).Error; err != nil {
 		return nil, err
 	}
 
 	var videos int64
 	if err := base.Session(&gorm.Session{}).
-		Where("key LIKE ? OR content_type LIKE ?", "frames/%", "video/%").
-		Select("COUNT(DISTINCT analysis_id)").
-		Scan(&videos).Error; err != nil {
+		Where("medias.key LIKE ? OR medias.content_type LIKE ?", "frames/%", "video/%").
+		Distinct("medias.analysis_id").
+		Count(&videos).Error; err != nil {
 		return nil, err
 	}
 

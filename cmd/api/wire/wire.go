@@ -69,7 +69,20 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	deleteUserByClerkIDUseCase := user.NewDeleteUserByClerkIDUseCase(&userRepo)
 
 	createMediaUseCase := media.NewCreateMediaUseCase(&analysisRepo, &mediaRepo)
-	generatePresignedUploadUrlUseCase := analysis.NewGeneratePresignedUploadUrlUseCase(storageClient, &analysisRepo, &mediaRepo)
+	resolveEffectivePlanUseCase := subscription.NewResolveEffectivePlanUseCase(&planRepo)
+	getQuotaUsageUseCase := subscription.NewGetQuotaUsageUseCase(&mediaRepo)
+	assertUploadAllowedUseCase := subscription.NewAssertUploadAllowedUseCase(
+		&userRepo,
+		&subscriptionRepo,
+		resolveEffectivePlanUseCase,
+		getQuotaUsageUseCase,
+	)
+	failAnalysisUseCase := analysis.NewFailAnalysisUseCase(&analysisRepo, centrifugoPublisher)
+	generatePresignedUploadUrlUseCase := analysis.NewGeneratePresignedUploadUrlUseCase(
+		storageClient,
+		&analysisRepo,
+		&mediaRepo,
+	)
 	getAnalysesUseCase := analysis.NewGetAnalysesUseCase(&analysisRepo)
 	getAnalysisUseCase := analysis.NewGetAnalysisUseCase(&analysisRepo)
 	getStatisticsUseCase := analysis.NewGetStatisticsUseCase(&analysisRepo)
@@ -87,6 +100,8 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		generateThumbnailUseCase,
 		updateMediaStatusUseCase,
 		publishMetadataUseCase,
+		assertUploadAllowedUseCase,
+		failAnalysisUseCase,
 		frameExtractor,
 		generateImageThumbnailUseCase,
 	)
@@ -130,8 +145,6 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		&subscriptionRepo,
 		subscriptionNotifier,
 	)
-	resolveEffectivePlanUseCase := subscription.NewResolveEffectivePlanUseCase(&planRepo)
-	getQuotaUsageUseCase := subscription.NewGetQuotaUsageUseCase(&mediaRepo)
 	getUserSubscriptionUseCase := subscription.NewGetUserSubscriptionUseCase(
 		&subscriptionRepo,
 		resolveEffectivePlanUseCase,

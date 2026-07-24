@@ -7,13 +7,22 @@ import (
 )
 
 type GeneratePresignedUploadUrlDetailResponse struct {
-	UploadURL string `json:"uploadUrl"`
+	UploadURL  string `json:"uploadUrl,omitempty"`
+	AnalysisID string `json:"analysisId"`
+}
+
+func NewGeneratePresignedUploadUrlDetailResponse(url string, analysisID string) GeneratePresignedUploadUrlDetailResponse {
+	return GeneratePresignedUploadUrlDetailResponse{
+		UploadURL:  url,
+		AnalysisID: analysisID,
+	}
 }
 
 type AnalysisListResponse struct {
 	ID         string              `json:"id"`
 	Status     string              `json:"status"`
 	Statuses   []string            `json:"statuses"`
+	Message    string              `json:"message,omitempty"`
 	FinalScore float64             `json:"finalScore,omitempty"`
 	Confidence string              `json:"confidence,omitempty"`
 	Verdict    string              `json:"verdict,omitempty"`
@@ -28,6 +37,7 @@ type AnalysisDetailResponse struct {
 	ID         string              `json:"id"`
 	Status     string              `json:"status"`
 	Statuses   []string            `json:"statuses"`
+	Message    string              `json:"message,omitempty"`
 	FinalScore float64             `json:"finalScore,omitempty"`
 	Confidence string              `json:"confidence,omitempty"`
 	Verdict    string              `json:"verdict,omitempty"`
@@ -37,12 +47,6 @@ type AnalysisDetailResponse struct {
 	Medias     []MediaItemResponse `json:"medias"`
 	CreatedAt  time.Time           `json:"createdAt"`
 	UpdatedAt  time.Time           `json:"updatedAt"`
-}
-
-func NewGeneratePresignedUploadUrlDetailResponse(url string) GeneratePresignedUploadUrlDetailResponse {
-	return GeneratePresignedUploadUrlDetailResponse{
-		UploadURL: url,
-	}
 }
 
 func primaryMedia(analysis *entity.Analysis) *entity.Media {
@@ -57,6 +61,7 @@ func NewAnalysisListResponse(analysis *entity.Analysis) *AnalysisListResponse {
 		ID:        analysis.ID.String(),
 		Status:    string(analysis.Status),
 		Statuses:  analysisStatusStrings(analysis.Statuses),
+		Message:   analysis.Message,
 		Medias:    NewMediaItemResponses(analysis.Medias),
 		CreatedAt: analysis.CreatedAt,
 		UpdatedAt: analysis.UpdatedAt,
@@ -81,6 +86,7 @@ func NewAnalysisDetailResponse(analysis *entity.Analysis) *AnalysisDetailRespons
 		ID:        analysis.ID.String(),
 		Status:    string(analysis.Status),
 		Statuses:  analysisStatusStrings(analysis.Statuses),
+		Message:   analysis.Message,
 		Insight:   aggregatedInsight(analysis.Medias),
 		Medias:    NewMediaItemResponses(analysis.Medias),
 		CreatedAt: analysis.CreatedAt,
