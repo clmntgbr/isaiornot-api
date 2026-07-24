@@ -45,7 +45,7 @@ func (u *UpdateAnalysisStatusUseCase) Execute(ctx context.Context, analysisID uu
 
 func ResolveStatus(medias []entity.Media) enum.AnalysisStatus {
 	if len(medias) == 0 {
-		return enum.AnalysisStatusProcessing
+		return enum.AnalysisStatusUploaded
 	}
 
 	allAnalyzed := true
@@ -63,8 +63,8 @@ func ResolveStatus(medias []entity.Media) enum.AnalysisStatus {
 		return enum.AnalysisStatusAnalyzed
 	}
 	if hasUploaded {
-		return enum.AnalysisStatusUploaded
+		return enum.AnalysisStatusProcessing
 	}
 
-	return enum.AnalysisStatusProcessing
+	return enum.AnalysisStatusUploaded
 }

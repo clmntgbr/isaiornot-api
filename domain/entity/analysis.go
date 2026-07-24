@@ -15,7 +15,7 @@ type Analysis struct {
 
 	Medias []Media `gorm:"foreignKey:AnalysisID" json:"medias"`
 
-	Status   enum.AnalysisStatus   `gorm:"type:varchar(20);not null;default:'processing';check:status IN ('processing','uploaded','analyzed');index:idx_analysis_status" json:"status"`
+	Status   enum.AnalysisStatus   `gorm:"type:varchar(20);not null;default:'uploaded';check:status IN ('uploaded','processing','analyzed');index:idx_analysis_status" json:"status"`
 	Statuses []enum.AnalysisStatus `gorm:"serializer:json;type:jsonb;default:'[]'" json:"statuses"`
 
 	FinalScore         float64         `gorm:"default:-1" json:"final_score"`

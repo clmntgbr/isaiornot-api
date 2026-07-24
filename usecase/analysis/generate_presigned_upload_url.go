@@ -46,8 +46,8 @@ func (uc *GeneratePresignedUploadUrlUseCase) Execute(ctx context.Context, userID
 
 	analysisEntity := entity.Analysis{
 		UserID:   userID,
-		Status:   enum.AnalysisStatusProcessing,
-		Statuses: []enum.AnalysisStatus{enum.AnalysisStatusProcessing},
+		Status:   enum.AnalysisStatusUploaded,
+		Statuses: []enum.AnalysisStatus{enum.AnalysisStatusUploaded},
 	}
 	if err := (*uc.analysisRepo).Create(ctx, &analysisEntity); err != nil {
 		return "", errors.New("failed to create analysis")
