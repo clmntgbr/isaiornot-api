@@ -25,17 +25,17 @@ type Config struct {
 	CORSMaxAge           int
 	RateLimitMax         int
 
-	ExchangeName             string
-	AnalyzeRequestQueueName  string
-	MetadataAnalyzeQueueName string
-	MetadataDoneQueueName    string
-	MetadataFailedQueueName  string
+	ExchangeName               string
+	AnalyzeRequestQueueName    string
+	MetadataAnalyzeQueueName   string
+	MetadataDoneQueueName      string
+	MetadataFailedQueueName    string
 	HeuristicsAnalyzeQueueName string
-	HeuristicsDoneQueueName  string
-	HeuristicsFailedQueueName string
-	AiModelAnalyzeQueueName  string
-	AiModelDoneQueueName     string
-	AiModelFailedQueueName   string
+	HeuristicsDoneQueueName    string
+	HeuristicsFailedQueueName  string
+	AiModelAnalyzeQueueName    string
+	AiModelDoneQueueName       string
+	AiModelFailedQueueName     string
 
 	StorageEndpoint         string
 	StorageInternalEndpoint string
@@ -57,6 +57,7 @@ type Config struct {
 	CentrifugoPublicWSURL string
 
 	StripeSecretKey     string
+	StripeWebhookSecret string
 	RedirectSuccessURL  string
 	RedirectCancelURL   string
 }
@@ -91,8 +92,8 @@ func Load() *Config {
 		AiModelAnalyzeQueueName:    getEnv("AI_MODEL_ANALYZE_QUEUE_NAME"),
 		AiModelDoneQueueName:       getEnv("AI_MODEL_DONE_QUEUE_NAME"),
 		AiModelFailedQueueName:     getEnv("AI_MODEL_FAILED_QUEUE_NAME"),
-		RabbitMQURL:       getEnv("RABBITMQ_URL"),
-		RabbitMQSecretKey: getEnvOrDefault("RABBITMQ_SECRET_KEY", ""),
+		RabbitMQURL:                getEnv("RABBITMQ_URL"),
+		RabbitMQSecretKey:          getEnvOrDefault("RABBITMQ_SECRET_KEY", ""),
 
 		StorageEndpoint:         getEnvOrDefault("STORAGE_ENDPOINT", ""),
 		StorageInternalEndpoint: getEnvOrDefault("STORAGE_INTERNAL_ENDPOINT", ""),
@@ -113,9 +114,10 @@ func Load() *Config {
 		CentrifugoTokenSecret: getEnvOrDefault("CENTRIFUGO_TOKEN_SECRET", ""),
 		CentrifugoPublicWSURL: getEnvOrDefault("CENTRIFUGO_PUBLIC_WS_URL", "ws://localhost:8000/connection/websocket"),
 
-		StripeSecretKey:    getEnvOrDefault("STRIPE_SECRET_KEY", ""),
-		RedirectSuccessURL: getEnvOrDefault("REDIRECT_SUCCESS_URL", "http://localhost:3000/subscription/success"),
-		RedirectCancelURL:  getEnvOrDefault("REDIRECT_CANCEL_URL", "http://localhost:3000/subscription/failed"),
+		StripeSecretKey:     getEnvOrDefault("STRIPE_SECRET_KEY", ""),
+		StripeWebhookSecret: getEnvOrDefault("STRIPE_WEBHOOK_SECRET", ""),
+		RedirectSuccessURL:  getEnvOrDefault("REDIRECT_SUCCESS_URL", "http://localhost:3000/subscription/success"),
+		RedirectCancelURL:   getEnvOrDefault("REDIRECT_CANCEL_URL", "http://localhost:3000/subscription/failed"),
 	}
 }
 

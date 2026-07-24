@@ -28,6 +28,7 @@ type Container struct {
 	AuthenticateMiddleware *middleware.AuthenticateMiddleware
 	ClerkMiddleware        *middleware.ClerkMiddleware
 	MinIOMiddleware        *middleware.MinIOMiddleware
+	StripeMiddleware       *middleware.StripeMiddleware
 	ClerkHandler           *handler.ClerkHandler
 	MinIOHandler           *handler.MinIOHandler
 	UserHandler            *handler.UserHandler
@@ -35,6 +36,7 @@ type Container struct {
 	MediaHandler           *handler.MediaHandler
 	RealtimeHandler        *handler.RealtimeHandler
 	PlanHandler            *handler.PlanHandler
+	StripeHandler          *handler.StripeHandler
 	SubscriptionHandler    *handler.SubscriptionHandler
 }
 
@@ -100,6 +102,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 
 	clerkMiddleware := middleware.NewClerkMiddleware(env.ClerkWebhookSecret)
 	minIOMiddleware := middleware.NewMinIOMiddleware(env.MinIOWebhookSecret)
+	stripeMiddleware := middleware.NewStripeMiddleware(env.StripeWebhookSecret)
 	authenticateMiddleware := middleware.NewAuthenticateMiddleware(
 		validateTokenUseCase,
 		fetchUserUseCase,
@@ -111,6 +114,8 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		AuthenticateMiddleware: authenticateMiddleware,
 		ClerkMiddleware:        clerkMiddleware,
 		MinIOMiddleware:        minIOMiddleware,
+		StripeMiddleware:       stripeMiddleware,
+		StripeHandler:          handler.NewStripeHandler(),
 		ClerkHandler: handler.NewClerkHandler(
 			getUserByClerkIDUseCase,
 			createUserUseCase,
