@@ -9,27 +9,27 @@ import (
 	"time"
 )
 
-// HandleSubscriptionDeletedUseCase handles customer.subscription.deleted:
+// SubscriptionDeletedUseCase handles customer.subscription.deleted:
 // the subscription actually ended. The user is reverted to the free plan.
-type HandleSubscriptionDeletedUseCase struct {
+type SubscriptionDeletedUseCase struct {
 	planRepo         *repository.PlanRepository
 	subscriptionRepo *repository.SubscriptionRepository
 	notifier         *Notifier
 }
 
-func NewHandleSubscriptionDeletedUseCase(
+func NewSubscriptionDeletedUseCase(
 	planRepo *repository.PlanRepository,
 	subscriptionRepo *repository.SubscriptionRepository,
 	notifier *Notifier,
-) *HandleSubscriptionDeletedUseCase {
-	return &HandleSubscriptionDeletedUseCase{
+) *SubscriptionDeletedUseCase {
+	return &SubscriptionDeletedUseCase{
 		planRepo:         planRepo,
 		subscriptionRepo: subscriptionRepo,
 		notifier:         notifier,
 	}
 }
 
-func (u *HandleSubscriptionDeletedUseCase) Execute(ctx context.Context, stripeSubscriptionID string) error {
+func (u *SubscriptionDeletedUseCase) Execute(ctx context.Context, stripeSubscriptionID string) error {
 	if stripeSubscriptionID == "" {
 		return errors.New("stripe subscription id is required")
 	}

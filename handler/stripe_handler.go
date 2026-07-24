@@ -14,26 +14,26 @@ import (
 )
 
 type StripeHandler struct {
-	handleCheckoutCompletedUseCase       *subscription.HandleCheckoutCompletedUseCase
-	handleSubscriptionUpdatedUseCase     *subscription.HandleSubscriptionUpdatedUseCase
-	handleSubscriptionDeletedUseCase     *subscription.HandleSubscriptionDeletedUseCase
-	handleInvoicePaymentSucceededUseCase *subscription.HandleInvoicePaymentSucceededUseCase
-	handleInvoicePaymentFailedUseCase    *subscription.HandleInvoicePaymentFailedUseCase
+	checkoutCompletedUseCase       *subscription.CheckoutCompletedUseCase
+	subscriptionUpdatedUseCase     *subscription.SubscriptionUpdatedUseCase
+	subscriptionDeletedUseCase     *subscription.SubscriptionDeletedUseCase
+	invoicePaymentSucceededUseCase *subscription.InvoicePaymentSucceededUseCase
+	invoicePaymentFailedUseCase    *subscription.InvoicePaymentFailedUseCase
 }
 
 func NewStripeHandler(
-	handleCheckoutCompletedUseCase *subscription.HandleCheckoutCompletedUseCase,
-	handleSubscriptionUpdatedUseCase *subscription.HandleSubscriptionUpdatedUseCase,
-	handleSubscriptionDeletedUseCase *subscription.HandleSubscriptionDeletedUseCase,
-	handleInvoicePaymentSucceededUseCase *subscription.HandleInvoicePaymentSucceededUseCase,
-	handleInvoicePaymentFailedUseCase *subscription.HandleInvoicePaymentFailedUseCase,
+	checkoutCompletedUseCase *subscription.CheckoutCompletedUseCase,
+	subscriptionUpdatedUseCase *subscription.SubscriptionUpdatedUseCase,
+	subscriptionDeletedUseCase *subscription.SubscriptionDeletedUseCase,
+	invoicePaymentSucceededUseCase *subscription.InvoicePaymentSucceededUseCase,
+	invoicePaymentFailedUseCase *subscription.InvoicePaymentFailedUseCase,
 ) *StripeHandler {
 	return &StripeHandler{
-		handleCheckoutCompletedUseCase:       handleCheckoutCompletedUseCase,
-		handleSubscriptionUpdatedUseCase:     handleSubscriptionUpdatedUseCase,
-		handleSubscriptionDeletedUseCase:     handleSubscriptionDeletedUseCase,
-		handleInvoicePaymentSucceededUseCase: handleInvoicePaymentSucceededUseCase,
-		handleInvoicePaymentFailedUseCase:    handleInvoicePaymentFailedUseCase,
+		checkoutCompletedUseCase:       checkoutCompletedUseCase,
+		subscriptionUpdatedUseCase:     subscriptionUpdatedUseCase,
+		subscriptionDeletedUseCase:     subscriptionDeletedUseCase,
+		invoicePaymentSucceededUseCase: invoicePaymentSucceededUseCase,
+		invoicePaymentFailedUseCase:    invoicePaymentFailedUseCase,
 	}
 }
 
@@ -86,7 +86,7 @@ func (h *StripeHandler) handleCheckoutCompleted(ctx context.Context, event strip
 		return err
 	}
 
-	input := subscription.HandleCheckoutCompletedInput{
+	input := subscription.CheckoutCompletedInput{
 		UserID: userID,
 	}
 	if session.Customer != nil {
@@ -96,7 +96,7 @@ func (h *StripeHandler) handleCheckoutCompleted(ctx context.Context, event strip
 		input.StripeSubscriptionID = session.Subscription.ID
 	}
 
-	return h.handleCheckoutCompletedUseCase.Execute(ctx, input)
+	return h.checkoutCompletedUseCase.Execute(ctx, input)
 }
 
 func (h *StripeHandler) handleSubscriptionUpdated(ctx context.Context, event stripe.Event) error {
@@ -107,7 +107,7 @@ func (h *StripeHandler) handleSubscriptionUpdated(ctx context.Context, event str
 
 	data := infraStripe.ExtractSubscriptionData(&sub)
 
-	return h.handleSubscriptionUpdatedUseCase.Execute(ctx, subscription.HandleSubscriptionUpdatedInput{
+	return h.subscriptionUpdatedUseCase.Execute(ctx, subscription.SubscriptionUpdatedInput{
 		StripeSubscriptionID: data.ID,
 		StripePriceID:        data.PriceID,
 		Status:               data.Status,
@@ -123,7 +123,7 @@ func (h *StripeHandler) handleSubscriptionDeleted(ctx context.Context, event str
 		return err
 	}
 
-	return h.handleSubscriptionDeletedUseCase.Execute(ctx, sub.ID)
+	return h.subscriptionDeletedUseCase.Execute(ctx, sub.ID)
 }
 
 func (h *StripeHandler) handleInvoicePaymentSucceeded(ctx context.Context, event stripe.Event) error {
@@ -132,7 +132,7 @@ func (h *StripeHandler) handleInvoicePaymentSucceeded(ctx context.Context, event
 		return err
 	}
 
-	return h.handleInvoicePaymentSucceededUseCase.Execute(ctx, subscription.HandleInvoicePaymentSucceededInput{
+	return h.invoicePaymentSucceededUseCase.Execute(ctx, subscription.InvoicePaymentSucceededInput{
 		StripeSubscriptionID: subscriptionIDFromInvoice(&invoice),
 		BillingReason:        string(invoice.BillingReason),
 		PeriodStart:          unixToTime(invoice.PeriodStart),
@@ -146,7 +146,7 @@ func (h *StripeHandler) handleInvoicePaymentFailed(ctx context.Context, event st
 		return err
 	}
 
-	return h.handleInvoicePaymentFailedUseCase.Execute(ctx, subscriptionIDFromInvoice(&invoice))
+	return h.invoicePaymentFailedUseCase.Execute(ctx, subscriptionIDFromInvoice(&invoice))
 }
 
 func subscriptionIDFromInvoice(invoice *stripe.Invoice) string {

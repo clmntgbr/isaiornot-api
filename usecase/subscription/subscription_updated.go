@@ -8,27 +8,27 @@ import (
 	"time"
 )
 
-// HandleSubscriptionUpdatedUseCase handles customer.subscription.updated:
+// SubscriptionUpdatedUseCase handles customer.subscription.updated:
 // plan change (upgrade/downgrade), renewal, past_due, scheduled cancellation.
-type HandleSubscriptionUpdatedUseCase struct {
+type SubscriptionUpdatedUseCase struct {
 	planRepo         *repository.PlanRepository
 	subscriptionRepo *repository.SubscriptionRepository
 	notifier         *Notifier
 }
 
-func NewHandleSubscriptionUpdatedUseCase(
+func NewSubscriptionUpdatedUseCase(
 	planRepo *repository.PlanRepository,
 	subscriptionRepo *repository.SubscriptionRepository,
 	notifier *Notifier,
-) *HandleSubscriptionUpdatedUseCase {
-	return &HandleSubscriptionUpdatedUseCase{
+) *SubscriptionUpdatedUseCase {
+	return &SubscriptionUpdatedUseCase{
 		planRepo:         planRepo,
 		subscriptionRepo: subscriptionRepo,
 		notifier:         notifier,
 	}
 }
 
-type HandleSubscriptionUpdatedInput struct {
+type SubscriptionUpdatedInput struct {
 	StripeSubscriptionID string
 	StripePriceID        string
 	Status               string
@@ -37,7 +37,7 @@ type HandleSubscriptionUpdatedInput struct {
 	CurrentPeriodEnd     time.Time
 }
 
-func (u *HandleSubscriptionUpdatedUseCase) Execute(ctx context.Context, input HandleSubscriptionUpdatedInput) error {
+func (u *SubscriptionUpdatedUseCase) Execute(ctx context.Context, input SubscriptionUpdatedInput) error {
 	if input.StripeSubscriptionID == "" {
 		return errors.New("stripe subscription id is required")
 	}

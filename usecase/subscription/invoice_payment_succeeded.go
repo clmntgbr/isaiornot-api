@@ -9,29 +9,29 @@ import (
 	"time"
 )
 
-type HandleInvoicePaymentSucceededUseCase struct {
+type InvoicePaymentSucceededUseCase struct {
 	subscriptionRepo *repository.SubscriptionRepository
 	notifier         *Notifier
 }
 
-func NewHandleInvoicePaymentSucceededUseCase(
+func NewInvoicePaymentSucceededUseCase(
 	subscriptionRepo *repository.SubscriptionRepository,
 	notifier *Notifier,
-) *HandleInvoicePaymentSucceededUseCase {
-	return &HandleInvoicePaymentSucceededUseCase{
+) *InvoicePaymentSucceededUseCase {
+	return &InvoicePaymentSucceededUseCase{
 		subscriptionRepo: subscriptionRepo,
 		notifier:         notifier,
 	}
 }
 
-type HandleInvoicePaymentSucceededInput struct {
+type InvoicePaymentSucceededInput struct {
 	StripeSubscriptionID string
 	BillingReason        string
 	PeriodStart          time.Time
 	PeriodEnd            time.Time
 }
 
-func (u *HandleInvoicePaymentSucceededUseCase) Execute(ctx context.Context, input HandleInvoicePaymentSucceededInput) error {
+func (u *InvoicePaymentSucceededUseCase) Execute(ctx context.Context, input InvoicePaymentSucceededInput) error {
 	if input.StripeSubscriptionID == "" {
 		return nil
 	}

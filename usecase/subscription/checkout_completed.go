@@ -11,10 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// HandleCheckoutCompletedUseCase handles the checkout.session.completed event:
+// CheckoutCompletedUseCase handles the checkout.session.completed event:
 // first successful payment (free -> paid). It links the Stripe customer and
 // subscription to the user and activates the chosen plan.
-type HandleCheckoutCompletedUseCase struct {
+type CheckoutCompletedUseCase struct {
 	userRepo            *repository.UserRepository
 	planRepo            *repository.PlanRepository
 	subscriptionRepo    *repository.SubscriptionRepository
@@ -22,14 +22,14 @@ type HandleCheckoutCompletedUseCase struct {
 	notifier            *Notifier
 }
 
-func NewHandleCheckoutCompletedUseCase(
+func NewCheckoutCompletedUseCase(
 	userRepo *repository.UserRepository,
 	planRepo *repository.PlanRepository,
 	subscriptionRepo *repository.SubscriptionRepository,
 	subscriptionGateway *stripe.SubscriptionGateway,
 	notifier *Notifier,
-) *HandleCheckoutCompletedUseCase {
-	return &HandleCheckoutCompletedUseCase{
+) *CheckoutCompletedUseCase {
+	return &CheckoutCompletedUseCase{
 		userRepo:            userRepo,
 		planRepo:            planRepo,
 		subscriptionRepo:    subscriptionRepo,
@@ -38,13 +38,13 @@ func NewHandleCheckoutCompletedUseCase(
 	}
 }
 
-type HandleCheckoutCompletedInput struct {
+type CheckoutCompletedInput struct {
 	UserID               uuid.UUID
 	StripeCustomerID     string
 	StripeSubscriptionID string
 }
 
-func (u *HandleCheckoutCompletedUseCase) Execute(ctx context.Context, input HandleCheckoutCompletedInput) error {
+func (u *CheckoutCompletedUseCase) Execute(ctx context.Context, input CheckoutCompletedInput) error {
 	if input.StripeSubscriptionID == "" {
 		return errors.New("stripe subscription id is required")
 	}

@@ -101,28 +101,28 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		checkoutSessionGateway,
 	)
 	subscriptionNotifier := subscription.NewNotifier(&userRepo, &subscriptionRepo, centrifugoPublisher)
-	handleCheckoutCompletedUseCase := subscription.NewHandleCheckoutCompletedUseCase(
+	checkoutCompletedUseCase := subscription.NewCheckoutCompletedUseCase(
 		&userRepo,
 		&planRepo,
 		&subscriptionRepo,
 		subscriptionGateway,
 		subscriptionNotifier,
 	)
-	handleSubscriptionUpdatedUseCase := subscription.NewHandleSubscriptionUpdatedUseCase(
+	subscriptionUpdatedUseCase := subscription.NewSubscriptionUpdatedUseCase(
 		&planRepo,
 		&subscriptionRepo,
 		subscriptionNotifier,
 	)
-	handleSubscriptionDeletedUseCase := subscription.NewHandleSubscriptionDeletedUseCase(
+	subscriptionDeletedUseCase := subscription.NewSubscriptionDeletedUseCase(
 		&planRepo,
 		&subscriptionRepo,
 		subscriptionNotifier,
 	)
-	handleInvoicePaymentSucceededUseCase := subscription.NewHandleInvoicePaymentSucceededUseCase(
+	invoicePaymentSucceededUseCase := subscription.NewInvoicePaymentSucceededUseCase(
 		&subscriptionRepo,
 		subscriptionNotifier,
 	)
-	handleInvoicePaymentFailedUseCase := subscription.NewHandleInvoicePaymentFailedUseCase(
+	invoicePaymentFailedUseCase := subscription.NewInvoicePaymentFailedUseCase(
 		&subscriptionRepo,
 		subscriptionNotifier,
 	)
@@ -145,11 +145,11 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		MinIOMiddleware:        minIOMiddleware,
 		StripeMiddleware:       stripeMiddleware,
 		StripeHandler: handler.NewStripeHandler(
-			handleCheckoutCompletedUseCase,
-			handleSubscriptionUpdatedUseCase,
-			handleSubscriptionDeletedUseCase,
-			handleInvoicePaymentSucceededUseCase,
-			handleInvoicePaymentFailedUseCase,
+			checkoutCompletedUseCase,
+			subscriptionUpdatedUseCase,
+			subscriptionDeletedUseCase,
+			invoicePaymentSucceededUseCase,
+			invoicePaymentFailedUseCase,
 		),
 		ClerkHandler: handler.NewClerkHandler(
 			getUserByClerkIDUseCase,

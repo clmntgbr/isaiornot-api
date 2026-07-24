@@ -8,25 +8,25 @@ import (
 	"log"
 )
 
-// HandleInvoicePaymentFailedUseCase handles invoice.payment_failed:
+// InvoicePaymentFailedUseCase handles invoice.payment_failed:
 // a charge failed (expired card, insufficient funds...). The subscription is
 // moved to past_due; Stripe automatically retries according to its policy.
-type HandleInvoicePaymentFailedUseCase struct {
+type InvoicePaymentFailedUseCase struct {
 	subscriptionRepo *repository.SubscriptionRepository
 	notifier         *Notifier
 }
 
-func NewHandleInvoicePaymentFailedUseCase(
+func NewInvoicePaymentFailedUseCase(
 	subscriptionRepo *repository.SubscriptionRepository,
 	notifier *Notifier,
-) *HandleInvoicePaymentFailedUseCase {
-	return &HandleInvoicePaymentFailedUseCase{
+) *InvoicePaymentFailedUseCase {
+	return &InvoicePaymentFailedUseCase{
 		subscriptionRepo: subscriptionRepo,
 		notifier:         notifier,
 	}
 }
 
-func (u *HandleInvoicePaymentFailedUseCase) Execute(ctx context.Context, stripeSubscriptionID string) error {
+func (u *InvoicePaymentFailedUseCase) Execute(ctx context.Context, stripeSubscriptionID string) error {
 	if stripeSubscriptionID == "" {
 		return nil
 	}
