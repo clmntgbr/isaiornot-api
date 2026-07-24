@@ -58,6 +58,7 @@ func setupRealtimeRoutes(api fiber.Router, container *wire.Container) {
 
 func setupUsersRoutes(api fiber.Router, container *wire.Container) {
 	api.Get("/users/me", container.UserHandler.GetUser)
+	api.Get("/user/subscription", container.UserHandler.GetSubscription)
 }
 
 func setupAnalysisRoutes(api fiber.Router, container *wire.Container) {

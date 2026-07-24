@@ -48,3 +48,18 @@ func (p *Publisher) PublishToUser(ctx context.Context, userID uuid.UUID, event M
 	log.Printf("centrifugo: published %s to %s", event.Type, channel)
 	return nil
 }
+
+func (p *Publisher) PublishSubscriptionToUser(ctx context.Context, userID uuid.UUID, event SubscriptionEvent) error {
+	payload, err := event.Marshal()
+	if err != nil {
+		return fmt.Errorf("failed to marshal centrifugo event: %w", err)
+	}
+
+	channel := UserChannel(userID)
+	if _, err := p.client.Publish(ctx, channel, payload); err != nil {
+		return fmt.Errorf("failed to publish to centrifugo channel %q: %w", channel, err)
+	}
+
+	log.Printf("centrifugo: published %s to %s", event.Type, channel)
+	return nil
+}

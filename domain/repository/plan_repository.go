@@ -14,4 +14,5 @@ type PlanRepository interface {
 	GetAll(ctx context.Context) ([]*entity.Plan, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Plan, error)
 	GetBySlug(ctx context.Context, slug string) (*entity.Plan, error)
+	GetByStripePriceID(ctx context.Context, stripePriceID string) (*entity.Plan, error)
 }

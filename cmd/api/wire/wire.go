@@ -94,11 +94,39 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 
 	getPlansUseCase := plan.NewGetPlansUseCase(&planRepo)
 	checkoutSessionGateway := infraStripe.NewCheckoutSessionGateway(env)
+	subscriptionGateway := infraStripe.NewSubscriptionGateway(env)
 	createSubscriptionUseCase := subscription.NewCreateSubscriptionUseCase(
 		&planRepo,
 		fetchUserUseCase,
 		checkoutSessionGateway,
 	)
+	subscriptionNotifier := subscription.NewNotifier(&userRepo, &subscriptionRepo, centrifugoPublisher)
+	handleCheckoutCompletedUseCase := subscription.NewHandleCheckoutCompletedUseCase(
+		&userRepo,
+		&planRepo,
+		&subscriptionRepo,
+		subscriptionGateway,
+		subscriptionNotifier,
+	)
+	handleSubscriptionUpdatedUseCase := subscription.NewHandleSubscriptionUpdatedUseCase(
+		&planRepo,
+		&subscriptionRepo,
+		subscriptionNotifier,
+	)
+	handleSubscriptionDeletedUseCase := subscription.NewHandleSubscriptionDeletedUseCase(
+		&planRepo,
+		&subscriptionRepo,
+		subscriptionNotifier,
+	)
+	handleInvoicePaymentSucceededUseCase := subscription.NewHandleInvoicePaymentSucceededUseCase(
+		&subscriptionRepo,
+		subscriptionNotifier,
+	)
+	handleInvoicePaymentFailedUseCase := subscription.NewHandleInvoicePaymentFailedUseCase(
+		&subscriptionRepo,
+		subscriptionNotifier,
+	)
+	getUserSubscriptionUseCase := subscription.NewGetUserSubscriptionUseCase(&subscriptionRepo)
 
 	clerkMiddleware := middleware.NewClerkMiddleware(env.ClerkWebhookSecret)
 	minIOMiddleware := middleware.NewMinIOMiddleware(env.MinIOWebhookSecret)
@@ -115,7 +143,13 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		ClerkMiddleware:        clerkMiddleware,
 		MinIOMiddleware:        minIOMiddleware,
 		StripeMiddleware:       stripeMiddleware,
-		StripeHandler:          handler.NewStripeHandler(),
+		StripeHandler: handler.NewStripeHandler(
+			handleCheckoutCompletedUseCase,
+			handleSubscriptionUpdatedUseCase,
+			handleSubscriptionDeletedUseCase,
+			handleInvoicePaymentSucceededUseCase,
+			handleInvoicePaymentFailedUseCase,
+		),
 		ClerkHandler: handler.NewClerkHandler(
 			getUserByClerkIDUseCase,
 			createUserUseCase,
@@ -126,7 +160,9 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 			env.StorageBucket,
 			processUploadedMediaUseCase,
 		),
-		UserHandler: handler.NewUserHandler(),
+		UserHandler: handler.NewUserHandler(
+			getUserSubscriptionUseCase,
+		),
 		AnalysisHandler: handler.NewAnalysisHandler(
 			generatePresignedUploadUrlUseCase,
 			getAnalysisUseCase,
