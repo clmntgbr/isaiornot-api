@@ -2,13 +2,14 @@ package wire
 
 import (
 	"go-api/handler"
-	"go-api/infrastructure/config"
 	"go-api/infrastructure/centrifugo"
+	"go-api/infrastructure/config"
 	"go-api/infrastructure/messaging/rabbitmq"
 	"go-api/infrastructure/messaging/security"
 	metadatainfra "go-api/infrastructure/metadata"
 	"go-api/infrastructure/storage"
 	repoGorm "go-api/repository/gorm"
+	analysisuc "go-api/usecase/analysis"
 	metadatauc "go-api/usecase/metadata"
 	pipelineuc "go-api/usecase/pipeline"
 	"go-api/usecase/signal"
@@ -38,7 +39,14 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	analysisRepo := repoGorm.NewAnalysisRepository(db)
 	signalRepo := repoGorm.NewSignalRepository(db)
 
-	aggregateAnalysisUseCase := pipelineuc.NewAggregateAnalysisUseCase(&mediaRepo, &analysisRepo, &signalRepo, centrifugoPublisher)
+	updateAnalysisStatusUseCase := analysisuc.NewUpdateAnalysisStatusUseCase(&analysisRepo)
+	aggregateAnalysisUseCase := pipelineuc.NewAggregateAnalysisUseCase(
+		&mediaRepo,
+		&analysisRepo,
+		&signalRepo,
+		updateAnalysisStatusUseCase,
+		centrifugoPublisher,
+	)
 	dispatcher := pipelineuc.NewDispatcher(env, &mediaRepo, publisher, aggregateAnalysisUseCase)
 
 	analyzer := metadatainfra.NewAnalyzer()

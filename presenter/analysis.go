@@ -13,6 +13,7 @@ type GeneratePresignedUploadUrlDetailResponse struct {
 type AnalysisListResponse struct {
 	ID         string              `json:"id"`
 	Status     string              `json:"status"`
+	Statuses   []string            `json:"statuses"`
 	FinalScore float64             `json:"finalScore,omitempty"`
 	Confidence string              `json:"confidence,omitempty"`
 	Verdict    string              `json:"verdict,omitempty"`
@@ -26,6 +27,7 @@ type AnalysisListResponse struct {
 type AnalysisDetailResponse struct {
 	ID         string              `json:"id"`
 	Status     string              `json:"status"`
+	Statuses   []string            `json:"statuses"`
 	FinalScore float64             `json:"finalScore,omitempty"`
 	Confidence string              `json:"confidence,omitempty"`
 	Verdict    string              `json:"verdict,omitempty"`
@@ -50,36 +52,11 @@ func primaryMedia(analysis *entity.Analysis) *entity.Media {
 	return &analysis.Medias[0]
 }
 
-func analysisStatus(analysis *entity.Analysis) string {
-	if analysis == nil || len(analysis.Medias) == 0 {
-		return ""
-	}
-
-	allAnalyzed := true
-	hasUploaded := false
-	for _, media := range analysis.Medias {
-		if media.Status != enum.MediaStatusAnalyzed {
-			allAnalyzed = false
-		}
-		if media.Status == enum.MediaStatusUploaded || media.Status == enum.MediaStatusAnalyzed {
-			hasUploaded = true
-		}
-	}
-
-	if allAnalyzed {
-		return string(enum.MediaStatusAnalyzed)
-	}
-	if hasUploaded {
-		return string(enum.MediaStatusUploaded)
-	}
-
-	return string(enum.MediaStatusProcessing)
-}
-
 func NewAnalysisListResponse(analysis *entity.Analysis) *AnalysisListResponse {
 	response := &AnalysisListResponse{
 		ID:        analysis.ID.String(),
-		Status:    analysisStatus(analysis),
+		Status:    string(analysis.Status),
+		Statuses:  analysisStatusStrings(analysis.Statuses),
 		Medias:    NewMediaItemResponses(analysis.Medias),
 		CreatedAt: analysis.CreatedAt,
 		UpdatedAt: analysis.UpdatedAt,
@@ -102,7 +79,8 @@ func NewAnalysisListResponse(analysis *entity.Analysis) *AnalysisListResponse {
 func NewAnalysisDetailResponse(analysis *entity.Analysis) *AnalysisDetailResponse {
 	response := &AnalysisDetailResponse{
 		ID:        analysis.ID.String(),
-		Status:    analysisStatus(analysis),
+		Status:    string(analysis.Status),
+		Statuses:  analysisStatusStrings(analysis.Statuses),
 		Insight:   aggregatedInsight(analysis.Medias),
 		Medias:    NewMediaItemResponses(analysis.Medias),
 		CreatedAt: analysis.CreatedAt,
@@ -121,6 +99,14 @@ func NewAnalysisDetailResponse(analysis *entity.Analysis) *AnalysisDetailRespons
 	}
 
 	return response
+}
+
+func analysisStatusStrings(statuses []enum.AnalysisStatus) []string {
+	result := make([]string, 0, len(statuses))
+	for _, status := range statuses {
+		result = append(result, string(status))
+	}
+	return result
 }
 
 func aggregatedInsight(medias []entity.Media) *InsightResponse {

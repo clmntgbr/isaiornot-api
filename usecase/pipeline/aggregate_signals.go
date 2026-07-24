@@ -9,6 +9,7 @@ import (
 	"go-api/domain/enum"
 	"go-api/domain/repository"
 	"go-api/infrastructure/centrifugo"
+	analysisuc "go-api/usecase/analysis"
 
 	"github.com/google/uuid"
 )
@@ -16,23 +17,26 @@ import (
 var requiredSignalNames = []string{"metadata", "heuristics", "ai_model"}
 
 type AggregateAnalysisUseCase struct {
-	mediaRepo           *repository.MediaRepository
-	analysisRepo        *repository.AnalysisRepository
-	signalRepo          *repository.SignalRepository
-	centrifugoPublisher *centrifugo.Publisher
+	mediaRepo                   *repository.MediaRepository
+	analysisRepo                *repository.AnalysisRepository
+	signalRepo                  *repository.SignalRepository
+	updateAnalysisStatusUseCase *analysisuc.UpdateAnalysisStatusUseCase
+	centrifugoPublisher         *centrifugo.Publisher
 }
 
 func NewAggregateAnalysisUseCase(
 	mediaRepo *repository.MediaRepository,
 	analysisRepo *repository.AnalysisRepository,
 	signalRepo *repository.SignalRepository,
+	updateAnalysisStatusUseCase *analysisuc.UpdateAnalysisStatusUseCase,
 	centrifugoPublisher *centrifugo.Publisher,
 ) *AggregateAnalysisUseCase {
 	return &AggregateAnalysisUseCase{
-		mediaRepo:           mediaRepo,
-		analysisRepo:        analysisRepo,
-		signalRepo:          signalRepo,
-		centrifugoPublisher: centrifugoPublisher,
+		mediaRepo:                   mediaRepo,
+		analysisRepo:                analysisRepo,
+		signalRepo:                  signalRepo,
+		updateAnalysisStatusUseCase: updateAnalysisStatusUseCase,
+		centrifugoPublisher:         centrifugoPublisher,
 	}
 }
 
@@ -57,12 +61,16 @@ func (u *AggregateAnalysisUseCase) Execute(ctx context.Context, mediaID uuid.UUI
 		return err
 	}
 
+	if err := u.updateAnalysisStatusUseCase.Execute(ctx, media.AnalysisID); err != nil {
+		return err
+	}
+
 	analysis, err := (*u.analysisRepo).GetByID(ctx, media.AnalysisID)
 	if err != nil {
 		return errors.New("analysis not found")
 	}
 
-	if !allMediasAnalyzed(analysis.Medias) {
+	if analysis.Status != enum.AnalysisStatusAnalyzed {
 		return nil
 	}
 
@@ -101,20 +109,6 @@ func (u *AggregateAnalysisUseCase) Execute(ctx context.Context, mediaID uuid.UUI
 	}
 
 	return nil
-}
-
-func allMediasAnalyzed(medias []entity.Media) bool {
-	if len(medias) == 0 {
-		return false
-	}
-
-	for _, media := range medias {
-		if media.Status != enum.MediaStatusAnalyzed {
-			return false
-		}
-	}
-
-	return true
 }
 
 func hasAllRequiredSignals(signals []*entity.Signal) bool {

@@ -3,14 +3,15 @@ package wire
 import (
 	"go-api/handler"
 	"go-api/infrastructure/aimodel"
-	"go-api/infrastructure/config"
 	"go-api/infrastructure/centrifugo"
+	"go-api/infrastructure/config"
 	"go-api/infrastructure/messaging/rabbitmq"
 	"go-api/infrastructure/messaging/security"
 	"go-api/infrastructure/sightengine"
 	"go-api/infrastructure/storage"
 	repoGorm "go-api/repository/gorm"
 	aimodeluc "go-api/usecase/aimodel"
+	analysisuc "go-api/usecase/analysis"
 	pipelineuc "go-api/usecase/pipeline"
 	"go-api/usecase/signal"
 	"log"
@@ -39,7 +40,14 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	analysisRepo := repoGorm.NewAnalysisRepository(db)
 	signalRepo := repoGorm.NewSignalRepository(db)
 
-	aggregateAnalysisUseCase := pipelineuc.NewAggregateAnalysisUseCase(&mediaRepo, &analysisRepo, &signalRepo, centrifugoPublisher)
+	updateAnalysisStatusUseCase := analysisuc.NewUpdateAnalysisStatusUseCase(&analysisRepo)
+	aggregateAnalysisUseCase := pipelineuc.NewAggregateAnalysisUseCase(
+		&mediaRepo,
+		&analysisRepo,
+		&signalRepo,
+		updateAnalysisStatusUseCase,
+		centrifugoPublisher,
+	)
 	dispatcher := pipelineuc.NewDispatcher(env, &mediaRepo, publisher, aggregateAnalysisUseCase)
 
 	sightengineClient := sightengine.NewClient(env)

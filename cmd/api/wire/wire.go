@@ -77,7 +77,8 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	generateImageThumbnailUseCase := thumbnail.NewGenerateImageThumbnailUseCase()
 	generateThumbnailUseCase := media.NewGenerateThumbnailUseCase(storageClient, &mediaRepo, generateImageThumbnailUseCase)
 	publishMetadataUseCase := media.NewPublishMetadataUseCase(&mediaRepo, publisher, centrifugoPublisher, env)
-	updateMediaStatusUseCase := media.NewUpdateMediaStatusUseCase(&mediaRepo)
+	updateAnalysisStatusUseCase := analysis.NewUpdateAnalysisStatusUseCase(&analysisRepo)
+	updateMediaStatusUseCase := media.NewUpdateMediaStatusUseCase(&mediaRepo, updateAnalysisStatusUseCase)
 	frameExtractor := video.NewFrameExtractor()
 	processUploadedMediaUseCase := media.NewProcessUploadedMediaUseCase(
 		storageClient,

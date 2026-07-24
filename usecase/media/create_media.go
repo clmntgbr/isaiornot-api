@@ -37,7 +37,9 @@ func (u *CreateMediaUseCase) Execute(ctx context.Context, userID uuid.UUID, key 
 	}
 
 	analysis := entity.Analysis{
-		UserID: userID,
+		UserID:   userID,
+		Status:   enum.AnalysisStatusProcessing,
+		Statuses: []enum.AnalysisStatus{enum.AnalysisStatusProcessing},
 	}
 	if err := (*u.analysisRepo).Create(ctx, &analysis); err != nil {
 		return nil, errors.New("failed to create analysis")

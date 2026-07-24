@@ -9,6 +9,7 @@ import (
 	"go-api/infrastructure/messaging/security"
 	"go-api/infrastructure/storage"
 	repoGorm "go-api/repository/gorm"
+	analysisuc "go-api/usecase/analysis"
 	heuristicuc "go-api/usecase/heuristic"
 	insightuc "go-api/usecase/insight"
 	pipelineuc "go-api/usecase/pipeline"
@@ -40,7 +41,14 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	signalRepo := repoGorm.NewSignalRepository(db)
 	insightRepo := repoGorm.NewInsightRepository(db)
 
-	aggregateAnalysisUseCase := pipelineuc.NewAggregateAnalysisUseCase(&mediaRepo, &analysisRepo, &signalRepo, centrifugoPublisher)
+	updateAnalysisStatusUseCase := analysisuc.NewUpdateAnalysisStatusUseCase(&analysisRepo)
+	aggregateAnalysisUseCase := pipelineuc.NewAggregateAnalysisUseCase(
+		&mediaRepo,
+		&analysisRepo,
+		&signalRepo,
+		updateAnalysisStatusUseCase,
+		centrifugoPublisher,
+	)
 	dispatcher := pipelineuc.NewDispatcher(env, &mediaRepo, publisher, aggregateAnalysisUseCase)
 
 	analyzer := heuristicsinfra.NewAnalyzer()

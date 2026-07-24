@@ -45,7 +45,9 @@ func (uc *GeneratePresignedUploadUrlUseCase) Execute(ctx context.Context, userID
 	filename := filepath.Base(input.Filename)
 
 	analysisEntity := entity.Analysis{
-		UserID: userID,
+		UserID:   userID,
+		Status:   enum.AnalysisStatusProcessing,
+		Statuses: []enum.AnalysisStatus{enum.AnalysisStatusProcessing},
 	}
 	if err := (*uc.analysisRepo).Create(ctx, &analysisEntity); err != nil {
 		return "", errors.New("failed to create analysis")

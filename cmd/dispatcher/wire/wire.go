@@ -7,6 +7,7 @@ import (
 	"go-api/infrastructure/messaging/rabbitmq"
 	"go-api/infrastructure/messaging/security"
 	repoGorm "go-api/repository/gorm"
+	analysisuc "go-api/usecase/analysis"
 	pipelineuc "go-api/usecase/pipeline"
 	"log"
 
@@ -31,7 +32,14 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	analysisRepo := repoGorm.NewAnalysisRepository(db)
 	signalRepo := repoGorm.NewSignalRepository(db)
 
-	aggregateAnalysisUseCase := pipelineuc.NewAggregateAnalysisUseCase(&mediaRepo, &analysisRepo, &signalRepo, centrifugoPublisher)
+	updateAnalysisStatusUseCase := analysisuc.NewUpdateAnalysisStatusUseCase(&analysisRepo)
+	aggregateAnalysisUseCase := pipelineuc.NewAggregateAnalysisUseCase(
+		&mediaRepo,
+		&analysisRepo,
+		&signalRepo,
+		updateAnalysisStatusUseCase,
+		centrifugoPublisher,
+	)
 	dispatcher := pipelineuc.NewDispatcher(env, &mediaRepo, publisher, aggregateAnalysisUseCase)
 
 	parser := security.NewWorkerParser(env)
