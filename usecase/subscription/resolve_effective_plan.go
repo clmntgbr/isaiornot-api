@@ -7,10 +7,6 @@ import (
 	"go-api/domain/repository"
 )
 
-// ResolveEffectivePlanUseCase resolves the plan a user is actually entitled to
-// right now. When the subscription is not active (past_due, cancelled,
-// inactive...), the user falls back to the free plan even though the "real"
-// plan on the subscription is unchanged.
 type ResolveEffectivePlanUseCase struct {
 	planRepo *repository.PlanRepository
 }

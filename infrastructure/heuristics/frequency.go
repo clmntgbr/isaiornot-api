@@ -63,7 +63,6 @@ func scoreFrequencySpectrum(spectrum []complex128, width, height int) float64 {
 	highRatio := highEnergy / totalEnergy
 	peakRatio := peakEnergy / (totalEnergy / float64(width*height))
 
-	// Useful against older GAN grids, weak against modern diffusion models.
 	switch {
 	case highRatio > 0.42 && peakRatio > 8:
 		return 62

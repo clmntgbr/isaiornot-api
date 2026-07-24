@@ -2,11 +2,6 @@ package subscription
 
 import "time"
 
-// CurrentQuotaPeriod returns the monthly quota window that contains now,
-// based on an anniversary anchor (QuotaPeriodStart).
-//
-// Example: anchor = July 10, now = July 15 → [July 10, August 10)
-// (i.e. July 10 through August 9 inclusive).
 func CurrentQuotaPeriod(anchor, now time.Time) (start, end time.Time) {
 	now = now.UTC()
 	anchor = anchor.UTC()

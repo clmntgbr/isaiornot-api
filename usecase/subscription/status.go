@@ -2,7 +2,6 @@ package subscription
 
 import "go-api/domain/entity"
 
-// MapStripeStatus converts a Stripe subscription status into our internal status.
 func MapStripeStatus(stripeStatus string) entity.SubscriptionStatus {
 	switch stripeStatus {
 	case "active", "trialing":

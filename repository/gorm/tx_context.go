@@ -8,7 +8,6 @@ import (
 
 type txCtxKey struct{}
 
-// ContextWithTx binds a *gorm.DB (typically a transaction) to ctx so repository methods use it.
 func ContextWithTx(ctx context.Context, db *gorm.DB) context.Context {
 	if db == nil {
 		return ctx

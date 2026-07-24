@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-// SubscriptionUpdatedUseCase handles customer.subscription.updated:
-// plan change (upgrade/downgrade), renewal, past_due, scheduled cancellation.
 type SubscriptionUpdatedUseCase struct {
 	planRepo         *repository.PlanRepository
 	subscriptionRepo *repository.SubscriptionRepository
@@ -62,6 +60,7 @@ func (u *SubscriptionUpdatedUseCase) Execute(ctx context.Context, input Subscrip
 	}
 
 	subscription.SubscriptionStatus = MapStripeStatus(input.Status)
+	subscription.CancelAtPeriodEnd = input.CancelAtPeriodEnd
 	if !input.CurrentPeriodStart.IsZero() {
 		subscription.SubscriptionStartDate = input.CurrentPeriodStart
 	}

@@ -64,8 +64,6 @@ func Compute(signals []entity.Signal) AggregationResult {
 	}
 }
 
-// AggregateMediaResults merges per-media aggregation results into one Analysis result.
-// Works the same for 1 or N medias: average score, confidence capped by agreement and weakest media.
 func AggregateMediaResults(results []AggregationResult) AggregationResult {
 	if len(results) == 0 {
 		return AggregationResult{

@@ -46,7 +46,6 @@ func channelEntropy(values []float64) float64 {
 
 	normalized := entropy / maxEntropy
 
-	// Very "clean" distributions can indicate synthetic rendering.
 	switch {
 	case normalized < 0.72:
 		return 62
@@ -60,7 +59,6 @@ func channelEntropy(values []float64) float64 {
 }
 
 func analyzeSaturationUniformity(img *GrayscaleImage) float64 {
-	// Grayscale-only decode: approximate saturation spread via local contrast regularity.
 	var localRanges []float64
 	window := 12
 

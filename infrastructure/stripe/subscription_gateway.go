@@ -10,7 +10,6 @@ import (
 	"github.com/stripe/stripe-go/v82/subscription"
 )
 
-// SubscriptionData is a flattened, framework-agnostic view of a Stripe subscription.
 type SubscriptionData struct {
 	ID                 string
 	CustomerID         string
@@ -49,7 +48,6 @@ func (g *SubscriptionGateway) Retrieve(ctx context.Context, subscriptionID strin
 	return ExtractSubscriptionData(sub), nil
 }
 
-// ExtractSubscriptionData flattens a *stripe.Subscription into SubscriptionData.
 func ExtractSubscriptionData(sub *stripe.Subscription) *SubscriptionData {
 	data := &SubscriptionData{
 		ID:                sub.ID,

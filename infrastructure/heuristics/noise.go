@@ -26,7 +26,6 @@ func AnalyzeNoise(img *GrayscaleImage) float64 {
 
 	coefficientOfVariation := std / mean
 
-	// Uniform noise texture across the image is more common in generated images.
 	switch {
 	case coefficientOfVariation < 0.25:
 		return 72

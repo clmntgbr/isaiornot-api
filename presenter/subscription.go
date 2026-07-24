@@ -56,6 +56,7 @@ type SubscriptionResponse struct {
 	StripeSubscriptionID string              `json:"stripeSubscriptionId"`
 	StartDate            time.Time           `json:"startDate"`
 	EndDate              time.Time           `json:"endDate"`
+	CancelAtPeriodEnd    bool                `json:"cancelAtPeriodEnd"`
 	QuotaPeriodStart     time.Time           `json:"quotaPeriodStart"`
 	Plan                 *PlanResponse       `json:"plan"`
 	EffectivePlan        *PlanResponse       `json:"effectivePlan"`
@@ -76,6 +77,7 @@ func NewSubscriptionResponse(
 		StripeSubscriptionID: sub.StripeSubscriptionID,
 		StartDate:            sub.SubscriptionStartDate,
 		EndDate:              sub.SubscriptionEndDate,
+		CancelAtPeriodEnd:    sub.CancelAtPeriodEnd,
 		QuotaPeriodStart:     sub.QuotaPeriodStart,
 		Plan:                 NewPlanResponse(&sub.Plan),
 		QuotaUsage:           NewQuotaUsageResponse(quotaUsage),

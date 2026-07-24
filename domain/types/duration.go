@@ -6,9 +6,6 @@ import (
 	"time"
 )
 
-// Duration wraps time.Duration and implements driver.Valuer/Scanner
-// to store it as a bigint (nanoseconds) in PostgreSQL,
-// since pgx with PreferSimpleProtocol would otherwise call .String() on time.Duration.
 type Duration time.Duration
 
 func NewDuration(d time.Duration) Duration {

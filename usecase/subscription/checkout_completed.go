@@ -12,9 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// CheckoutCompletedUseCase handles the checkout.session.completed event:
-// first successful payment (free -> paid). It links the Stripe customer and
-// subscription to the user and activates the chosen plan.
 type CheckoutCompletedUseCase struct {
 	userRepo            *repository.UserRepository
 	planRepo            *repository.PlanRepository
@@ -94,6 +91,7 @@ func (u *CheckoutCompletedUseCase) Execute(ctx context.Context, input CheckoutCo
 	subscription.StripeCustomerID = customerID
 	subscription.StripeSubscriptionID = subData.ID
 	subscription.SubscriptionStatus = status
+	subscription.CancelAtPeriodEnd = subData.CancelAtPeriodEnd
 	if !subData.CurrentPeriodStart.IsZero() {
 		subscription.SubscriptionStartDate = subData.CurrentPeriodStart
 	}
@@ -101,7 +99,6 @@ func (u *CheckoutCompletedUseCase) Execute(ctx context.Context, input CheckoutCo
 		subscription.SubscriptionEndDate = subData.CurrentPeriodEnd
 	}
 
-	// Reset quota anniversary only on free → paid (not on paid → paid upgrades).
 	wasFree := subscription.ID == uuid.Nil || subscription.Plan.Slug == entity.FreePlanSlug
 	if wasFree {
 		if !subData.CurrentPeriodStart.IsZero() {
@@ -128,8 +125,6 @@ func (u *CheckoutCompletedUseCase) Execute(ctx context.Context, input CheckoutCo
 		}
 	}
 
-	// payment_succeeded is notified from invoice.payment_succeeded only (fires on
-	// both the first payment and renewals), so we avoid a duplicate here.
 	u.notifier.Notify(ctx, subscription.ID)
 
 	log.Printf("checkout completed: user %s subscribed to plan %s (stripe sub %s)", user.ID, plan.Slug, subData.ID)

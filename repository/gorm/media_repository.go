@@ -63,9 +63,6 @@ func (r *mediaRepository) GetByKey(ctx context.Context, key string) (*entity.Med
 	return &media, nil
 }
 
-// CountUsageInPeriod counts billable uploads in [from, to).
-// Images: original image uploads (excludes video-extracted frames).
-// Videos: one count per analysis that produced frames (or still has video/*).
 func (r *mediaRepository) CountUsageInPeriod(ctx context.Context, userID uuid.UUID, from, to time.Time) (*repository.MediaUsageCounts, error) {
 	base := dbWithContext(ctx, r.db).Model(&entity.Media{}).
 		Where("user_id = ? AND created_at >= ? AND created_at < ?", userID, from, to)

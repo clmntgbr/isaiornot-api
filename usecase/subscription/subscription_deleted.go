@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-// SubscriptionDeletedUseCase handles customer.subscription.deleted:
-// the subscription actually ended. The user is reverted to the free plan.
 type SubscriptionDeletedUseCase struct {
 	planRepo         *repository.PlanRepository
 	subscriptionRepo *repository.SubscriptionRepository
@@ -55,6 +53,7 @@ func (u *SubscriptionDeletedUseCase) Execute(ctx context.Context, stripeSubscrip
 	subscription.PlanID = freePlan.ID
 	subscription.StripeSubscriptionID = ""
 	subscription.SubscriptionStatus = entity.SubscriptionStatusActive
+	subscription.CancelAtPeriodEnd = false
 	subscription.SubscriptionStartDate = now
 	subscription.SubscriptionEndDate = now.AddDate(100, 0, 0)
 	subscription.QuotaPeriodStart = now

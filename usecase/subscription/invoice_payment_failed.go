@@ -8,9 +8,6 @@ import (
 	"log"
 )
 
-// InvoicePaymentFailedUseCase handles invoice.payment_failed:
-// a charge failed (expired card, insufficient funds...). The subscription is
-// moved to past_due; Stripe automatically retries according to its policy.
 type InvoicePaymentFailedUseCase struct {
 	subscriptionRepo *repository.SubscriptionRepository
 	notifier         *Notifier
@@ -48,7 +45,6 @@ func (u *InvoicePaymentFailedUseCase) Execute(ctx context.Context, stripeSubscri
 	u.notifier.Notify(ctx, subscription.ID)
 	u.notifier.NotifyPaymentFailedAfter(subscription.ID)
 
-	// TODO: notify the user by email that their payment failed.
 	log.Printf("invoice payment failed: stripe sub %s marked past_due", stripeSubscriptionID)
 	return nil
 }

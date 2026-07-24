@@ -36,10 +36,8 @@ func setupHealthChecks(app *fiber.App) {
 func setupAPIRoutes(app *fiber.App, container *wire.Container) {
 	api := app.Group("/api")
 
-	// Public routes
 	setupPlanRoutes(api, container)
 
-	// Protected routes
 	api.Use(container.AuthenticateMiddleware.Protected())
 	setupUsersRoutes(api, container)
 	setupSubscriptionRoutes(api, container)

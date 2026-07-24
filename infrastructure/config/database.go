@@ -11,9 +11,6 @@ import (
 
 func ConnectDatabase(cfg *Config) *gorm.DB {
 	logLevel := logger.Warn
-	// if cfg.Environment == "development" {
-	// 	logLevel = logger.Info
-	// }
 
 	gormLogger := logger.New(
 		log.New(log.Writer(), "\r\n", log.LstdFlags),

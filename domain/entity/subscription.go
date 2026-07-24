@@ -29,9 +29,8 @@ type Subscription struct {
 	SubscriptionStartDate time.Time          `json:"subscription_start_date" gorm:"type:timestamp;not null"`
 	SubscriptionEndDate   time.Time          `json:"subscription_end_date" gorm:"type:timestamp;not null"`
 
-	// QuotaPeriodStart is the anniversary anchor used to compute the current
-	// monthly quota window. It only changes on free ↔ paid transitions — not on
-	// paid → paid plan changes or billing renewals.
+	CancelAtPeriodEnd bool `json:"cancel_at_period_end" gorm:"type:boolean;not null;default:false"`
+
 	QuotaPeriodStart time.Time `json:"quota_period_start" gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
 
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`

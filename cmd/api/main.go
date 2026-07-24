@@ -34,17 +34,6 @@ func main() {
 		MaxAge:           env.CORSMaxAge,
 	}))
 
-	// app.Use(limiter.New(limiter.Config{
-	// 	Max:        env.RateLimitMax,
-	// 	Expiration: 1 * time.Minute,
-	// 	LimitReached: func(c fiber.Ctx) error {
-	// 		log.Println("rate limit exceeded: ", c.IP(), c.Path(), c.Method())
-	// 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-	// 			"message": "too many requests, please try again later",
-	// 		})
-	// 	},
-	// }))
-
 	app.Use(logger.New(logger.Config{
 		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
 	}))
