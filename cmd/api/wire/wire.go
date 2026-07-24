@@ -126,7 +126,8 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		&subscriptionRepo,
 		subscriptionNotifier,
 	)
-	getUserSubscriptionUseCase := subscription.NewGetUserSubscriptionUseCase(&subscriptionRepo)
+	resolveEffectivePlanUseCase := subscription.NewResolveEffectivePlanUseCase(&planRepo)
+	getUserSubscriptionUseCase := subscription.NewGetUserSubscriptionUseCase(&subscriptionRepo, resolveEffectivePlanUseCase)
 
 	clerkMiddleware := middleware.NewClerkMiddleware(env.ClerkWebhookSecret)
 	minIOMiddleware := middleware.NewMinIOMiddleware(env.MinIOWebhookSecret)

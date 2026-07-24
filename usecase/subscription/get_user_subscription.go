@@ -10,18 +10,26 @@ import (
 var ErrSubscriptionNotFound = errors.New("subscription not found")
 
 type GetUserSubscriptionUseCase struct {
-	subscriptionRepo *repository.SubscriptionRepository
+	subscriptionRepo            *repository.SubscriptionRepository
+	resolveEffectivePlanUseCase *ResolveEffectivePlanUseCase
 }
 
 func NewGetUserSubscriptionUseCase(
 	subscriptionRepo *repository.SubscriptionRepository,
+	resolveEffectivePlanUseCase *ResolveEffectivePlanUseCase,
 ) *GetUserSubscriptionUseCase {
 	return &GetUserSubscriptionUseCase{
-		subscriptionRepo: subscriptionRepo,
+		subscriptionRepo:            subscriptionRepo,
+		resolveEffectivePlanUseCase: resolveEffectivePlanUseCase,
 	}
 }
 
-func (u *GetUserSubscriptionUseCase) Execute(ctx context.Context, user *entity.User) (*entity.Subscription, error) {
+type UserSubscription struct {
+	Subscription  *entity.Subscription
+	EffectivePlan *entity.Plan
+}
+
+func (u *GetUserSubscriptionUseCase) Execute(ctx context.Context, user *entity.User) (*UserSubscription, error) {
 	if user == nil {
 		return nil, errors.New("user is required")
 	}
@@ -37,5 +45,13 @@ func (u *GetUserSubscriptionUseCase) Execute(ctx context.Context, user *entity.U
 		return nil, ErrSubscriptionNotFound
 	}
 
-	return subscription, nil
+	effectivePlan, err := u.resolveEffectivePlanUseCase.Execute(ctx, subscription)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UserSubscription{
+		Subscription:  subscription,
+		EffectivePlan: effectivePlan,
+	}, nil
 }

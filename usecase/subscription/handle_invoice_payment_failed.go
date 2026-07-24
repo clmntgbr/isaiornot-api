@@ -46,6 +46,7 @@ func (u *HandleInvoicePaymentFailedUseCase) Execute(ctx context.Context, stripeS
 	}
 
 	u.notifier.Notify(ctx, subscription.ID)
+	u.notifier.NotifyPaymentFailedAfter(subscription.ID)
 
 	// TODO: notify the user by email that their payment failed.
 	log.Printf("invoice payment failed: stripe sub %s marked past_due", stripeSubscriptionID)

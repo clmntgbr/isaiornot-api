@@ -62,7 +62,7 @@ func (u *HandleInvoicePaymentSucceededUseCase) Execute(ctx context.Context, inpu
 	}
 
 	u.notifier.Notify(ctx, subscription.ID)
-	u.notifier.NotifyPaymentSucceeded(ctx, subscription.ID)
+	u.notifier.NotifyPaymentSucceededAfter(subscription.ID)
 
 	log.Printf("invoice payment succeeded: stripe sub %s confirmed active", input.StripeSubscriptionID)
 	return nil

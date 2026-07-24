@@ -40,7 +40,7 @@ func (h *UserHandler) GetSubscription(c fiber.Ctx) error {
 		})
 	}
 
-	sub, err := h.getUserSubscriptionUseCase.Execute(c.Context(), user)
+	result, err := h.getUserSubscriptionUseCase.Execute(c.Context(), user)
 	if err != nil {
 		if errors.Is(err, subscription.ErrSubscriptionNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -53,5 +53,5 @@ func (h *UserHandler) GetSubscription(c fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(presenter.NewSubscriptionResponse(sub))
+	return c.Status(fiber.StatusOK).JSON(presenter.NewSubscriptionResponse(result.Subscription, result.EffectivePlan))
 }

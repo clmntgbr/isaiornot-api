@@ -21,12 +21,13 @@ type SubscriptionResponse struct {
 	StartDate            time.Time     `json:"startDate"`
 	EndDate              time.Time     `json:"endDate"`
 	Plan                 *PlanResponse `json:"plan"`
+	EffectivePlan        *PlanResponse `json:"effectivePlan"`
 	CreatedAt            time.Time     `json:"createdAt"`
 	UpdatedAt            time.Time     `json:"updatedAt"`
 }
 
-func NewSubscriptionResponse(subscription *entity.Subscription) *SubscriptionResponse {
-	return &SubscriptionResponse{
+func NewSubscriptionResponse(subscription *entity.Subscription, effectivePlan *entity.Plan) *SubscriptionResponse {
+	response := &SubscriptionResponse{
 		ID:                   subscription.ID.String(),
 		Status:               string(subscription.SubscriptionStatus),
 		StripeCustomerID:     subscription.StripeCustomerID,
@@ -37,4 +38,12 @@ func NewSubscriptionResponse(subscription *entity.Subscription) *SubscriptionRes
 		CreatedAt:            subscription.CreatedAt,
 		UpdatedAt:            subscription.UpdatedAt,
 	}
+
+	if effectivePlan != nil {
+		response.EffectivePlan = NewPlanResponse(effectivePlan)
+	} else {
+		response.EffectivePlan = response.Plan
+	}
+
+	return response
 }

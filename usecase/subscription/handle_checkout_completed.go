@@ -118,6 +118,7 @@ func (u *HandleCheckoutCompletedUseCase) Execute(ctx context.Context, input Hand
 	}
 
 	u.notifier.Notify(ctx, subscription.ID)
+	u.notifier.NotifyPaymentSucceededAfter(subscription.ID)
 
 	log.Printf("checkout completed: user %s subscribed to plan %s (stripe sub %s)", user.ID, plan.Slug, subData.ID)
 	return nil

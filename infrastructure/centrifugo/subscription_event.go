@@ -12,6 +12,7 @@ import (
 const (
 	EventSubscriptionUpdated = "subscription_updated"
 	EventPaymentSucceeded    = "payment_succeeded"
+	EventPaymentFailed       = "payment_failed"
 )
 
 type SubscriptionEvent struct {
