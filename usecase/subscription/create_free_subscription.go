@@ -45,6 +45,7 @@ func (u *CreateFreeSubscriptionUseCase) Execute(ctx context.Context, user *entit
 		SubscriptionStatus:    entity.SubscriptionStatusActive,
 		SubscriptionStartDate: now,
 		SubscriptionEndDate:   now.AddDate(100, 0, 0),
+		QuotaPeriodStart:      now,
 	}
 
 	if err := (*u.subscriptionRepo).Create(ctx, &subscription); err != nil {

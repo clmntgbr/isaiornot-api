@@ -5,6 +5,7 @@ import (
 	"errors"
 	"go-api/domain/entity"
 	"go-api/domain/repository"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -60,4 +61,32 @@ func (r *mediaRepository) GetByKey(ctx context.Context, key string) (*entity.Med
 		return nil, errors.New("media not found")
 	}
 	return &media, nil
+}
+
+// CountUsageInPeriod counts billable uploads in [from, to).
+// Images: original image uploads (excludes video-extracted frames).
+// Videos: one count per analysis that produced frames (or still has video/*).
+func (r *mediaRepository) CountUsageInPeriod(ctx context.Context, userID uuid.UUID, from, to time.Time) (*repository.MediaUsageCounts, error) {
+	base := dbWithContext(ctx, r.db).Model(&entity.Media{}).
+		Where("user_id = ? AND created_at >= ? AND created_at < ?", userID, from, to)
+
+	var images int64
+	if err := base.Session(&gorm.Session{}).
+		Where("content_type LIKE ? AND key NOT LIKE ?", "image/%", "frames/%").
+		Count(&images).Error; err != nil {
+		return nil, err
+	}
+
+	var videos int64
+	if err := base.Session(&gorm.Session{}).
+		Where("key LIKE ? OR content_type LIKE ?", "frames/%", "video/%").
+		Select("COUNT(DISTINCT analysis_id)").
+		Scan(&videos).Error; err != nil {
+		return nil, err
+	}
+
+	return &repository.MediaUsageCounts{
+		Images: images,
+		Videos: videos,
+	}, nil
 }

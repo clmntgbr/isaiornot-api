@@ -121,7 +121,7 @@ func (h *ClerkHandler) CreateUser(c fiber.Ctx, data clerkdto.ClerkUserCreated) e
 	}
 
 	txFunc := func(_ *gorm.DB) error {
-		user, err = h.createUserUseCase.Execute(c.Context(), data.ID, data.FirstName, data.LastName, *data.Banned)
+		user, err = h.createUserUseCase.Execute(c.Context(), data.ID, data.FirstName, data.LastName, *data.Banned, data.Email)
 		if err != nil {
 			log.Printf("Error creating user with Clerk ID %s: %v", data.ID, err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -131,10 +131,6 @@ func (h *ClerkHandler) CreateUser(c fiber.Ctx, data clerkdto.ClerkUserCreated) e
 
 		log.Printf("Successfully created user with Clerk ID %s", data.ID)
 		return nil
-	}
-
-	if err := txFunc(nil); err != nil {
-		return err
 	}
 
 	return txFunc(nil)
@@ -159,6 +155,9 @@ func (h *ClerkHandler) UpdateUser(c fiber.Ctx, data clerkdto.ClerkUserUpdated) e
 	user.FirstName = data.FirstName
 	user.LastName = data.LastName
 	user.Banned = *data.Banned
+	if data.Email != "" {
+		user.Email = data.Email
+	}
 
 	if err := h.updateUserUseCase.Execute(c.Context(), user); err != nil {
 		log.Printf("Error updating user with Clerk ID %s: %v", data.ID, err)

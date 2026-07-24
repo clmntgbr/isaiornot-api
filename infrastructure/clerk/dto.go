@@ -2,25 +2,61 @@ package clerk
 
 import "encoding/json"
 
+type ClerkEmailAddress struct {
+	ID           string `json:"id"`
+	EmailAddress string `json:"email_address"`
+}
+
 type ClerkUserCreated struct {
-	ID        string `json:"id" validate:"required"`
-	FirstName string `json:"first_name" validate:"omitempty"`
-	LastName  string `json:"last_name" validate:"omitempty"`
-	Banned    *bool  `json:"banned" validate:"required"`
+	ID             string              `json:"id" validate:"required"`
+	FirstName      string              `json:"first_name" validate:"omitempty"`
+	LastName       string              `json:"last_name" validate:"omitempty"`
+	Banned         *bool               `json:"banned" validate:"required"`
+	EmailAddresses []ClerkEmailAddress `json:"email_addresses"`
+	Email          string              `json:"-"`
+}
+
+func (u *ClerkUserCreated) UnmarshalJSON(data []byte) error {
+	type rawClerkUserCreated ClerkUserCreated
+	var raw rawClerkUserCreated
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*u = ClerkUserCreated(raw)
+	if len(u.EmailAddresses) > 0 {
+		u.Email = u.EmailAddresses[0].EmailAddress
+	}
+	return nil
 }
 
 type ClerkUser struct {
 	ID        string `json:"id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
+	Email     string `json:"email"`
 	Banned    bool   `json:"banned"`
 }
 
 type ClerkUserUpdated struct {
-	ID        string `json:"id" validate:"required"`
-	FirstName string `json:"first_name" validate:"omitempty"`
-	LastName  string `json:"last_name" validate:"omitempty"`
-	Banned    *bool  `json:"banned" validate:"required"`
+	ID             string              `json:"id" validate:"required"`
+	FirstName      string              `json:"first_name" validate:"omitempty"`
+	LastName       string              `json:"last_name" validate:"omitempty"`
+	Banned         *bool               `json:"banned" validate:"required"`
+	EmailAddresses []ClerkEmailAddress `json:"email_addresses"`
+	Email          string              `json:"-"`
+}
+
+func (u *ClerkUserUpdated) UnmarshalJSON(data []byte) error {
+	type rawClerkUserUpdated ClerkUserUpdated
+	var raw rawClerkUserUpdated
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*u = ClerkUserUpdated(raw)
+	if len(u.EmailAddresses) > 0 {
+		u.Email = u.EmailAddresses[0].EmailAddress
+	}
+	return nil
 }
 
 type ClerkUserDeleted struct {

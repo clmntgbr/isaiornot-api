@@ -37,10 +37,22 @@ func (s *FetchUserUseCase) Execute(ctx context.Context, clerkID string) (clerkdt
 
 	banned := clerkUser.Banned
 
+	email := ""
+	for _, address := range clerkUser.EmailAddresses {
+		if clerkUser.PrimaryEmailAddressID != nil && address.ID == *clerkUser.PrimaryEmailAddressID {
+			email = address.EmailAddress
+			break
+		}
+	}
+	if email == "" && len(clerkUser.EmailAddresses) > 0 {
+		email = clerkUser.EmailAddresses[0].EmailAddress
+	}
+
 	return clerkdto.ClerkUser{
 		ID:        clerkUser.ID,
 		FirstName: firstName,
 		LastName:  lastName,
+		Email:     email,
 		Banned:    banned,
 	}, nil
 }

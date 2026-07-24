@@ -12,6 +12,7 @@ type User struct {
 	FirstName string    `gorm:"null" json:"first_name"`
 	LastName  string    `gorm:"null" json:"last_name"`
 	Banned    bool      `gorm:"default:false;index:idx_user_banned" json:"banned"`
+	Email     string    `gorm:"uniqueIndex;not null" json:"email"`
 
 	SubscriptionID *uuid.UUID    `gorm:"type:uuid;index:idx_user_subscription_id" json:"subscription_id"`
 	Subscription   *Subscription `gorm:"foreignKey:SubscriptionID" json:"subscription"`

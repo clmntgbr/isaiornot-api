@@ -17,6 +17,7 @@ func setupWebhooks(app *fiber.App, container *wire.Container) {
 	webhooks := app.Group("/webhook")
 
 	webhooks.Post("/clerk", container.ClerkMiddleware.Protected(), container.ClerkHandler.Execute)
+	webhooks.Post("/stripe", container.StripeMiddleware.Protected(), container.StripeHandler.Execute)
 
 	minioWebhooks := app.Group("/webhooks/minio")
 	minioWebhooks.Post(
@@ -41,9 +42,16 @@ func setupAPIRoutes(app *fiber.App, container *wire.Container) {
 	// Protected routes
 	api.Use(container.AuthenticateMiddleware.Protected())
 	setupUsersRoutes(api, container)
+	setupSubscriptionRoutes(api, container)
 	setupAnalysisRoutes(api, container)
 	setupMediaRoutes(api, container)
 	setupRealtimeRoutes(api, container)
+}
+
+func setupSubscriptionRoutes(api fiber.Router, container *wire.Container) {
+	api.Get("/subscription", container.SubscriptionHandler.GetSubscription)
+	api.Post("/subscriptions", container.SubscriptionHandler.CreateSubscription)
+	api.Get("/subscriptions/portal", container.SubscriptionHandler.CreateBillingPortal)
 }
 
 func setupRealtimeRoutes(api fiber.Router, container *wire.Container) {

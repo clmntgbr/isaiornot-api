@@ -41,6 +41,35 @@ func (r *planRepository) GetAll(ctx context.Context) ([]*entity.Plan, error) {
 	return plans, nil
 }
 
+func (r *planRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Plan, error) {
+	var plan entity.Plan
+	err := dbWithContext(ctx, r.db).
+		Preload("Quota").
+		First(&plan, "id = ?", id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &plan, nil
+}
+
+func (r *planRepository) GetByStripePriceID(ctx context.Context, stripePriceID string) (*entity.Plan, error) {
+	var plan entity.Plan
+	err := dbWithContext(ctx, r.db).
+		Preload("Quota").
+		Where("stripe_price_id = ?", stripePriceID).
+		First(&plan).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &plan, nil
+}
+
 func (r *planRepository) GetBySlug(ctx context.Context, slug string) (*entity.Plan, error) {
 	var plan entity.Plan
 	err := dbWithContext(ctx, r.db).

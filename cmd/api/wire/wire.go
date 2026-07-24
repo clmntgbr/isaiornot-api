@@ -8,6 +8,7 @@ import (
 	"go-api/infrastructure/config"
 	"go-api/infrastructure/messaging/rabbitmq"
 	"go-api/infrastructure/storage"
+	infraStripe "go-api/infrastructure/stripe"
 	"go-api/infrastructure/video"
 	repoGorm "go-api/repository/gorm"
 	"go-api/usecase/analysis"
@@ -27,6 +28,7 @@ type Container struct {
 	AuthenticateMiddleware *middleware.AuthenticateMiddleware
 	ClerkMiddleware        *middleware.ClerkMiddleware
 	MinIOMiddleware        *middleware.MinIOMiddleware
+	StripeMiddleware       *middleware.StripeMiddleware
 	ClerkHandler           *handler.ClerkHandler
 	MinIOHandler           *handler.MinIOHandler
 	UserHandler            *handler.UserHandler
@@ -34,6 +36,8 @@ type Container struct {
 	MediaHandler           *handler.MediaHandler
 	RealtimeHandler        *handler.RealtimeHandler
 	PlanHandler            *handler.PlanHandler
+	StripeHandler          *handler.StripeHandler
+	SubscriptionHandler    *handler.SubscriptionHandler
 }
 
 func NewContainer(db *gorm.DB, env *config.Config) *Container {
@@ -89,9 +93,55 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	)
 
 	getPlansUseCase := plan.NewGetPlansUseCase(&planRepo)
+	checkoutSessionGateway := infraStripe.NewCheckoutSessionGateway(env)
+	subscriptionGateway := infraStripe.NewSubscriptionGateway(env)
+	createSubscriptionUseCase := subscription.NewCreateSubscriptionUseCase(
+		&planRepo,
+		fetchUserUseCase,
+		checkoutSessionGateway,
+	)
+	billingPortalGateway := infraStripe.NewBillingPortalGateway(env)
+	createBillingPortalUseCase := subscription.NewCreateBillingPortalUseCase(
+		&subscriptionRepo,
+		billingPortalGateway,
+	)
+	subscriptionNotifier := subscription.NewNotifier(&userRepo, &subscriptionRepo, centrifugoPublisher)
+	checkoutCompletedUseCase := subscription.NewCheckoutCompletedUseCase(
+		&userRepo,
+		&planRepo,
+		&subscriptionRepo,
+		subscriptionGateway,
+		subscriptionNotifier,
+	)
+	subscriptionUpdatedUseCase := subscription.NewSubscriptionUpdatedUseCase(
+		&planRepo,
+		&subscriptionRepo,
+		subscriptionNotifier,
+	)
+	subscriptionDeletedUseCase := subscription.NewSubscriptionDeletedUseCase(
+		&planRepo,
+		&subscriptionRepo,
+		subscriptionNotifier,
+	)
+	invoicePaymentSucceededUseCase := subscription.NewInvoicePaymentSucceededUseCase(
+		&subscriptionRepo,
+		subscriptionNotifier,
+	)
+	invoicePaymentFailedUseCase := subscription.NewInvoicePaymentFailedUseCase(
+		&subscriptionRepo,
+		subscriptionNotifier,
+	)
+	resolveEffectivePlanUseCase := subscription.NewResolveEffectivePlanUseCase(&planRepo)
+	getQuotaUsageUseCase := subscription.NewGetQuotaUsageUseCase(&mediaRepo)
+	getUserSubscriptionUseCase := subscription.NewGetUserSubscriptionUseCase(
+		&subscriptionRepo,
+		resolveEffectivePlanUseCase,
+		getQuotaUsageUseCase,
+	)
 
 	clerkMiddleware := middleware.NewClerkMiddleware(env.ClerkWebhookSecret)
 	minIOMiddleware := middleware.NewMinIOMiddleware(env.MinIOWebhookSecret)
+	stripeMiddleware := middleware.NewStripeMiddleware(env.StripeWebhookSecret)
 	authenticateMiddleware := middleware.NewAuthenticateMiddleware(
 		validateTokenUseCase,
 		fetchUserUseCase,
@@ -103,6 +153,14 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		AuthenticateMiddleware: authenticateMiddleware,
 		ClerkMiddleware:        clerkMiddleware,
 		MinIOMiddleware:        minIOMiddleware,
+		StripeMiddleware:       stripeMiddleware,
+		StripeHandler: handler.NewStripeHandler(
+			checkoutCompletedUseCase,
+			subscriptionUpdatedUseCase,
+			subscriptionDeletedUseCase,
+			invoicePaymentSucceededUseCase,
+			invoicePaymentFailedUseCase,
+		),
 		ClerkHandler: handler.NewClerkHandler(
 			getUserByClerkIDUseCase,
 			createUserUseCase,
@@ -127,6 +185,11 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		RealtimeHandler: handler.NewRealtimeHandler(env),
 		PlanHandler: handler.NewPlanHandler(
 			getPlansUseCase,
+		),
+		SubscriptionHandler: handler.NewSubscriptionHandler(
+			createSubscriptionUseCase,
+			createBillingPortalUseCase,
+			getUserSubscriptionUseCase,
 		),
 	}
 }

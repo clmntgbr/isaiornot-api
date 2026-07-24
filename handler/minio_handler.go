@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"strings"
+	"time"
 
 	mediadto "go-api/infrastructure/media"
 	miniodto "go-api/infrastructure/minio"
@@ -13,7 +15,7 @@ import (
 )
 
 type MinIOHandler struct {
-	mediaBucket                string
+	mediaBucket                 string
 	processUploadedMediaUseCase *media.ProcessUploadedMediaUseCase
 }
 
@@ -38,6 +40,17 @@ func (h *MinIOHandler) ObjectCreated(c fiber.Ctx) error {
 		})
 	}
 
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+
+		h.process(ctx, event)
+	}()
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
+func (h *MinIOHandler) process(ctx context.Context, event miniodto.ObjectCreatedEvent) {
 	for _, record := range event.Records {
 		if record.S3.Bucket.Name != h.mediaBucket {
 			continue
@@ -70,7 +83,7 @@ func (h *MinIOHandler) ObjectCreated(c fiber.Ctx) error {
 		}
 
 		err = h.processUploadedMediaUseCase.Execute(
-			c.Context(),
+			ctx,
 			userID,
 			fileKey,
 			record.S3.Object.ContentType,
@@ -81,6 +94,4 @@ func (h *MinIOHandler) ObjectCreated(c fiber.Ctx) error {
 			continue
 		}
 	}
-
-	return c.SendStatus(fiber.StatusOK)
 }

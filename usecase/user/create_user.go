@@ -23,12 +23,13 @@ func NewCreateUserUseCase(
 	}
 }
 
-func (u *CreateUserUseCase) Execute(ctx context.Context, clerkID string, firstName string, lastName string, banned bool) (*entity.User, error) {
+func (u *CreateUserUseCase) Execute(ctx context.Context, clerkID string, firstName string, lastName string, banned bool, email string) (*entity.User, error) {
 	user := entity.User{
 		ClerkID:   clerkID,
 		FirstName: firstName,
 		LastName:  lastName,
 		Banned:    banned,
+		Email:     email,
 	}
 
 	err := (*u.userRepo).Create(ctx, &user)
