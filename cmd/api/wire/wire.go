@@ -100,6 +100,11 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		fetchUserUseCase,
 		checkoutSessionGateway,
 	)
+	billingPortalGateway := infraStripe.NewBillingPortalGateway(env)
+	createBillingPortalUseCase := subscription.NewCreateBillingPortalUseCase(
+		&subscriptionRepo,
+		billingPortalGateway,
+	)
 	subscriptionNotifier := subscription.NewNotifier(&userRepo, &subscriptionRepo, centrifugoPublisher)
 	checkoutCompletedUseCase := subscription.NewCheckoutCompletedUseCase(
 		&userRepo,
@@ -127,7 +132,12 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		subscriptionNotifier,
 	)
 	resolveEffectivePlanUseCase := subscription.NewResolveEffectivePlanUseCase(&planRepo)
-	getUserSubscriptionUseCase := subscription.NewGetUserSubscriptionUseCase(&subscriptionRepo, resolveEffectivePlanUseCase)
+	getQuotaUsageUseCase := subscription.NewGetQuotaUsageUseCase(&mediaRepo)
+	getUserSubscriptionUseCase := subscription.NewGetUserSubscriptionUseCase(
+		&subscriptionRepo,
+		resolveEffectivePlanUseCase,
+		getQuotaUsageUseCase,
+	)
 
 	clerkMiddleware := middleware.NewClerkMiddleware(env.ClerkWebhookSecret)
 	minIOMiddleware := middleware.NewMinIOMiddleware(env.MinIOWebhookSecret)
@@ -161,9 +171,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 			env.StorageBucket,
 			processUploadedMediaUseCase,
 		),
-		UserHandler: handler.NewUserHandler(
-			getUserSubscriptionUseCase,
-		),
+		UserHandler: handler.NewUserHandler(),
 		AnalysisHandler: handler.NewAnalysisHandler(
 			generatePresignedUploadUrlUseCase,
 			getAnalysisUseCase,
@@ -180,6 +188,8 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		),
 		SubscriptionHandler: handler.NewSubscriptionHandler(
 			createSubscriptionUseCase,
+			createBillingPortalUseCase,
+			getUserSubscriptionUseCase,
 		),
 	}
 }

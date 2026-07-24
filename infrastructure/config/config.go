@@ -60,6 +60,7 @@ type Config struct {
 	StripeWebhookSecret string
 	RedirectSuccessURL  string
 	RedirectCancelURL   string
+	RedirectPortalURL   string
 }
 
 func Load() *Config {
@@ -118,6 +119,7 @@ func Load() *Config {
 		StripeWebhookSecret: getEnvOrDefault("STRIPE_WEBHOOK_SECRET", ""),
 		RedirectSuccessURL:  getEnvOrDefault("REDIRECT_SUCCESS_URL", "http://localhost:3000/subscription/success"),
 		RedirectCancelURL:   getEnvOrDefault("REDIRECT_CANCEL_URL", "http://localhost:3000/subscription/failed"),
+		RedirectPortalURL:   getEnvOrDefault("REDIRECT_PORTAL_URL", "http://localhost:3000/subscription"),
 	}
 }
 

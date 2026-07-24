@@ -7,6 +7,7 @@ import (
 	"go-api/domain/repository"
 	"go-api/infrastructure/stripe"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -98,6 +99,16 @@ func (u *CheckoutCompletedUseCase) Execute(ctx context.Context, input CheckoutCo
 	}
 	if !subData.CurrentPeriodEnd.IsZero() {
 		subscription.SubscriptionEndDate = subData.CurrentPeriodEnd
+	}
+
+	// Reset quota anniversary only on free → paid (not on paid → paid upgrades).
+	wasFree := subscription.ID == uuid.Nil || subscription.Plan.Slug == entity.FreePlanSlug
+	if wasFree {
+		if !subData.CurrentPeriodStart.IsZero() {
+			subscription.QuotaPeriodStart = subData.CurrentPeriodStart
+		} else {
+			subscription.QuotaPeriodStart = time.Now().UTC()
+		}
 	}
 
 	if subscription.ID == uuid.Nil {

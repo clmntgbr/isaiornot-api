@@ -12,21 +12,25 @@ var ErrSubscriptionNotFound = errors.New("subscription not found")
 type GetUserSubscriptionUseCase struct {
 	subscriptionRepo            *repository.SubscriptionRepository
 	resolveEffectivePlanUseCase *ResolveEffectivePlanUseCase
+	getQuotaUsageUseCase        *GetQuotaUsageUseCase
 }
 
 func NewGetUserSubscriptionUseCase(
 	subscriptionRepo *repository.SubscriptionRepository,
 	resolveEffectivePlanUseCase *ResolveEffectivePlanUseCase,
+	getQuotaUsageUseCase *GetQuotaUsageUseCase,
 ) *GetUserSubscriptionUseCase {
 	return &GetUserSubscriptionUseCase{
 		subscriptionRepo:            subscriptionRepo,
 		resolveEffectivePlanUseCase: resolveEffectivePlanUseCase,
+		getQuotaUsageUseCase:        getQuotaUsageUseCase,
 	}
 }
 
 type UserSubscription struct {
 	Subscription  *entity.Subscription
 	EffectivePlan *entity.Plan
+	QuotaUsage    *QuotaUsage
 }
 
 func (u *GetUserSubscriptionUseCase) Execute(ctx context.Context, user *entity.User) (*UserSubscription, error) {
@@ -50,8 +54,14 @@ func (u *GetUserSubscriptionUseCase) Execute(ctx context.Context, user *entity.U
 		return nil, err
 	}
 
+	quotaUsage, err := u.getQuotaUsageUseCase.Execute(ctx, user, subscription, effectivePlan)
+	if err != nil {
+		return nil, err
+	}
+
 	return &UserSubscription{
 		Subscription:  subscription,
 		EffectivePlan: effectivePlan,
+		QuotaUsage:    quotaUsage,
 	}, nil
 }

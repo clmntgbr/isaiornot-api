@@ -58,7 +58,7 @@ func (u *InvoicePaymentSucceededUseCase) Execute(ctx context.Context, input Invo
 	}
 
 	if input.BillingReason == "subscription_cycle" {
-		log.Printf("invoice payment succeeded: new billing period for stripe sub %s, monthly usage should be reset", input.StripeSubscriptionID)
+		log.Printf("invoice payment succeeded: new billing period for stripe sub %s", input.StripeSubscriptionID)
 	}
 
 	u.notifier.Notify(ctx, subscription.ID)

@@ -57,6 +57,7 @@ func (u *SubscriptionDeletedUseCase) Execute(ctx context.Context, stripeSubscrip
 	subscription.SubscriptionStatus = entity.SubscriptionStatusActive
 	subscription.SubscriptionStartDate = now
 	subscription.SubscriptionEndDate = now.AddDate(100, 0, 0)
+	subscription.QuotaPeriodStart = now
 
 	if err := (*u.subscriptionRepo).Update(ctx, subscription); err != nil {
 		return errors.New("failed to update subscription")
