@@ -5,7 +5,7 @@ import (
 
 	rabbitmqDTO "go-api/infrastructure/messaging/rabbitmq"
 	"go-api/infrastructure/messaging/security"
-	pipelineuc "go-api/usecase/pipeline"
+	pipelineUseCase "go-api/usecase/pipeline"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -13,13 +13,13 @@ import (
 type AnalyzeRequestHandler struct {
 	parser            *security.WorkerParser
 	securityValidator *security.WorkerSecurityValidator
-	dispatcher        *pipelineuc.Dispatcher
+	dispatcher        *pipelineUseCase.Dispatcher
 }
 
 func NewAnalyzeRequestHandler(
 	parser *security.WorkerParser,
 	securityValidator *security.WorkerSecurityValidator,
-	dispatcher *pipelineuc.Dispatcher,
+	dispatcher *pipelineUseCase.Dispatcher,
 ) *AnalyzeRequestHandler {
 	return &AnalyzeRequestHandler{
 		parser:            parser,
@@ -47,13 +47,13 @@ func (h *AnalyzeRequestHandler) HandleMessage(ctx context.Context, message *amqp
 type StageDoneHandler struct {
 	parser            *security.WorkerParser
 	securityValidator *security.WorkerSecurityValidator
-	dispatcher        *pipelineuc.Dispatcher
+	dispatcher        *pipelineUseCase.Dispatcher
 }
 
 func NewStageDoneHandler(
 	parser *security.WorkerParser,
 	securityValidator *security.WorkerSecurityValidator,
-	dispatcher *pipelineuc.Dispatcher,
+	dispatcher *pipelineUseCase.Dispatcher,
 ) *StageDoneHandler {
 	return &StageDoneHandler{
 		parser:            parser,
@@ -82,7 +82,7 @@ type StageWorkerHandler struct {
 	stage             string
 	parser            *security.WorkerParser
 	securityValidator *security.WorkerSecurityValidator
-	dispatcher        *pipelineuc.Dispatcher
+	dispatcher        *pipelineUseCase.Dispatcher
 	process           func(ctx context.Context, message rabbitmqDTO.AnalyzeMessage) error
 }
 
@@ -90,7 +90,7 @@ func NewStageWorkerHandler(
 	stage string,
 	parser *security.WorkerParser,
 	securityValidator *security.WorkerSecurityValidator,
-	dispatcher *pipelineuc.Dispatcher,
+	dispatcher *pipelineUseCase.Dispatcher,
 	process func(ctx context.Context, message rabbitmqDTO.AnalyzeMessage) error,
 ) *StageWorkerHandler {
 	return &StageWorkerHandler{

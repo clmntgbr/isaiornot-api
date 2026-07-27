@@ -5,8 +5,8 @@ import (
 
 	rabbitmqDTO "go-api/infrastructure/messaging/rabbitmq"
 	"go-api/infrastructure/messaging/security"
-	metadatauc "go-api/usecase/metadata"
-	pipelineuc "go-api/usecase/pipeline"
+	metadataUseCase "go-api/usecase/metadata"
+	pipelineUseCase "go-api/usecase/pipeline"
 	"go-api/usecase/signal"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -15,16 +15,16 @@ import (
 type MetadataHandler struct {
 	parser                      *security.WorkerParser
 	securityValidator           *security.WorkerSecurityValidator
-	dispatcher                  *pipelineuc.Dispatcher
-	analyzeMediaMetadataUseCase *metadatauc.AnalyzeMediaMetadataUseCase
+	dispatcher                  *pipelineUseCase.Dispatcher
+	analyzeMediaMetadataUseCase *metadataUseCase.AnalyzeMediaMetadataUseCase
 	createSignalUseCase         *signal.CreateSignalUseCase
 }
 
 func NewMetadataHandler(
 	parser *security.WorkerParser,
 	securityValidator *security.WorkerSecurityValidator,
-	dispatcher *pipelineuc.Dispatcher,
-	analyzeMediaMetadataUseCase *metadatauc.AnalyzeMediaMetadataUseCase,
+	dispatcher *pipelineUseCase.Dispatcher,
+	analyzeMediaMetadataUseCase *metadataUseCase.AnalyzeMediaMetadataUseCase,
 	createSignalUseCase *signal.CreateSignalUseCase,
 ) *MetadataHandler {
 	return &MetadataHandler{

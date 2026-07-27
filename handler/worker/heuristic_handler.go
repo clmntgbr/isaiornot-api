@@ -5,9 +5,9 @@ import (
 
 	rabbitmqDTO "go-api/infrastructure/messaging/rabbitmq"
 	"go-api/infrastructure/messaging/security"
-	heuristicuc "go-api/usecase/heuristic"
-	insightuc "go-api/usecase/insight"
-	pipelineuc "go-api/usecase/pipeline"
+	heuristicUseCase "go-api/usecase/heuristic"
+	insightUseCase "go-api/usecase/insight"
+	pipelineUseCase "go-api/usecase/pipeline"
 	"go-api/usecase/signal"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -16,19 +16,19 @@ import (
 type HeuristicHandler struct {
 	parser                        *security.WorkerParser
 	securityValidator             *security.WorkerSecurityValidator
-	dispatcher                    *pipelineuc.Dispatcher
-	analyzeMediaHeuristicsUseCase *heuristicuc.AnalyzeMediaHeuristicsUseCase
+	dispatcher                    *pipelineUseCase.Dispatcher
+	analyzeMediaHeuristicsUseCase *heuristicUseCase.AnalyzeMediaHeuristicsUseCase
 	createSignalUseCase           *signal.CreateSignalUseCase
-	createInsightUseCase          *insightuc.CreateInsightUseCase
+	createInsightUseCase          *insightUseCase.CreateInsightUseCase
 }
 
 func NewHeuristicHandler(
 	parser *security.WorkerParser,
 	securityValidator *security.WorkerSecurityValidator,
-	dispatcher *pipelineuc.Dispatcher,
-	analyzeMediaHeuristicsUseCase *heuristicuc.AnalyzeMediaHeuristicsUseCase,
+	dispatcher *pipelineUseCase.Dispatcher,
+	analyzeMediaHeuristicsUseCase *heuristicUseCase.AnalyzeMediaHeuristicsUseCase,
 	createSignalUseCase *signal.CreateSignalUseCase,
-	createInsightUseCase *insightuc.CreateInsightUseCase,
+	createInsightUseCase *insightUseCase.CreateInsightUseCase,
 ) *HeuristicHandler {
 	return &HeuristicHandler{
 		parser:                        parser,

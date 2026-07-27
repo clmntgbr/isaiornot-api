@@ -8,8 +8,8 @@ import (
 	"go-api/infrastructure/messaging/rabbitmq"
 	"go-api/infrastructure/messaging/security"
 	repoGorm "go-api/repository/gorm"
-	pipelineuc "go-api/usecase/pipeline"
-	scanuc "go-api/usecase/scan"
+	pipelineUseCase "go-api/usecase/pipeline"
+	scanUseCase "go-api/usecase/scan"
 
 	"gorm.io/gorm"
 )
@@ -20,7 +20,7 @@ type Shared struct {
 	MediaRepo           repository.MediaRepository
 	ScanRepo            repository.ScanRepository
 	SignalRepo          repository.SignalRepository
-	Dispatcher          *pipelineuc.Dispatcher
+	Dispatcher          *pipelineUseCase.Dispatcher
 	Parser              *security.WorkerParser
 	SecurityValidator   *security.WorkerSecurityValidator
 }
@@ -37,15 +37,15 @@ func New(db *gorm.DB, env *config.Config) (*Shared, error) {
 	scanRepo := repoGorm.NewScanRepository(db)
 	signalRepo := repoGorm.NewSignalRepository(db)
 
-	updateScanStatusUseCase := scanuc.NewUpdateScanStatusUseCase(scanRepo)
-	aggregateScanUseCase := pipelineuc.NewAggregateScanUseCase(
+	updateScanStatusUseCase := scanUseCase.NewUpdateScanStatusUseCase(scanRepo)
+	aggregateScanUseCase := pipelineUseCase.NewAggregateScanUseCase(
 		mediaRepo,
 		scanRepo,
 		signalRepo,
 		updateScanStatusUseCase,
 		centrifugoPublisher,
 	)
-	dispatcher := pipelineuc.NewDispatcher(env.AnalyzeQueues(), mediaRepo, publisher, aggregateScanUseCase)
+	dispatcher := pipelineUseCase.NewDispatcher(env.AnalyzeQueues(), mediaRepo, publisher, aggregateScanUseCase)
 
 	return &Shared{
 		Publisher:           publisher,

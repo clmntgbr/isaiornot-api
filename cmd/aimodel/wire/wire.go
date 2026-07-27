@@ -7,7 +7,7 @@ import (
 	"go-api/infrastructure/config"
 	"go-api/infrastructure/sightengine"
 	"go-api/infrastructure/storage"
-	aimodeluc "go-api/usecase/aimodel"
+	aimodelUseCase "go-api/usecase/aimodel"
 	"go-api/usecase/signal"
 	"log"
 
@@ -31,7 +31,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 
 	sightengineClient := sightengine.NewClient(env)
 	analyzer := aimodel.NewAnalyzer(sightengineClient)
-	analyzeMediaAiModelUseCase := aimodeluc.NewAnalyzeMediaAiModelUseCase(storageClient, analyzer)
+	analyzeMediaAiModelUseCase := aimodelUseCase.NewAnalyzeMediaAiModelUseCase(storageClient, analyzer)
 	createSignalUseCase := signal.NewCreateSignalUseCase(shared.SignalRepo)
 
 	return &Container{

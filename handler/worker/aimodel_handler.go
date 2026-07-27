@@ -5,8 +5,8 @@ import (
 
 	rabbitmqDTO "go-api/infrastructure/messaging/rabbitmq"
 	"go-api/infrastructure/messaging/security"
-	aimodeluc "go-api/usecase/aimodel"
-	pipelineuc "go-api/usecase/pipeline"
+	aimodelUseCase "go-api/usecase/aimodel"
+	pipelineUseCase "go-api/usecase/pipeline"
 	"go-api/usecase/signal"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -15,16 +15,16 @@ import (
 type AiModelHandler struct {
 	parser                     *security.WorkerParser
 	securityValidator          *security.WorkerSecurityValidator
-	dispatcher                 *pipelineuc.Dispatcher
-	analyzeMediaAiModelUseCase *aimodeluc.AnalyzeMediaAiModelUseCase
+	dispatcher                 *pipelineUseCase.Dispatcher
+	analyzeMediaAiModelUseCase *aimodelUseCase.AnalyzeMediaAiModelUseCase
 	createSignalUseCase        *signal.CreateSignalUseCase
 }
 
 func NewAiModelHandler(
 	parser *security.WorkerParser,
 	securityValidator *security.WorkerSecurityValidator,
-	dispatcher *pipelineuc.Dispatcher,
-	analyzeMediaAiModelUseCase *aimodeluc.AnalyzeMediaAiModelUseCase,
+	dispatcher *pipelineUseCase.Dispatcher,
+	analyzeMediaAiModelUseCase *aimodelUseCase.AnalyzeMediaAiModelUseCase,
 	createSignalUseCase *signal.CreateSignalUseCase,
 ) *AiModelHandler {
 	return &AiModelHandler{

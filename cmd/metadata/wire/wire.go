@@ -6,7 +6,7 @@ import (
 	"go-api/infrastructure/config"
 	metadatainfra "go-api/infrastructure/metadata"
 	"go-api/infrastructure/storage"
-	metadatauc "go-api/usecase/metadata"
+	metadataUseCase "go-api/usecase/metadata"
 	"go-api/usecase/signal"
 	"log"
 
@@ -29,7 +29,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	}
 
 	analyzer := metadatainfra.NewAnalyzer()
-	analyzeMediaMetadataUseCase := metadatauc.NewAnalyzeMediaMetadataUseCase(storageClient, analyzer)
+	analyzeMediaMetadataUseCase := metadataUseCase.NewAnalyzeMediaMetadataUseCase(storageClient, analyzer)
 	createSignalUseCase := signal.NewCreateSignalUseCase(shared.SignalRepo)
 
 	return &Container{

@@ -10,7 +10,7 @@ import (
 	"go-api/domain/port"
 	"go-api/domain/realtime"
 	"go-api/domain/repository"
-	scanuc "go-api/usecase/scan"
+	scanUseCase "go-api/usecase/scan"
 
 	"github.com/google/uuid"
 )
@@ -21,7 +21,7 @@ type AggregateScanUseCase struct {
 	mediaRepo               repository.MediaRepository
 	scanRepo                repository.ScanRepository
 	signalRepo              repository.SignalRepository
-	updateScanStatusUseCase *scanuc.UpdateScanStatusUseCase
+	updateScanStatusUseCase *scanUseCase.UpdateScanStatusUseCase
 	centrifugoPublisher     port.RealtimePublisher
 }
 
@@ -29,7 +29,7 @@ func NewAggregateScanUseCase(
 	mediaRepo repository.MediaRepository,
 	scanRepo repository.ScanRepository,
 	signalRepo repository.SignalRepository,
-	updateScanStatusUseCase *scanuc.UpdateScanStatusUseCase,
+	updateScanStatusUseCase *scanUseCase.UpdateScanStatusUseCase,
 	centrifugoPublisher port.RealtimePublisher,
 ) *AggregateScanUseCase {
 	return &AggregateScanUseCase{

@@ -7,8 +7,8 @@ import (
 	heuristicsinfra "go-api/infrastructure/heuristics"
 	"go-api/infrastructure/storage"
 	repoGorm "go-api/repository/gorm"
-	heuristicuc "go-api/usecase/heuristic"
-	insightuc "go-api/usecase/insight"
+	heuristicUseCase "go-api/usecase/heuristic"
+	insightUseCase "go-api/usecase/insight"
 	"go-api/usecase/signal"
 	"log"
 
@@ -32,9 +32,9 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 
 	insightRepo := repoGorm.NewInsightRepository(db)
 	analyzer := heuristicsinfra.NewAnalyzer()
-	analyzeMediaHeuristicsUseCase := heuristicuc.NewAnalyzeMediaHeuristicsUseCase(storageClient, analyzer)
+	analyzeMediaHeuristicsUseCase := heuristicUseCase.NewAnalyzeMediaHeuristicsUseCase(storageClient, analyzer)
 	createSignalUseCase := signal.NewCreateSignalUseCase(shared.SignalRepo)
-	createInsightUseCase := insightuc.NewCreateInsightUseCase(insightRepo, shared.MediaRepo)
+	createInsightUseCase := insightUseCase.NewCreateInsightUseCase(insightRepo, shared.MediaRepo)
 
 	return &Container{
 		HeuristicHandler: worker.NewHeuristicHandler(
