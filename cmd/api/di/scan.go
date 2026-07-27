@@ -21,7 +21,7 @@ func wireScan(d *apiDeps) scanBundle {
 		resolveEffectivePlanUseCase,
 		getQuotaUsageUseCase,
 	)
-	failScanUseCase := scan.NewFailScanUseCase(d.scanRepo, d.centrifugoPublisher)
+	failScanUseCase := scan.NewFailScanUseCase(d.scanRepo, d.mediaRepo, d.centrifugoPublisher)
 	generatePresignedUploadUrlUseCase := scan.NewGeneratePresignedUploadUrlUseCase(
 		d.storage,
 		d.scanRepo,

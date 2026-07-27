@@ -91,8 +91,12 @@ func (u *ProcessUploadedMediaUseCase) processVideo(
 		frameMedias = append(frameMedias, frameMedia)
 	}
 
-	if err := u.assertBeforePipeline(ctx, userID, scanID, contentType, size); err != nil {
+	allowed, err := u.assertBeforePipeline(ctx, userID, scanID, contentType, size)
+	if err != nil {
 		return err
+	}
+	if !allowed {
+		return nil
 	}
 
 	for i, frameMedia := range frameMedias {

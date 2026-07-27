@@ -56,7 +56,7 @@ func Compute(signals []entity.Signal) AggregationResult {
 	return AggregationResult{
 		FinalScore: finalScore,
 		Confidence: globalConfidence(available),
-		Verdict:    verdict(finalScore, hasAIModel),
+		Verdict:    verdict(finalScore, hasAIModel, available),
 		Signals:    signals,
 		HasAIModel: hasAIModel,
 	}
@@ -75,10 +75,12 @@ func AggregateMediaResults(results []AggregationResult) AggregationResult {
 	levels := make([]entity.ConfidenceLevel, 0, len(results)+1)
 	var sum float64
 	hasAIModel := true
+	var allSignals []entity.Signal
 	for _, result := range results {
 		scores = append(scores, result.FinalScore)
 		levels = append(levels, result.Confidence)
 		sum += result.FinalScore
+		allSignals = append(allSignals, result.Signals...)
 		if !result.HasAIModel {
 			hasAIModel = false
 		}
@@ -86,19 +88,33 @@ func AggregateMediaResults(results []AggregationResult) AggregationResult {
 	levels = append(levels, agreementConfidence(scores))
 
 	finalScore := sum / float64(len(results))
+	available := make([]entity.Signal, 0, len(allSignals))
+	for _, signal := range allSignals {
+		if signal.Score < 0 || effectiveWeight(signal) == 0 {
+			continue
+		}
+		available = append(available, signal)
+	}
 
 	return AggregationResult{
 		FinalScore: finalScore,
 		Confidence: minConfidenceLevels(levels...),
-		Verdict:    verdict(finalScore, hasAIModel),
+		Verdict:    verdict(finalScore, hasAIModel, available),
 		HasAIModel: hasAIModel,
 	}
 }
 
-// verdict maps a score to a label. Without the AI model stage, the uncertain
-// band is removed so free-tier scans still return likely_real / likely_ai.
-func verdict(score float64, hasAIModel bool) string {
+// verdict maps a score to a label.
+// Without the AI model stage, never greenlight as likely_real on weak /
+// low-confidence-only evidence (common for stripped AI images).
+func verdict(score float64, hasAIModel bool, available []entity.Signal) string {
 	if !hasAIModel {
+		if !hasReliableNonAIEvidence(available) {
+			if score < 25 {
+				return VerdictLikelyReal
+			}
+			return VerdictLikelyAI
+		}
 		if score < 50 {
 			return VerdictLikelyReal
 		}
@@ -113,4 +129,21 @@ func verdict(score float64, hasAIModel bool) string {
 	default:
 		return VerdictLikelyAI
 	}
+}
+
+// hasReliableNonAIEvidence is true when at least one non-AI signal has
+// medium+ confidence, or metadata contributes a decisive camera/real lean.
+func hasReliableNonAIEvidence(available []entity.Signal) bool {
+	for _, signal := range available {
+		if signal.Name == "ai_model" {
+			continue
+		}
+		if signal.Confidence == entity.ConfidenceMedium || signal.Confidence == entity.ConfidenceHigh {
+			return true
+		}
+		if signal.Name == "metadata" && signal.Score >= 0 && signal.Score < 30 {
+			return true
+		}
+	}
+	return false
 }

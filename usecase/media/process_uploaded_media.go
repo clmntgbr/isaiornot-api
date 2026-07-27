@@ -74,7 +74,7 @@ func (u *ProcessUploadedMediaUseCase) assertBeforePipeline(
 	scanID uuid.UUID,
 	contentType string,
 	size int64,
-) error {
+) (bool, error) {
 	if err := u.assertUploadAllowedUseCase.Execute(ctx, subscription.AssertUploadAllowedInput{
 		UserID:              userID,
 		ContentType:         contentType,
@@ -86,9 +86,9 @@ func (u *ProcessUploadedMediaUseCase) assertBeforePipeline(
 			message = "No active subscription found"
 		}
 		if failErr := u.failScanUseCase.Execute(ctx, scanID, message); failErr != nil {
-			return failErr
+			return false, failErr
 		}
-		return nil
+		return false, nil
 	}
-	return nil
+	return true, nil
 }

@@ -14,15 +14,18 @@ import (
 
 type FailScanUseCase struct {
 	scanRepo            repository.ScanRepository
+	mediaRepo           repository.MediaRepository
 	centrifugoPublisher port.RealtimePublisher
 }
 
 func NewFailScanUseCase(
 	scanRepo repository.ScanRepository,
+	mediaRepo repository.MediaRepository,
 	centrifugoPublisher port.RealtimePublisher,
 ) *FailScanUseCase {
 	return &FailScanUseCase{
 		scanRepo:            scanRepo,
+		mediaRepo:           mediaRepo,
 		centrifugoPublisher: centrifugoPublisher,
 	}
 }
@@ -31,6 +34,18 @@ func (u *FailScanUseCase) Execute(ctx context.Context, scanID uuid.UUID, message
 	scan, err := u.scanRepo.GetByID(ctx, scanID)
 	if err != nil {
 		return errors.New("failed to get scan")
+	}
+
+	for i := range scan.Medias {
+		media := &scan.Medias[i]
+		if media.Status == enum.MediaStatusFailed {
+			continue
+		}
+		media.Statuses = append(media.Statuses, enum.MediaStatusFailed)
+		media.Status = enum.MediaStatusFailed
+		if err := u.mediaRepo.Update(ctx, media); err != nil {
+			return errors.New("failed to update media status")
+		}
 	}
 
 	scan.Message = message

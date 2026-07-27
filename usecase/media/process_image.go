@@ -21,8 +21,12 @@ func (u *ProcessUploadedMediaUseCase) processImage(
 		return fmt.Errorf("failed to generate thumbnail: %w", err)
 	}
 
-	if err := u.assertBeforePipeline(ctx, userID, media.ScanID, contentType, size); err != nil {
+	allowed, err := u.assertBeforePipeline(ctx, userID, media.ScanID, contentType, size)
+	if err != nil {
 		return err
+	}
+	if !allowed {
+		return nil
 	}
 
 	if err := u.updateMediaStatusUseCase.Execute(ctx, media.ID, enum.MediaStatusUploaded); err != nil {

@@ -27,7 +27,7 @@ type Media struct {
 
 	Signals []Signal `gorm:"foreignKey:MediaID" json:"signals"`
 
-	Status   enum.MediaStatus   `gorm:"type:varchar(20);not null;check:status IN ('processing','uploaded','analyzed');index:idx_media_status" json:"status"`
+	Status   enum.MediaStatus   `gorm:"type:varchar(20);not null;check:status IN ('processing','uploaded','analyzed','failed');index:idx_media_status" json:"status"`
 	Statuses []enum.MediaStatus `gorm:"serializer:json;type:jsonb;default:'[]'" json:"statuses"`
 
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"createdAt"`
