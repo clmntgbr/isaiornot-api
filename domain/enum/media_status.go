@@ -5,6 +5,6 @@ type MediaStatus string
 const (
 	MediaStatusProcessing MediaStatus = "processing"
 	MediaStatusUploaded   MediaStatus = "uploaded"
-	MediaStatusAnalyzed   MediaStatus = "analyzed"
+	MediaStatusCompleted  MediaStatus = "completed"
 	MediaStatusFailed     MediaStatus = "failed"
 )

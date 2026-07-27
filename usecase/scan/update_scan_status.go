@@ -53,19 +53,19 @@ func ResolveStatus(medias []entity.Media) enum.ScanStatus {
 		return enum.ScanStatusUploaded
 	}
 
-	allAnalyzed := true
+	allCompleted := true
 	hasUploaded := false
 	for _, media := range medias {
-		if media.Status != enum.MediaStatusAnalyzed {
-			allAnalyzed = false
+		if media.Status != enum.MediaStatusCompleted {
+			allCompleted = false
 		}
-		if media.Status == enum.MediaStatusUploaded || media.Status == enum.MediaStatusAnalyzed {
+		if media.Status == enum.MediaStatusUploaded || media.Status == enum.MediaStatusCompleted {
 			hasUploaded = true
 		}
 	}
 
-	if allAnalyzed {
-		return enum.ScanStatusAnalyzed
+	if allCompleted {
+		return enum.ScanStatusCompleted
 	}
 	if hasUploaded {
 		return enum.ScanStatusProcessing

@@ -64,8 +64,8 @@ func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) e
 		return errors.New("not all signals are ready")
 	}
 
-	media.Statuses = append(media.Statuses, enum.MediaStatusAnalyzed)
-	media.Status = enum.MediaStatusAnalyzed
+	media.Statuses = append(media.Statuses, enum.MediaStatusCompleted)
+	media.Status = enum.MediaStatusCompleted
 	if err := u.mediaRepo.Update(ctx, media); err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) e
 		return errors.New("scan not found")
 	}
 
-	if scan.Status != enum.ScanStatusAnalyzed {
+	if scan.Status != enum.ScanStatusCompleted {
 		return nil
 	}
 

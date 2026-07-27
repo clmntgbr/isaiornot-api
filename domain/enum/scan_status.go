@@ -5,6 +5,6 @@ type ScanStatus string
 const (
 	ScanStatusUploaded   ScanStatus = "uploaded"
 	ScanStatusProcessing ScanStatus = "processing"
-	ScanStatusAnalyzed   ScanStatus = "analyzed"
+	ScanStatusCompleted  ScanStatus = "completed"
 	ScanStatusFailed     ScanStatus = "failed"
 )

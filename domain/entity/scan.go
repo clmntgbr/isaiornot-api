@@ -15,7 +15,7 @@ type Scan struct {
 
 	Medias []Media `gorm:"foreignKey:ScanID" json:"medias"`
 
-	Status   enum.ScanStatus   `gorm:"type:varchar(20);not null;default:'uploaded';check:status IN ('uploaded','processing','analyzed','failed');index:idx_scan_status" json:"status"`
+	Status   enum.ScanStatus   `gorm:"type:varchar(20);not null;default:'uploaded';check:status IN ('uploaded','processing','completed','failed');index:idx_scan_status" json:"status"`
 	Statuses []enum.ScanStatus `gorm:"serializer:json;type:jsonb;default:'[]'" json:"statuses"`
 	Message  string            `gorm:"type:text;not null;default:''" json:"message"`
 
