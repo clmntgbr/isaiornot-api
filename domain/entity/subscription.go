@@ -19,22 +19,22 @@ const (
 type Subscription struct {
 	ID uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 
-	PlanID uuid.UUID `gorm:"type:uuid;not null" json:"plan_id"`
+	PlanID uuid.UUID `gorm:"type:uuid;not null" json:"planId"`
 	Plan   Plan      `gorm:"foreignKey:PlanID" json:"plan"`
 
-	StripeCustomerID     string `gorm:"type:varchar(255);null" json:"stripe_customer_id"`
-	StripeSubscriptionID string `gorm:"type:varchar(255);null" json:"stripe_subscription_id"`
+	StripeCustomerID     string `gorm:"type:varchar(255);null" json:"stripeCustomerId"`
+	StripeSubscriptionID string `gorm:"type:varchar(255);null" json:"stripeSubscriptionId"`
 
-	SubscriptionStatus    SubscriptionStatus `json:"subscription_status" gorm:"type:varchar(255);not null"`
-	SubscriptionStartDate time.Time          `json:"subscription_start_date" gorm:"type:timestamp;not null"`
-	SubscriptionEndDate   time.Time          `json:"subscription_end_date" gorm:"type:timestamp;not null"`
+	SubscriptionStatus    SubscriptionStatus `json:"subscriptionStatus" gorm:"type:varchar(255);not null"`
+	SubscriptionStartDate time.Time          `json:"subscriptionStartDate" gorm:"type:timestamp;not null"`
+	SubscriptionEndDate   time.Time          `json:"subscriptionEndDate" gorm:"type:timestamp;not null"`
 
-	CancelAtPeriodEnd bool `json:"cancel_at_period_end" gorm:"type:boolean;not null;default:false"`
+	CancelAtPeriodEnd bool `json:"cancelAtPeriodEnd" gorm:"type:boolean;not null;default:false"`
 
-	QuotaPeriodStart time.Time `json:"quota_period_start" gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
+	QuotaPeriodStart time.Time `json:"quotaPeriodStart" gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP"`
 
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"createdAt"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updatedAt"`
 }
 
 func (Subscription) TableName() string {

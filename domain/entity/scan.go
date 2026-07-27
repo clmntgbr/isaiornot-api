@@ -10,7 +10,7 @@ import (
 type Scan struct {
 	ID uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 
-	UserID uuid.UUID `gorm:"type:uuid;not null;index:idx_scan_user_id" json:"user_id"`
+	UserID uuid.UUID `gorm:"type:uuid;not null;index:idx_scan_user_id" json:"userId"`
 	User   User      `gorm:"foreignKey:UserID" json:"user"`
 
 	Medias []Media `gorm:"foreignKey:ScanID" json:"medias"`
@@ -19,12 +19,12 @@ type Scan struct {
 	Statuses []enum.ScanStatus `gorm:"serializer:json;type:jsonb;default:'[]'" json:"statuses"`
 	Message  string            `gorm:"type:text;not null;default:''" json:"message"`
 
-	FinalScore     float64         `gorm:"default:-1" json:"final_score"`
+	FinalScore     float64         `gorm:"default:-1" json:"finalScore"`
 	ScanConfidence ConfidenceLevel `gorm:"type:varchar(20);default:'unknown'" json:"confidence"`
 	Verdict        string          `gorm:"type:varchar(20);default:''" json:"verdict"`
 
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"createdAt"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updatedAt"`
 }
 
 func (Scan) TableName() string {

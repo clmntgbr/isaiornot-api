@@ -17,15 +17,15 @@ const (
 
 type Signal struct {
 	ID         uuid.UUID       `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	MediaID    uuid.UUID       `gorm:"type:uuid;not null" json:"media_id"`
+	MediaID    uuid.UUID       `gorm:"type:uuid;not null" json:"mediaId"`
 	Media      Media           `gorm:"foreignKey:MediaID" json:"media"`
 	Name       string          `json:"name"`
 	Score      int             `json:"score"`
 	Confidence ConfidenceLevel `json:"confidence"`
 	Details    []string        `json:"details" gorm:"serializer:json;type:jsonb;default:'[]'"`
 
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"createdAt"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updatedAt"`
 }
 
 func (Signal) TableName() string {
