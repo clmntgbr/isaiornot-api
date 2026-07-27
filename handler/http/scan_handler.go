@@ -4,6 +4,7 @@ import (
 	"errors"
 	mediadto "go-api/domain/media"
 	"go-api/domain/paginate"
+	domainScan "go-api/domain/scan"
 	"go-api/handler/http/context"
 	"go-api/presenter"
 	"go-api/usecase/scan"
@@ -76,7 +77,7 @@ func (h *ScanHandler) GetScans(c fiber.Ctx) error {
 		})
 	}
 
-	var query paginate.PaginateQuery
+	var query domainScan.ListQuery
 	if err := c.Bind().Query(&query); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Invalid query parameters",
@@ -98,7 +99,7 @@ func (h *ScanHandler) GetScans(c fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(paginate.NewPaginateResponse(presenter.NewScanListResponses(scans), int(total), query))
+	return c.JSON(paginate.NewPaginateResponse(presenter.NewScanListResponses(scans), int(total), query.PaginateQuery))
 }
 
 func (h *ScanHandler) GetScan(c fiber.Ctx) error {

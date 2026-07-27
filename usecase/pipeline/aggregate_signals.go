@@ -102,7 +102,7 @@ func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) e
 	result := aggregate.AggregateMediaResults(mediaResults)
 
 	scan.FinalScore = result.FinalScore
-	scan.ScanConfidence = result.Confidence
+	scan.Confidence = result.Confidence
 	scan.Verdict = result.Verdict
 	if err := u.scanRepo.Update(ctx, scan); err != nil {
 		return err

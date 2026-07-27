@@ -61,7 +61,7 @@ func NewScanCompletedEvent(scan *entity.Scan, media *entity.Media, signals []*en
 		UserID:     scan.UserID.String(),
 		Status:     string(media.Status),
 		FinalScore: scan.FinalScore,
-		Confidence: string(scan.ScanConfidence),
+		Confidence: string(scan.Confidence),
 		Verdict:    scan.Verdict,
 		UpdatedAt:  scan.UpdatedAt,
 		Signals:    make([]SignalPayload, 0, len(signals)),

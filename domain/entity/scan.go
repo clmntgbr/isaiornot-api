@@ -19,9 +19,9 @@ type Scan struct {
 	Statuses []enum.ScanStatus `gorm:"serializer:json;type:jsonb;default:'[]'" json:"statuses"`
 	Message  string            `gorm:"type:text;not null;default:''" json:"message"`
 
-	FinalScore     float64         `gorm:"default:-1" json:"finalScore"`
-	ScanConfidence ConfidenceLevel `gorm:"type:varchar(20);default:'unknown'" json:"confidence"`
-	Verdict        string          `gorm:"type:varchar(20);default:''" json:"verdict"`
+	FinalScore float64         `gorm:"default:-1" json:"finalScore"`
+	Confidence ConfidenceLevel `gorm:"type:varchar(20);default:'unknown'" json:"confidence"`
+	Verdict    string          `gorm:"type:varchar(20);default:''" json:"verdict"`
 
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"createdAt"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updatedAt"`

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"go-api/domain/entity"
-	"go-api/domain/paginate"
 	"go-api/domain/repository"
+	domainScan "go-api/domain/scan"
 
 	"github.com/google/uuid"
 )
@@ -25,7 +25,7 @@ func NewGetScansUseCase(
 	}
 }
 
-func (u *GetScansUseCase) Execute(ctx context.Context, userID uuid.UUID, query paginate.PaginateQuery) ([]*entity.Scan, int64, error) {
+func (u *GetScansUseCase) Execute(ctx context.Context, userID uuid.UUID, query domainScan.ListQuery) ([]*entity.Scan, int64, error) {
 	since, err := u.historyCutoff.ForUser(ctx, userID)
 	if err != nil {
 		return []*entity.Scan{}, 0, err

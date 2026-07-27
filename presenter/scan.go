@@ -74,7 +74,7 @@ func NewScanListResponse(scan *entity.Scan) *ScanListResponse {
 
 	if scan.Verdict != "" {
 		response.FinalScore = scan.FinalScore
-		response.Confidence = string(scan.ScanConfidence)
+		response.Confidence = string(scan.Confidence)
 		response.Verdict = scan.Verdict
 	}
 
@@ -100,7 +100,7 @@ func NewScanDetailResponse(scan *entity.Scan) *ScanDetailResponse {
 
 	if scan.Verdict != "" {
 		response.FinalScore = scan.FinalScore
-		response.Confidence = string(scan.ScanConfidence)
+		response.Confidence = string(scan.Confidence)
 		response.Verdict = scan.Verdict
 	}
 

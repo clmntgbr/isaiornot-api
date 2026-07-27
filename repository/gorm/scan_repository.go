@@ -5,8 +5,8 @@ import (
 	"errors"
 	"go-api/domain/aggregate"
 	"go-api/domain/entity"
-	"go-api/domain/paginate"
 	"go-api/domain/repository"
+	"go-api/domain/scan"
 	"time"
 
 	"github.com/google/uuid"
@@ -52,7 +52,7 @@ func (r *scanRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Sca
 	return &scan, nil
 }
 
-func (r *scanRepository) GetByUserID(ctx context.Context, userID uuid.UUID, query paginate.PaginateQuery, since time.Time) ([]*entity.Scan, int64, error) {
+func (r *scanRepository) GetByUserID(ctx context.Context, userID uuid.UUID, query scan.ListQuery, since time.Time) ([]*entity.Scan, int64, error) {
 	var scans []*entity.Scan
 
 	db := dbWithContext(ctx, r.db).Model(&entity.Scan{}).
@@ -62,13 +62,25 @@ func (r *scanRepository) GetByUserID(ctx context.Context, userID uuid.UUID, quer
 		db = db.Where("scans.created_at >= ?", since)
 	}
 
+	if query.Status != "" {
+		db = db.Where("scans.status = ?", query.Status)
+	}
+
+	if query.Confidence != "" {
+		db = db.Where("scans.confidence = ?", query.Confidence)
+	}
+
+	if query.Verdict != "" {
+		db = db.Where("scans.verdict = ?", query.Verdict)
+	}
+
 	if query.Search != "" {
 		db = db.Joins("JOIN medias ON medias.scan_id = scans.id").
 			Where("medias.filename ILIKE ? OR medias.key ILIKE ?", "%"+query.Search+"%", "%"+query.Search+"%").
 			Distinct()
 	}
 
-	db, total, err := Paginate(db, query)
+	db, total, err := Paginate(db, query.PaginateQuery)
 	if err != nil {
 		return nil, 0, err
 	}
