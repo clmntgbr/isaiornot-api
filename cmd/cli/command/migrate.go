@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:embed sql/*.sql
 var sqlFiles embed.FS
 
 func NewMigrateCommand() *cobra.Command {
