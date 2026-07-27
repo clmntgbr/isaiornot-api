@@ -3,6 +3,7 @@ package scan
 import (
 	"context"
 	"errors"
+
 	"go-api/domain/entity"
 	"go-api/domain/repository"
 
@@ -11,11 +12,18 @@ import (
 )
 
 type GetScanUseCase struct {
-	scanRepo repository.ScanRepository
+	scanRepo      repository.ScanRepository
+	historyCutoff *HistoryCutoffResolver
 }
 
-func NewGetScanUseCase(scanRepo repository.ScanRepository) *GetScanUseCase {
-	return &GetScanUseCase{scanRepo: scanRepo}
+func NewGetScanUseCase(
+	scanRepo repository.ScanRepository,
+	historyCutoff *HistoryCutoffResolver,
+) *GetScanUseCase {
+	return &GetScanUseCase{
+		scanRepo:      scanRepo,
+		historyCutoff: historyCutoff,
+	}
 }
 
 func (u *GetScanUseCase) Execute(ctx context.Context, userID uuid.UUID, scanID uuid.UUID) (*entity.Scan, error) {
@@ -30,6 +38,15 @@ func (u *GetScanUseCase) Execute(ctx context.Context, userID uuid.UUID, scanID u
 
 	if scan.UserID != userID {
 		return nil, errors.New("scan not found")
+	}
+
+	since, err := u.historyCutoff.ForUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !since.IsZero() && scan.CreatedAt.Before(since) {
+		return nil, ErrHistoryOutsideRetention
 	}
 
 	return scan, nil

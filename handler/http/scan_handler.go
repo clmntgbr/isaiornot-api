@@ -7,6 +7,7 @@ import (
 	"go-api/handler/http/context"
 	"go-api/presenter"
 	"go-api/usecase/scan"
+	"go-api/usecase/subscription"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -86,6 +87,11 @@ func (h *ScanHandler) GetScans(c fiber.Ctx) error {
 
 	scans, total, err := h.getScansUseCase.Execute(c.Context(), user.ID, query)
 	if err != nil {
+		if errors.Is(err, subscription.ErrSubscriptionNotFound) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"message": "No active subscription found",
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Internal server error",
 			"errors":  err.Error(),
@@ -128,6 +134,11 @@ func (h *ScanHandler) GetStatistics(c fiber.Ctx) error {
 
 	stats, err := h.getMediaStatisticsUseCase.Execute(c.Context(), user.ID)
 	if err != nil {
+		if errors.Is(err, subscription.ErrSubscriptionNotFound) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"message": "No active subscription found",
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Internal server error",
 			"errors":  err.Error(),

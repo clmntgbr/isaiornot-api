@@ -27,15 +27,20 @@ func wireScan(d *apiDeps) scanBundle {
 		d.scanRepo,
 		d.mediaRepo,
 	)
+	historyCutoff := scan.NewHistoryCutoffResolver(
+		d.userRepo,
+		d.subscriptionRepo,
+		resolveEffectivePlanUseCase,
+	)
 
 	return scanBundle{
 		failScanUseCase:            failScanUseCase,
 		assertUploadAllowedUseCase: assertUploadAllowedUseCase,
 		scanHandler: httphandler.NewScanHandler(
 			generatePresignedUploadUrlUseCase,
-			scan.NewGetScanUseCase(d.scanRepo),
-			scan.NewGetScansUseCase(d.scanRepo),
-			scan.NewGetMediaStatisticsUseCase(d.scanRepo),
+			scan.NewGetScanUseCase(d.scanRepo, historyCutoff),
+			scan.NewGetScansUseCase(d.scanRepo, historyCutoff),
+			scan.NewGetMediaStatisticsUseCase(d.scanRepo, historyCutoff),
 		),
 	}
 }

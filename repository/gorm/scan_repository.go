@@ -5,8 +5,9 @@ import (
 	"errors"
 	"go-api/domain/aggregate"
 	"go-api/domain/entity"
-	"go-api/domain/repository"
 	"go-api/domain/paginate"
+	"go-api/domain/repository"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -51,11 +52,15 @@ func (r *scanRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Sca
 	return &scan, nil
 }
 
-func (r *scanRepository) GetByUserID(ctx context.Context, userID uuid.UUID, query paginate.PaginateQuery) ([]*entity.Scan, int64, error) {
+func (r *scanRepository) GetByUserID(ctx context.Context, userID uuid.UUID, query paginate.PaginateQuery, since time.Time) ([]*entity.Scan, int64, error) {
 	var scans []*entity.Scan
 
 	db := dbWithContext(ctx, r.db).Model(&entity.Scan{}).
 		Where("scans.user_id = ?", userID)
+
+	if !since.IsZero() {
+		db = db.Where("scans.created_at >= ?", since)
+	}
 
 	if query.Search != "" {
 		db = db.Joins("JOIN medias ON medias.scan_id = scans.id").
@@ -80,10 +85,10 @@ func (r *scanRepository) GetByUserID(ctx context.Context, userID uuid.UUID, quer
 	return scans, total, nil
 }
 
-func (r *scanRepository) GetStatisticsByUserID(ctx context.Context, userID uuid.UUID) (*entity.MediaStatistics, error) {
+func (r *scanRepository) GetStatisticsByUserID(ctx context.Context, userID uuid.UUID, since time.Time) (*entity.MediaStatistics, error) {
 	var stats entity.MediaStatistics
 
-	err := dbWithContext(ctx, r.db).Raw(`
+	query := `
 		SELECT
 			COUNT(*) FILTER (WHERE verdict <> '') AS scans_count,
 			COUNT(*) FILTER (WHERE verdict = ?) AS real_image_count,
@@ -91,11 +96,19 @@ func (r *scanRepository) GetStatisticsByUserID(ctx context.Context, userID uuid.
 			COALESCE(AVG(final_score) FILTER (WHERE verdict <> '' AND final_score >= 0), 0) AS average_score
 		FROM scans
 		WHERE user_id = ?
-	`,
+	`
+	args := []any{
 		aggregate.VerdictLikelyReal,
 		aggregate.VerdictLikelyAI,
 		userID,
-	).Scan(&stats).Error
+	}
+
+	if !since.IsZero() {
+		query += ` AND created_at >= ?`
+		args = append(args, since)
+	}
+
+	err := dbWithContext(ctx, r.db).Raw(query, args...).Scan(&stats).Error
 	if err != nil {
 		return nil, err
 	}
