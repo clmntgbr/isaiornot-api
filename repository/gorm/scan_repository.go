@@ -6,7 +6,7 @@ import (
 	"go-api/domain/aggregate"
 	"go-api/domain/entity"
 	"go-api/domain/repository"
-	"go-api/infrastructure/paginate"
+	"go-api/domain/paginate"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

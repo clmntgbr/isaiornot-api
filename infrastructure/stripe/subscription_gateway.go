@@ -3,22 +3,16 @@ package stripe
 import (
 	"context"
 	"fmt"
-	"go-api/infrastructure/config"
 	"time"
+
+	"go-api/domain/port"
+	"go-api/infrastructure/config"
 
 	"github.com/stripe/stripe-go/v82"
 	"github.com/stripe/stripe-go/v82/subscription"
 )
 
-type SubscriptionData struct {
-	ID                 string
-	CustomerID         string
-	PriceID            string
-	Status             string
-	CancelAtPeriodEnd  bool
-	CurrentPeriodStart time.Time
-	CurrentPeriodEnd   time.Time
-}
+type SubscriptionData = port.SubscriptionData
 
 type SubscriptionGateway struct {
 	secretKey string
@@ -30,7 +24,7 @@ func NewSubscriptionGateway(cfg *config.Config) *SubscriptionGateway {
 	}
 }
 
-func (g *SubscriptionGateway) Retrieve(ctx context.Context, subscriptionID string) (*SubscriptionData, error) {
+func (g *SubscriptionGateway) Retrieve(ctx context.Context, subscriptionID string) (*port.SubscriptionData, error) {
 	if g.secretKey == "" {
 		return nil, fmt.Errorf("stripe secret key is not configured")
 	}
@@ -48,8 +42,8 @@ func (g *SubscriptionGateway) Retrieve(ctx context.Context, subscriptionID strin
 	return ExtractSubscriptionData(sub), nil
 }
 
-func ExtractSubscriptionData(sub *stripe.Subscription) *SubscriptionData {
-	data := &SubscriptionData{
+func ExtractSubscriptionData(sub *stripe.Subscription) *port.SubscriptionData {
+	data := &port.SubscriptionData{
 		ID:                sub.ID,
 		Status:            string(sub.Status),
 		CancelAtPeriodEnd: sub.CancelAtPeriodEnd,

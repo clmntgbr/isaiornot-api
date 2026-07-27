@@ -3,9 +3,10 @@ package subscription
 import (
 	"context"
 	"errors"
+
 	"go-api/domain/entity"
+	"go-api/domain/port"
 	"go-api/domain/repository"
-	"go-api/infrastructure/stripe"
 	"go-api/usecase/clerk"
 
 	"github.com/google/uuid"
@@ -19,15 +20,15 @@ var (
 )
 
 type CreateSubscriptionUseCase struct {
-	planRepo               *repository.PlanRepository
+	planRepo               repository.PlanRepository
 	fetchUserUseCase       *clerk.FetchUserUseCase
-	checkoutSessionGateway *stripe.CheckoutSessionGateway
+	checkoutSessionGateway port.CheckoutSessionGateway
 }
 
 func NewCreateSubscriptionUseCase(
-	planRepo *repository.PlanRepository,
+	planRepo repository.PlanRepository,
 	fetchUserUseCase *clerk.FetchUserUseCase,
-	checkoutSessionGateway *stripe.CheckoutSessionGateway,
+	checkoutSessionGateway port.CheckoutSessionGateway,
 ) *CreateSubscriptionUseCase {
 	return &CreateSubscriptionUseCase{
 		planRepo:               planRepo,
@@ -45,7 +46,7 @@ func (u *CreateSubscriptionUseCase) Execute(
 		return "", errors.New("user is required")
 	}
 
-	plan, err := (*u.planRepo).GetByID(ctx, planID)
+	plan, err := u.planRepo.GetByID(ctx, planID)
 	if err != nil {
 		return "", errors.New("failed to get plan")
 	}

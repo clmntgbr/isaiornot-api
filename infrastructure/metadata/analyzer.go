@@ -19,17 +19,12 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (a *Analyzer) Analyze(r io.Reader) (ScanResult, error) {
+func (a *Analyzer) Analyze(r io.Reader) (entity.Signal, error) {
 	data, err := io.ReadAll(io.LimitReader(r, maxScanBytes))
 	if err != nil {
-		return ScanResult{}, err
+		return entity.Signal{}, err
 	}
 
 	extracted := Extract(data)
-	signal := Score(extracted)
-
-	return ScanResult{
-		Signal:    signal,
-		Extracted: extracted,
-	}, nil
+	return Score(extracted), nil
 }

@@ -3,34 +3,34 @@ package auth
 import (
 	"context"
 	"errors"
+
+	"go-api/domain/port"
 	"go-api/domain/repository"
-	authdto "go-api/infrastructure/auth"
-	"go-api/infrastructure/clerk"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type ValidateTokenUseCase struct {
-	jwksProvider *clerk.JWKSProvider
-	userRepo     *repository.UserRepository
+	tokenKeys port.TokenKeyProvider
+	userRepo  repository.UserRepository
 }
 
 func NewValidateTokenUseCase(
-	jwksProvider *clerk.JWKSProvider,
-	userRepo *repository.UserRepository,
+	tokenKeys port.TokenKeyProvider,
+	userRepo repository.UserRepository,
 ) *ValidateTokenUseCase {
 	return &ValidateTokenUseCase{
-		jwksProvider: jwksProvider,
-		userRepo:     userRepo,
+		tokenKeys: tokenKeys,
+		userRepo:  userRepo,
 	}
 }
 
-func (uc *ValidateTokenUseCase) Execute(ctx context.Context, input authdto.ValidateTokenInput) (*authdto.ValidateTokenOutput, error) {
+func (uc *ValidateTokenUseCase) Execute(ctx context.Context, input ValidateTokenInput) (*ValidateTokenOutput, error) {
 	token, err := jwt.ParseWithClaims(
 		input.Token,
-		&authdto.JWTClaims{},
-		uc.jwksProvider.GetKeyfunc(),
-		jwt.WithIssuer(uc.jwksProvider.GetIssuer()),
+		&JWTClaims{},
+		uc.tokenKeys.GetKeyfunc(),
+		jwt.WithIssuer(uc.tokenKeys.GetIssuer()),
 		jwt.WithExpirationRequired(),
 	)
 
@@ -38,17 +38,17 @@ func (uc *ValidateTokenUseCase) Execute(ctx context.Context, input authdto.Valid
 		return nil, errors.New("invalid token")
 	}
 
-	claims, ok := token.Claims.(*authdto.JWTClaims)
+	claims, ok := token.Claims.(*JWTClaims)
 	if !ok || !token.Valid {
 		return nil, errors.New("invalid token")
 	}
 
-	user, err := (*uc.userRepo).GetByClerkID(ctx, claims.UserID)
+	user, err := uc.userRepo.GetByClerkID(ctx, claims.UserID)
 	if err != nil {
 		return nil, errors.New("user not found")
 	}
 
-	return &authdto.ValidateTokenOutput{
+	return &ValidateTokenOutput{
 		User:   user,
 		Claims: claims,
 	}, nil

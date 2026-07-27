@@ -11,11 +11,11 @@ import (
 )
 
 type UpdateScanStatusUseCase struct {
-	scanRepo *repository.ScanRepository
+	scanRepo repository.ScanRepository
 }
 
 func NewUpdateScanStatusUseCase(
-	scanRepo *repository.ScanRepository,
+	scanRepo repository.ScanRepository,
 ) *UpdateScanStatusUseCase {
 	return &UpdateScanStatusUseCase{
 		scanRepo: scanRepo,
@@ -23,7 +23,7 @@ func NewUpdateScanStatusUseCase(
 }
 
 func (u *UpdateScanStatusUseCase) Execute(ctx context.Context, scanID uuid.UUID) error {
-	scan, err := (*u.scanRepo).GetByID(ctx, scanID)
+	scan, err := u.scanRepo.GetByID(ctx, scanID)
 	if err != nil {
 		return errors.New("failed to get scan")
 	}
@@ -41,7 +41,7 @@ func (u *UpdateScanStatusUseCase) Execute(ctx context.Context, scanID uuid.UUID)
 	scan.Status = status
 	scan.Message = ""
 
-	if err := (*u.scanRepo).Update(ctx, scan); err != nil {
+	if err := u.scanRepo.Update(ctx, scan); err != nil {
 		return errors.New("failed to update scan status")
 	}
 

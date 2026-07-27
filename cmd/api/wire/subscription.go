@@ -1,0 +1,64 @@
+package wire
+
+import (
+	httphandler "go-api/handler/http"
+	infraStripe "go-api/infrastructure/stripe"
+	"go-api/usecase/plan"
+	"go-api/usecase/subscription"
+)
+
+type subscriptionBundle struct {
+	planHandler         *httphandler.PlanHandler
+	stripeHandler       *httphandler.StripeHandler
+	subscriptionHandler *httphandler.SubscriptionHandler
+}
+
+func subscriptionFree(d *apiDeps) *subscription.CreateFreeSubscriptionUseCase {
+	return subscription.NewCreateFreeSubscriptionUseCase(d.planRepo, d.subscriptionRepo, d.userRepo)
+}
+
+func wireSubscription(d *apiDeps, auth authBundle) subscriptionBundle {
+	resolveEffectivePlanUseCase := subscription.NewResolveEffectivePlanUseCase(d.planRepo)
+	getQuotaUsageUseCase := subscription.NewGetQuotaUsageUseCase(d.mediaRepo)
+	checkoutSessionGateway := infraStripe.NewCheckoutSessionGateway(d.env)
+	subscriptionGateway := infraStripe.NewSubscriptionGateway(d.env)
+	billingPortalGateway := infraStripe.NewBillingPortalGateway(d.env)
+	subscriptionNotifier := subscription.NewNotifier(d.userRepo, d.subscriptionRepo, d.centrifugoPublisher)
+
+	createSubscriptionUseCase := subscription.NewCreateSubscriptionUseCase(
+		d.planRepo,
+		auth.fetchUserUseCase,
+		checkoutSessionGateway,
+	)
+	createBillingPortalUseCase := subscription.NewCreateBillingPortalUseCase(
+		d.subscriptionRepo,
+		billingPortalGateway,
+	)
+	getUserSubscriptionUseCase := subscription.NewGetUserSubscriptionUseCase(
+		d.subscriptionRepo,
+		resolveEffectivePlanUseCase,
+		getQuotaUsageUseCase,
+	)
+
+	return subscriptionBundle{
+		planHandler: httphandler.NewPlanHandler(plan.NewGetPlansUseCase(d.planRepo)),
+		stripeHandler: httphandler.NewStripeHandler(
+			subscription.NewCheckoutCompletedUseCase(
+				d.userRepo,
+				d.planRepo,
+				d.subscriptionRepo,
+				subscriptionGateway,
+				subscriptionNotifier,
+			),
+			subscription.NewSubscriptionUpdatedUseCase(d.planRepo, d.subscriptionRepo, subscriptionNotifier),
+			subscription.NewSubscriptionDeletedUseCase(d.planRepo, d.subscriptionRepo, subscriptionNotifier),
+			subscription.NewInvoicePaymentSucceededUseCase(d.subscriptionRepo, subscriptionNotifier),
+			subscription.NewInvoicePaymentFailedUseCase(d.subscriptionRepo, subscriptionNotifier),
+		),
+		subscriptionHandler: httphandler.NewSubscriptionHandler(
+			createSubscriptionUseCase,
+			createBillingPortalUseCase,
+			getUserSubscriptionUseCase,
+		),
+	}
+}

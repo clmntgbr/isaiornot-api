@@ -10,13 +10,13 @@ import (
 )
 
 type CreateInsightUseCase struct {
-	insightRepo *repository.InsightRepository
-	mediaRepo   *repository.MediaRepository
+	insightRepo repository.InsightRepository
+	mediaRepo   repository.MediaRepository
 }
 
 func NewCreateInsightUseCase(
-	insightRepo *repository.InsightRepository,
-	mediaRepo *repository.MediaRepository,
+	insightRepo repository.InsightRepository,
+	mediaRepo repository.MediaRepository,
 ) *CreateInsightUseCase {
 	return &CreateInsightUseCase{
 		insightRepo: insightRepo,
@@ -32,7 +32,7 @@ func (u *CreateInsightUseCase) Execute(
 	frequency float64,
 	histogram float64,
 ) (*entity.Insight, error) {
-	media, err := (*u.mediaRepo).GetByID(ctx, mediaID)
+	media, err := u.mediaRepo.GetByID(ctx, mediaID)
 	if err != nil {
 		return nil, errors.New("failed to get media")
 	}
@@ -44,12 +44,12 @@ func (u *CreateInsightUseCase) Execute(
 		Histogram:   histogram,
 	}
 
-	if err := (*u.insightRepo).Create(ctx, &insight); err != nil {
+	if err := u.insightRepo.Create(ctx, &insight); err != nil {
 		return nil, errors.New("failed to create insight")
 	}
 
 	media.InsightID = &insight.ID
-	if err := (*u.mediaRepo).Update(ctx, media); err != nil {
+	if err := u.mediaRepo.Update(ctx, media); err != nil {
 		return nil, errors.New("failed to link insight to media")
 	}
 

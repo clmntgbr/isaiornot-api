@@ -14,14 +14,12 @@ func setupRoutes(app *fiber.App, container *wire.Container) {
 }
 
 func setupWebhooks(app *fiber.App, container *wire.Container) {
-	webhooks := app.Group("/webhook")
+	webhooks := app.Group("/webhooks")
 
 	webhooks.Post("/clerk", container.ClerkMiddleware.Protected(), container.ClerkHandler.Execute)
 	webhooks.Post("/stripe", container.StripeMiddleware.Protected(), container.StripeHandler.Execute)
-
-	minioWebhooks := app.Group("/webhooks/minio")
-	minioWebhooks.Post(
-		"/object-created",
+	webhooks.Post(
+		"/minio/object-created",
 		container.MinIOMiddleware.Protected(),
 		container.MinIOHandler.ObjectCreated,
 	)

@@ -25,18 +25,13 @@ func NewAnalyzer(client *sightengine.Client) *Analyzer {
 	return &Analyzer{client: client}
 }
 
-func (a *Analyzer) Analyze(ctx context.Context, imageData []byte, filename string) (ScanResult, error) {
+func (a *Analyzer) Analyze(ctx context.Context, imageData []byte, filename string) (entity.Signal, error) {
 	response, err := a.client.CheckGenAI(ctx, imageData, filename)
 	if err != nil {
-		return ScanResult{}, err
+		return entity.Signal{}, err
 	}
 
-	signal := toSignal(*response)
-
-	return ScanResult{
-		Signal:      signal,
-		Sightengine: *response,
-	}, nil
+	return toSignal(*response), nil
 }
 
 func toSignal(response sightengine.CheckResponse) entity.Signal {

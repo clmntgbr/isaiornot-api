@@ -3,55 +3,56 @@ package media
 import (
 	"context"
 	"errors"
-	"go-api/domain/repository"
-	"go-api/infrastructure/centrifugo"
-	"go-api/infrastructure/config"
-	"go-api/infrastructure/messaging/rabbitmq"
 	"log"
+
+	"go-api/domain/messaging"
+	"go-api/domain/port"
+	"go-api/domain/realtime"
+	"go-api/domain/repository"
 
 	"github.com/google/uuid"
 )
 
 type PublishMetadataUseCase struct {
-	mediaRepo           *repository.MediaRepository
-	publisher           rabbitmq.Publisher
-	centrifugoPublisher *centrifugo.Publisher
-	config              *config.Config
+	mediaRepo           repository.MediaRepository
+	publisher           port.MessagePublisher
+	centrifugoPublisher port.RealtimePublisher
+	queues              port.AnalyzeQueues
 }
 
 func NewPublishMetadataUseCase(
-	mediaRepo *repository.MediaRepository,
-	publisher rabbitmq.Publisher,
-	centrifugoPublisher *centrifugo.Publisher,
-	config *config.Config,
+	mediaRepo repository.MediaRepository,
+	publisher port.MessagePublisher,
+	centrifugoPublisher port.RealtimePublisher,
+	queues port.AnalyzeQueues,
 ) *PublishMetadataUseCase {
 	return &PublishMetadataUseCase{
 		mediaRepo:           mediaRepo,
 		publisher:           publisher,
 		centrifugoPublisher: centrifugoPublisher,
-		config:              config,
+		queues:              queues,
 	}
 }
 
 func (u *PublishMetadataUseCase) Execute(ctx context.Context, mediaID uuid.UUID) error {
-	media, err := (*u.mediaRepo).GetByID(ctx, mediaID)
+	media, err := u.mediaRepo.GetByID(ctx, mediaID)
 	if err != nil {
 		return errors.New("failed to get media")
 	}
 
-	event := rabbitmq.AnalyzeMessage{
+	event := messaging.AnalyzeMessage{
 		UserID:       media.UserID,
 		MediaID:      mediaID,
 		MediaKey:     media.Key,
 		ThumbnailKey: media.Thumbnail,
 	}
 
-	err = u.publisher.Publish(ctx, u.config.AnalyzeRequestQueueName, event)
+	err = u.publisher.Publish(ctx, u.queues.Request, event)
 	if err != nil {
 		return errors.New("failed to publish metadata event")
 	}
 
-	realtimeEvent, err := centrifugo.NewScanStartedEvent(media)
+	realtimeEvent, err := realtime.NewScanStartedEvent(media)
 	if err != nil {
 		return errors.New("failed to build scan started event")
 	}

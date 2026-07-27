@@ -1,7 +1,7 @@
 package gorm
 
 import (
-	"go-api/infrastructure/paginate"
+	"go-api/domain/paginate"
 
 	"gorm.io/gorm"
 )

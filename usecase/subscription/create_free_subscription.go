@@ -9,15 +9,15 @@ import (
 )
 
 type CreateFreeSubscriptionUseCase struct {
-	planRepo         *repository.PlanRepository
-	subscriptionRepo *repository.SubscriptionRepository
-	userRepo         *repository.UserRepository
+	planRepo         repository.PlanRepository
+	subscriptionRepo repository.SubscriptionRepository
+	userRepo         repository.UserRepository
 }
 
 func NewCreateFreeSubscriptionUseCase(
-	planRepo *repository.PlanRepository,
-	subscriptionRepo *repository.SubscriptionRepository,
-	userRepo *repository.UserRepository,
+	planRepo repository.PlanRepository,
+	subscriptionRepo repository.SubscriptionRepository,
+	userRepo repository.UserRepository,
 ) *CreateFreeSubscriptionUseCase {
 	return &CreateFreeSubscriptionUseCase{
 		planRepo:         planRepo,
@@ -31,7 +31,7 @@ func (u *CreateFreeSubscriptionUseCase) Execute(ctx context.Context, user *entit
 		return nil, errors.New("user is required")
 	}
 
-	plan, err := (*u.planRepo).GetBySlug(ctx, entity.FreePlanSlug)
+	plan, err := u.planRepo.GetBySlug(ctx, entity.FreePlanSlug)
 	if err != nil {
 		return nil, errors.New("failed to get free plan")
 	}
@@ -48,13 +48,13 @@ func (u *CreateFreeSubscriptionUseCase) Execute(ctx context.Context, user *entit
 		QuotaPeriodStart:      now,
 	}
 
-	if err := (*u.subscriptionRepo).Create(ctx, &subscription); err != nil {
+	if err := u.subscriptionRepo.Create(ctx, &subscription); err != nil {
 		return nil, errors.New("failed to create free subscription")
 	}
 
 	user.SubscriptionID = &subscription.ID
 	user.Subscription = &subscription
-	if err := (*u.userRepo).Update(ctx, user); err != nil {
+	if err := u.userRepo.Update(ctx, user); err != nil {
 		return nil, errors.New("failed to link subscription to user")
 	}
 

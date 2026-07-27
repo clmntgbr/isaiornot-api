@@ -4,26 +4,27 @@ import (
 	"bytes"
 	"context"
 	"errors"
+
+	"go-api/domain/port"
 	"go-api/domain/repository"
-	mediadto "go-api/infrastructure/media"
-	"go-api/infrastructure/storage"
+	mediadto "go-api/domain/media"
 	"go-api/usecase/thumbnail"
 
 	"github.com/google/uuid"
 )
 
 type GenerateThumbnailUseCase struct {
-	storage                  *storage.MinIOStorage
-	mediaRepo                *repository.MediaRepository
+	storage                  port.Storage
+	mediaRepo                repository.MediaRepository
 	generateThumbnailUseCase *thumbnail.GenerateImageThumbnailUseCase
 }
 
-func NewGenerateThumbnailUseCase(storage *storage.MinIOStorage, mediaRepo *repository.MediaRepository, generateThumbnailUseCase *thumbnail.GenerateImageThumbnailUseCase) *GenerateThumbnailUseCase {
+func NewGenerateThumbnailUseCase(storage port.Storage, mediaRepo repository.MediaRepository, generateThumbnailUseCase *thumbnail.GenerateImageThumbnailUseCase) *GenerateThumbnailUseCase {
 	return &GenerateThumbnailUseCase{storage: storage, mediaRepo: mediaRepo, generateThumbnailUseCase: generateThumbnailUseCase}
 }
 
 func (uc *GenerateThumbnailUseCase) Execute(ctx context.Context, userID uuid.UUID, mediaID uuid.UUID) error {
-	media, err := (*uc.mediaRepo).GetByID(ctx, mediaID)
+	media, err := uc.mediaRepo.GetByID(ctx, mediaID)
 	if err != nil {
 		return errors.New("media not found")
 	}
@@ -57,5 +58,5 @@ func (uc *GenerateThumbnailUseCase) Execute(ctx context.Context, userID uuid.UUI
 	}
 
 	media.Thumbnail = thumbKey
-	return (*uc.mediaRepo).Update(ctx, media)
+	return uc.mediaRepo.Update(ctx, media)
 }

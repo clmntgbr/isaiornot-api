@@ -4,38 +4,38 @@ import (
 	"context"
 	"fmt"
 
+	"go-api/domain/messaging"
+	"go-api/domain/port"
 	"go-api/domain/repository"
-	"go-api/infrastructure/config"
-	"go-api/infrastructure/messaging/rabbitmq"
 )
 
 type Dispatcher struct {
-	config          *config.Config
-	mediaRepo       *repository.MediaRepository
-	publisher       rabbitmq.Publisher
+	queues          port.AnalyzeQueues
+	mediaRepo       repository.MediaRepository
+	publisher       port.MessagePublisher
 	finalizeUseCase *AggregateScanUseCase
 }
 
 func NewDispatcher(
-	config *config.Config,
-	mediaRepo *repository.MediaRepository,
-	publisher rabbitmq.Publisher,
+	queues port.AnalyzeQueues,
+	mediaRepo repository.MediaRepository,
+	publisher port.MessagePublisher,
 	finalizeUseCase *AggregateScanUseCase,
 ) *Dispatcher {
 	return &Dispatcher{
-		config:          config,
+		queues:          queues,
 		mediaRepo:       mediaRepo,
 		publisher:       publisher,
 		finalizeUseCase: finalizeUseCase,
 	}
 }
 
-func (d *Dispatcher) HandleAnalyzeRequest(ctx context.Context, message rabbitmq.AnalyzeMessage) error {
-	return d.publisher.Publish(ctx, d.config.MetadataAnalyzeQueueName, message)
+func (d *Dispatcher) HandleAnalyzeRequest(ctx context.Context, message messaging.AnalyzeMessage) error {
+	return d.publisher.Publish(ctx, d.queues.MetadataAnalyze, message)
 }
 
-func (d *Dispatcher) HandleStageDone(ctx context.Context, message rabbitmq.StageDoneMessage) error {
-	media, err := (*d.mediaRepo).GetByID(ctx, message.MediaID)
+func (d *Dispatcher) HandleStageDone(ctx context.Context, message messaging.StageDoneMessage) error {
+	media, err := d.mediaRepo.GetByID(ctx, message.MediaID)
 	if err != nil {
 		return fmt.Errorf("media not found: %w", err)
 	}
@@ -45,7 +45,7 @@ func (d *Dispatcher) HandleStageDone(ctx context.Context, message rabbitmq.Stage
 		return d.finalizeUseCase.Execute(ctx, media.ID)
 	}
 
-	analyzeMessage := rabbitmq.AnalyzeMessage{
+	analyzeMessage := messaging.AnalyzeMessage{
 		UserID:       media.UserID,
 		MediaID:      media.ID,
 		MediaKey:     media.Key,
@@ -74,11 +74,11 @@ func (d *Dispatcher) nextStage(current string) string {
 func (d *Dispatcher) stageAnalyzeQueue(stage string) string {
 	switch stage {
 	case "metadata":
-		return d.config.MetadataAnalyzeQueueName
+		return d.queues.MetadataAnalyze
 	case "heuristics":
-		return d.config.HeuristicsAnalyzeQueueName
+		return d.queues.HeuristicsAnalyze
 	case "ai_model":
-		return d.config.AiModelAnalyzeQueueName
+		return d.queues.AiModelAnalyze
 	default:
 		return ""
 	}
@@ -87,11 +87,11 @@ func (d *Dispatcher) stageAnalyzeQueue(stage string) string {
 func (d *Dispatcher) StageFailedQueue(stage string) string {
 	switch stage {
 	case "metadata":
-		return d.config.MetadataFailedQueueName
+		return d.queues.MetadataFailed
 	case "heuristics":
-		return d.config.HeuristicsFailedQueueName
+		return d.queues.HeuristicsFailed
 	case "ai_model":
-		return d.config.AiModelFailedQueueName
+		return d.queues.AiModelFailed
 	default:
 		return ""
 	}
@@ -100,20 +100,20 @@ func (d *Dispatcher) StageFailedQueue(stage string) string {
 func (d *Dispatcher) StageDoneQueue(stage string) string {
 	switch stage {
 	case "metadata":
-		return d.config.MetadataDoneQueueName
+		return d.queues.MetadataDone
 	case "heuristics":
-		return d.config.HeuristicsDoneQueueName
+		return d.queues.HeuristicsDone
 	case "ai_model":
-		return d.config.AiModelDoneQueueName
+		return d.queues.AiModelDone
 	default:
 		return ""
 	}
 }
 
-func (d *Dispatcher) PublishStageDone(ctx context.Context, queueName string, message rabbitmq.StageDoneMessage) error {
+func (d *Dispatcher) PublishStageDone(ctx context.Context, queueName string, message messaging.StageDoneMessage) error {
 	return d.publisher.Publish(ctx, queueName, message)
 }
 
-func (d *Dispatcher) PublishFailed(ctx context.Context, queueName string, message rabbitmq.FailedMessage) error {
+func (d *Dispatcher) PublishFailed(ctx context.Context, queueName string, message messaging.FailedMessage) error {
 	return d.publisher.Publish(ctx, queueName, message)
 }

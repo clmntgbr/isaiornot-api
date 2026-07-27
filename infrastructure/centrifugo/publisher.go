@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"go-api/domain/realtime"
 	"go-api/infrastructure/config"
 
 	"github.com/centrifugal/gocent/v3"
@@ -33,7 +34,7 @@ func apiEndpoint(baseURL string) string {
 	return baseURL + "/api"
 }
 
-func (p *Publisher) PublishToUser(ctx context.Context, userID uuid.UUID, event MediaEvent) error {
+func (p *Publisher) PublishToUser(ctx context.Context, userID uuid.UUID, event realtime.MediaEvent) error {
 	payload, err := event.Marshal()
 	if err != nil {
 		return fmt.Errorf("failed to marshal centrifugo event: %w", err)
@@ -47,7 +48,7 @@ func (p *Publisher) PublishToUser(ctx context.Context, userID uuid.UUID, event M
 	return nil
 }
 
-func (p *Publisher) PublishSubscriptionToUser(ctx context.Context, userID uuid.UUID, event SubscriptionEvent) error {
+func (p *Publisher) PublishSubscriptionToUser(ctx context.Context, userID uuid.UUID, event realtime.SubscriptionEvent) error {
 	payload, err := event.Marshal()
 	if err != nil {
 		return fmt.Errorf("failed to marshal centrifugo event: %w", err)

@@ -9,12 +9,12 @@ import (
 )
 
 type InvoicePaymentSucceededUseCase struct {
-	subscriptionRepo *repository.SubscriptionRepository
+	subscriptionRepo repository.SubscriptionRepository
 	notifier         *Notifier
 }
 
 func NewInvoicePaymentSucceededUseCase(
-	subscriptionRepo *repository.SubscriptionRepository,
+	subscriptionRepo repository.SubscriptionRepository,
 	notifier *Notifier,
 ) *InvoicePaymentSucceededUseCase {
 	return &InvoicePaymentSucceededUseCase{
@@ -36,13 +36,13 @@ func (u *InvoicePaymentSucceededUseCase) Execute(ctx context.Context, input Invo
 		return nil
 	}
 
-	subscription, err := (*u.subscriptionRepo).GetByStripeSubscriptionID(ctx, input.StripeSubscriptionID)
+	subscription, err := u.subscriptionRepo.GetByStripeSubscriptionID(ctx, input.StripeSubscriptionID)
 	if err != nil {
 		return errors.New("failed to get subscription")
 	}
 
 	if subscription == nil && input.StripeCustomerID != "" {
-		subscription, err = (*u.subscriptionRepo).GetByStripeCustomerID(ctx, input.StripeCustomerID)
+		subscription, err = u.subscriptionRepo.GetByStripeCustomerID(ctx, input.StripeCustomerID)
 		if err != nil {
 			return errors.New("failed to get subscription by customer")
 		}
@@ -65,7 +65,7 @@ func (u *InvoicePaymentSucceededUseCase) Execute(ctx context.Context, input Invo
 		subscription.SubscriptionEndDate = input.PeriodEnd
 	}
 
-	if err := (*u.subscriptionRepo).Update(ctx, subscription); err != nil {
+	if err := u.subscriptionRepo.Update(ctx, subscription); err != nil {
 		return errors.New("failed to update subscription")
 	}
 

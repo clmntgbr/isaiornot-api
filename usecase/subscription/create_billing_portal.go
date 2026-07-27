@@ -3,21 +3,22 @@ package subscription
 import (
 	"context"
 	"errors"
+
 	"go-api/domain/entity"
+	"go-api/domain/port"
 	"go-api/domain/repository"
-	"go-api/infrastructure/stripe"
 )
 
 var ErrMissingStripeCustomer = errors.New("user has no stripe customer id")
 
 type CreateBillingPortalUseCase struct {
-	subscriptionRepo     *repository.SubscriptionRepository
-	billingPortalGateway *stripe.BillingPortalGateway
+	subscriptionRepo     repository.SubscriptionRepository
+	billingPortalGateway port.BillingPortalGateway
 }
 
 func NewCreateBillingPortalUseCase(
-	subscriptionRepo *repository.SubscriptionRepository,
-	billingPortalGateway *stripe.BillingPortalGateway,
+	subscriptionRepo repository.SubscriptionRepository,
+	billingPortalGateway port.BillingPortalGateway,
 ) *CreateBillingPortalUseCase {
 	return &CreateBillingPortalUseCase{
 		subscriptionRepo:     subscriptionRepo,
@@ -33,7 +34,7 @@ func (u *CreateBillingPortalUseCase) Execute(ctx context.Context, user *entity.U
 		return "", ErrSubscriptionNotFound
 	}
 
-	subscription, err := (*u.subscriptionRepo).GetByID(ctx, *user.SubscriptionID)
+	subscription, err := u.subscriptionRepo.GetByID(ctx, *user.SubscriptionID)
 	if err != nil {
 		return "", errors.New("failed to get subscription")
 	}

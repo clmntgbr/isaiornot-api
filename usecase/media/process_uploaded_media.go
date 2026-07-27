@@ -9,10 +9,9 @@ import (
 
 	"go-api/domain/entity"
 	"go-api/domain/enum"
+	"go-api/domain/port"
 	"go-api/domain/repository"
-	mediadto "go-api/infrastructure/media"
-	"go-api/infrastructure/storage"
-	"go-api/infrastructure/video"
+	mediadto "go-api/domain/media"
 	"go-api/usecase/scan"
 	"go-api/usecase/subscription"
 	"go-api/usecase/thumbnail"
@@ -21,28 +20,28 @@ import (
 )
 
 type ProcessUploadedMediaUseCase struct {
-	storage                    *storage.MinIOStorage
-	mediaRepo                  *repository.MediaRepository
+	storage                    port.Storage
+	mediaRepo                  repository.MediaRepository
 	createMediaUseCase         *CreateMediaUseCase
 	generateThumbnailUseCase   *GenerateThumbnailUseCase
 	updateMediaStatusUseCase   *UpdateMediaStatusUseCase
 	publishMetadataUseCase     *PublishMetadataUseCase
 	assertUploadAllowedUseCase *subscription.AssertUploadAllowedUseCase
 	failScanUseCase            *scan.FailScanUseCase
-	frameExtractor             *video.FrameExtractor
+	frameExtractor             port.FrameExtractor
 	imageThumbnailUseCase      *thumbnail.GenerateImageThumbnailUseCase
 }
 
 func NewProcessUploadedMediaUseCase(
-	storage *storage.MinIOStorage,
-	mediaRepo *repository.MediaRepository,
+	storage port.Storage,
+	mediaRepo repository.MediaRepository,
 	createMediaUseCase *CreateMediaUseCase,
 	generateThumbnailUseCase *GenerateThumbnailUseCase,
 	updateMediaStatusUseCase *UpdateMediaStatusUseCase,
 	publishMetadataUseCase *PublishMetadataUseCase,
 	assertUploadAllowedUseCase *subscription.AssertUploadAllowedUseCase,
 	failScanUseCase *scan.FailScanUseCase,
-	frameExtractor *video.FrameExtractor,
+	frameExtractor port.FrameExtractor,
 	imageThumbnailUseCase *thumbnail.GenerateImageThumbnailUseCase,
 ) *ProcessUploadedMediaUseCase {
 	return &ProcessUploadedMediaUseCase{
@@ -149,7 +148,7 @@ func (u *ProcessUploadedMediaUseCase) processVideo(
 			sourceMedia.Filename = filename
 			sourceMedia.ContentType = "image/jpeg"
 			sourceMedia.Size = int64(len(frame))
-			if err := (*u.mediaRepo).Update(ctx, sourceMedia); err != nil {
+			if err := u.mediaRepo.Update(ctx, sourceMedia); err != nil {
 				return fmt.Errorf("failed to update source media as first frame: %w", err)
 			}
 			frameMedia = sourceMedia
@@ -164,7 +163,7 @@ func (u *ProcessUploadedMediaUseCase) processVideo(
 				Status:      enum.MediaStatusProcessing,
 				Statuses:    []enum.MediaStatus{enum.MediaStatusProcessing},
 			}
-			if err := (*u.mediaRepo).Create(ctx, &created); err != nil {
+			if err := u.mediaRepo.Create(ctx, &created); err != nil {
 				return fmt.Errorf("failed to create frame media %d: %w", i, err)
 			}
 			frameMedia = &created
@@ -237,5 +236,5 @@ func (u *ProcessUploadedMediaUseCase) storeFrameThumbnail(ctx context.Context, u
 	}
 
 	media.Thumbnail = thumbKey
-	return (*u.mediaRepo).Update(ctx, media)
+	return u.mediaRepo.Update(ctx, media)
 }

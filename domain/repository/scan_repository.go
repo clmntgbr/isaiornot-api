@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"go-api/domain/entity"
-	"go-api/infrastructure/paginate"
+	"go-api/domain/paginate"
 
 	"github.com/google/uuid"
 )

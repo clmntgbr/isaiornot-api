@@ -1,18 +1,14 @@
 package wire
 
 import (
-	"go-api/handler"
-	"go-api/infrastructure/centrifugo"
+	"go-api/cmd/shared/pipeline"
+	"go-api/handler/worker"
 	"go-api/infrastructure/config"
 	heuristicsinfra "go-api/infrastructure/heuristics"
-	"go-api/infrastructure/messaging/rabbitmq"
-	"go-api/infrastructure/messaging/security"
 	"go-api/infrastructure/storage"
 	repoGorm "go-api/repository/gorm"
 	heuristicuc "go-api/usecase/heuristic"
 	insightuc "go-api/usecase/insight"
-	pipelineuc "go-api/usecase/pipeline"
-	scanuc "go-api/usecase/scan"
 	"go-api/usecase/signal"
 	"log"
 
@@ -20,55 +16,34 @@ import (
 )
 
 type Container struct {
-	HeuristicHandler *handler.HeuristicHandler
+	HeuristicHandler *worker.HeuristicHandler
 }
 
 func NewContainer(db *gorm.DB, env *config.Config) *Container {
+	shared, err := pipeline.New(db, env)
+	if err != nil {
+		log.Fatalf("failed to create pipeline: %v", err)
+	}
+
 	storageClient, err := storage.NewMinIOStorage(env)
 	if err != nil {
 		log.Fatalf("failed to create storage client: %v", err)
 	}
 
-	publisher, err := rabbitmq.NewPublisherFromEnv(env)
-	if err != nil {
-		log.Fatalf("failed to create publisher: %v", err)
-	}
-
-	centrifugoPublisher := centrifugo.NewPublisher(env)
-
-	mediaRepo := repoGorm.NewMediaRepository(db)
-	scanRepo := repoGorm.NewScanRepository(db)
-	signalRepo := repoGorm.NewSignalRepository(db)
 	insightRepo := repoGorm.NewInsightRepository(db)
-
-	updateScanStatusUseCase := scanuc.NewUpdateScanStatusUseCase(&scanRepo)
-	aggregateScanUseCase := pipelineuc.NewAggregateScanUseCase(
-		&mediaRepo,
-		&scanRepo,
-		&signalRepo,
-		updateScanStatusUseCase,
-		centrifugoPublisher,
-	)
-	dispatcher := pipelineuc.NewDispatcher(env, &mediaRepo, publisher, aggregateScanUseCase)
-
 	analyzer := heuristicsinfra.NewAnalyzer()
 	analyzeMediaHeuristicsUseCase := heuristicuc.NewAnalyzeMediaHeuristicsUseCase(storageClient, analyzer)
-	createSignalUseCase := signal.NewCreateSignalUseCase(&signalRepo)
-	createInsightUseCase := insightuc.NewCreateInsightUseCase(&insightRepo, &mediaRepo)
-
-	parser := security.NewWorkerParser(env)
-	securityValidator := security.NewWorkerSecurityValidator(env)
-
-	heuristicHandler := handler.NewHeuristicHandler(
-		parser,
-		securityValidator,
-		dispatcher,
-		analyzeMediaHeuristicsUseCase,
-		createSignalUseCase,
-		createInsightUseCase,
-	)
+	createSignalUseCase := signal.NewCreateSignalUseCase(shared.SignalRepo)
+	createInsightUseCase := insightuc.NewCreateInsightUseCase(insightRepo, shared.MediaRepo)
 
 	return &Container{
-		HeuristicHandler: heuristicHandler,
+		HeuristicHandler: worker.NewHeuristicHandler(
+			shared.Parser,
+			shared.SecurityValidator,
+			shared.Dispatcher,
+			analyzeMediaHeuristicsUseCase,
+			createSignalUseCase,
+			createInsightUseCase,
+		),
 	}
 }

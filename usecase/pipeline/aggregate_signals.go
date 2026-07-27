@@ -7,8 +7,9 @@ import (
 	"go-api/domain/aggregate"
 	"go-api/domain/entity"
 	"go-api/domain/enum"
+	"go-api/domain/port"
+	"go-api/domain/realtime"
 	"go-api/domain/repository"
-	"go-api/infrastructure/centrifugo"
 	scanuc "go-api/usecase/scan"
 
 	"github.com/google/uuid"
@@ -17,19 +18,19 @@ import (
 var requiredSignalNames = []string{"metadata", "heuristics", "ai_model"}
 
 type AggregateScanUseCase struct {
-	mediaRepo               *repository.MediaRepository
-	scanRepo                *repository.ScanRepository
-	signalRepo              *repository.SignalRepository
+	mediaRepo               repository.MediaRepository
+	scanRepo                repository.ScanRepository
+	signalRepo              repository.SignalRepository
 	updateScanStatusUseCase *scanuc.UpdateScanStatusUseCase
-	centrifugoPublisher     *centrifugo.Publisher
+	centrifugoPublisher     port.RealtimePublisher
 }
 
 func NewAggregateScanUseCase(
-	mediaRepo *repository.MediaRepository,
-	scanRepo *repository.ScanRepository,
-	signalRepo *repository.SignalRepository,
+	mediaRepo repository.MediaRepository,
+	scanRepo repository.ScanRepository,
+	signalRepo repository.SignalRepository,
 	updateScanStatusUseCase *scanuc.UpdateScanStatusUseCase,
-	centrifugoPublisher *centrifugo.Publisher,
+	centrifugoPublisher port.RealtimePublisher,
 ) *AggregateScanUseCase {
 	return &AggregateScanUseCase{
 		mediaRepo:               mediaRepo,
@@ -41,12 +42,12 @@ func NewAggregateScanUseCase(
 }
 
 func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) error {
-	media, err := (*u.mediaRepo).GetByID(ctx, mediaID)
+	media, err := u.mediaRepo.GetByID(ctx, mediaID)
 	if err != nil {
 		return errors.New("media not found")
 	}
 
-	signals, err := (*u.signalRepo).GetByMediaID(ctx, mediaID)
+	signals, err := u.signalRepo.GetByMediaID(ctx, mediaID)
 	if err != nil {
 		return errors.New("failed to load signals")
 	}
@@ -57,7 +58,7 @@ func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) e
 
 	media.Statuses = append(media.Statuses, enum.MediaStatusAnalyzed)
 	media.Status = enum.MediaStatusAnalyzed
-	if err := (*u.mediaRepo).Update(ctx, media); err != nil {
+	if err := u.mediaRepo.Update(ctx, media); err != nil {
 		return err
 	}
 
@@ -65,7 +66,7 @@ func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) e
 		return err
 	}
 
-	scan, err := (*u.scanRepo).GetByID(ctx, media.ScanID)
+	scan, err := u.scanRepo.GetByID(ctx, media.ScanID)
 	if err != nil {
 		return errors.New("scan not found")
 	}
@@ -78,7 +79,7 @@ func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) e
 	var allSignals []*entity.Signal
 
 	for _, scanMedia := range scan.Medias {
-		mediaSignals, err := (*u.signalRepo).GetByMediaID(ctx, scanMedia.ID)
+		mediaSignals, err := u.signalRepo.GetByMediaID(ctx, scanMedia.ID)
 		if err != nil {
 			return errors.New("failed to load signals")
 		}
@@ -95,11 +96,11 @@ func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) e
 	scan.FinalScore = result.FinalScore
 	scan.ScanConfidence = result.Confidence
 	scan.Verdict = result.Verdict
-	if err := (*u.scanRepo).Update(ctx, scan); err != nil {
+	if err := u.scanRepo.Update(ctx, scan); err != nil {
 		return err
 	}
 
-	realtimeEvent, err := centrifugo.NewScanCompletedEvent(scan, media, allSignals)
+	realtimeEvent, err := realtime.NewScanCompletedEvent(scan, media, allSignals)
 	if err != nil {
 		return errors.New("failed to build scan completed event")
 	}

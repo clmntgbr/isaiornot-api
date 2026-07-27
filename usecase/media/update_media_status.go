@@ -11,12 +11,12 @@ import (
 )
 
 type UpdateMediaStatusUseCase struct {
-	mediaRepo               *repository.MediaRepository
+	mediaRepo               repository.MediaRepository
 	updateScanStatusUseCase *scan.UpdateScanStatusUseCase
 }
 
 func NewUpdateMediaStatusUseCase(
-	mediaRepo *repository.MediaRepository,
+	mediaRepo repository.MediaRepository,
 	updateScanStatusUseCase *scan.UpdateScanStatusUseCase,
 ) *UpdateMediaStatusUseCase {
 	return &UpdateMediaStatusUseCase{
@@ -26,7 +26,7 @@ func NewUpdateMediaStatusUseCase(
 }
 
 func (u *UpdateMediaStatusUseCase) Execute(ctx context.Context, mediaID uuid.UUID, status enum.MediaStatus) error {
-	media, err := (*u.mediaRepo).GetByID(ctx, mediaID)
+	media, err := u.mediaRepo.GetByID(ctx, mediaID)
 	if err != nil {
 		return errors.New("failed to get media")
 	}
@@ -34,7 +34,7 @@ func (u *UpdateMediaStatusUseCase) Execute(ctx context.Context, mediaID uuid.UUI
 	media.Statuses = append(media.Statuses, status)
 	media.Status = media.Statuses[len(media.Statuses)-1]
 
-	if err := (*u.mediaRepo).Update(ctx, media); err != nil {
+	if err := u.mediaRepo.Update(ctx, media); err != nil {
 		return err
 	}
 

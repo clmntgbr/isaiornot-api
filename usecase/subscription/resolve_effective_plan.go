@@ -8,11 +8,11 @@ import (
 )
 
 type ResolveEffectivePlanUseCase struct {
-	planRepo *repository.PlanRepository
+	planRepo repository.PlanRepository
 }
 
 func NewResolveEffectivePlanUseCase(
-	planRepo *repository.PlanRepository,
+	planRepo repository.PlanRepository,
 ) *ResolveEffectivePlanUseCase {
 	return &ResolveEffectivePlanUseCase{
 		planRepo: planRepo,
@@ -28,7 +28,7 @@ func (u *ResolveEffectivePlanUseCase) Execute(ctx context.Context, subscription 
 		return &subscription.Plan, nil
 	}
 
-	freePlan, err := (*u.planRepo).GetBySlug(ctx, entity.FreePlanSlug)
+	freePlan, err := u.planRepo.GetBySlug(ctx, entity.FreePlanSlug)
 	if err != nil {
 		return nil, errors.New("failed to get free plan")
 	}

@@ -5,14 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"go-api/domain/port"
 	"go-api/infrastructure/config"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type Publisher interface {
-	Publish(ctx context.Context, queueName string, message any) error
-}
+type Publisher = port.MessagePublisher
 
 type publisher struct {
 	env     *config.Config

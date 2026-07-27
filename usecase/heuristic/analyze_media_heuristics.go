@@ -5,21 +5,20 @@ import (
 	"errors"
 	"fmt"
 
-	heuristicsinfra "go-api/infrastructure/heuristics"
-	mediadto "go-api/infrastructure/media"
-	"go-api/infrastructure/storage"
+	"go-api/domain/port"
+	mediadto "go-api/domain/media"
 
 	"github.com/google/uuid"
 )
 
 type AnalyzeMediaHeuristicsUseCase struct {
-	storage  *storage.MinIOStorage
-	analyzer *heuristicsinfra.Analyzer
+	storage  port.Storage
+	analyzer port.HeuristicsAnalyzer
 }
 
 func NewAnalyzeMediaHeuristicsUseCase(
-	storage *storage.MinIOStorage,
-	analyzer *heuristicsinfra.Analyzer,
+	storage port.Storage,
+	analyzer port.HeuristicsAnalyzer,
 ) *AnalyzeMediaHeuristicsUseCase {
 	return &AnalyzeMediaHeuristicsUseCase{
 		storage:  storage,
@@ -31,7 +30,7 @@ func (uc *AnalyzeMediaHeuristicsUseCase) Execute(
 	ctx context.Context,
 	userID uuid.UUID,
 	mediaKey string,
-) (*heuristicsinfra.ScanResult, error) {
+) (*port.HeuristicsScanResult, error) {
 	objectKey := mediadto.NewObjectKey(userID, mediaKey)
 
 	reader, err := uc.storage.Get(ctx, objectKey)

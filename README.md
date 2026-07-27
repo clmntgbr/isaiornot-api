@@ -164,8 +164,8 @@ Base URL (dev): `http://localhost:4000`
 
 | Method | Path | Auth |
 |---|---|---|
-| `POST` | `/webhook/clerk` | Svix (`CLERK_WEBHOOK_SECRET`) |
-| `POST` | `/webhook/stripe` | Stripe signature (`STRIPE_WEBHOOK_SECRET`) |
+| `POST` | `/webhooks/clerk` | Svix (`CLERK_WEBHOOK_SECRET`) |
+| `POST` | `/webhooks/stripe` | Stripe signature (`STRIPE_WEBHOOK_SECRET`) |
 | `POST` | `/webhooks/minio/object-created` | `MINIO_WEBHOOK_SECRET` |
 
 Stripe events handled: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`.

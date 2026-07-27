@@ -11,15 +11,15 @@ import (
 )
 
 type GetMediaByIDUseCase struct {
-	mediaRepo *repository.MediaRepository
+	mediaRepo repository.MediaRepository
 }
 
-func NewGetMediaByIDUseCase(mediaRepo *repository.MediaRepository) *GetMediaByIDUseCase {
+func NewGetMediaByIDUseCase(mediaRepo repository.MediaRepository) *GetMediaByIDUseCase {
 	return &GetMediaByIDUseCase{mediaRepo: mediaRepo}
 }
 
 func (u *GetMediaByIDUseCase) Execute(ctx context.Context, userID uuid.UUID, mediaID uuid.UUID) (*entity.Media, error) {
-	media, err := (*u.mediaRepo).GetByID(ctx, mediaID)
+	media, err := u.mediaRepo.GetByID(ctx, mediaID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("media not found")

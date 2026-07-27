@@ -2,10 +2,12 @@ package subscription
 
 import (
 	"context"
-	"go-api/domain/repository"
-	"go-api/infrastructure/centrifugo"
 	"log"
 	"time"
+
+	"go-api/domain/port"
+	"go-api/domain/realtime"
+	"go-api/domain/repository"
 
 	"github.com/google/uuid"
 )
@@ -13,15 +15,15 @@ import (
 const PaymentNotificationDelay = 10 * time.Second
 
 type Notifier struct {
-	userRepo         *repository.UserRepository
-	subscriptionRepo *repository.SubscriptionRepository
-	publisher        *centrifugo.Publisher
+	userRepo         repository.UserRepository
+	subscriptionRepo repository.SubscriptionRepository
+	publisher        port.RealtimePublisher
 }
 
 func NewNotifier(
-	userRepo *repository.UserRepository,
-	subscriptionRepo *repository.SubscriptionRepository,
-	publisher *centrifugo.Publisher,
+	userRepo repository.UserRepository,
+	subscriptionRepo repository.SubscriptionRepository,
+	publisher port.RealtimePublisher,
 ) *Notifier {
 	return &Notifier{
 		userRepo:         userRepo,
@@ -31,15 +33,15 @@ func NewNotifier(
 }
 
 func (n *Notifier) Notify(ctx context.Context, subscriptionID uuid.UUID) {
-	n.notify(ctx, subscriptionID, centrifugo.EventSubscriptionUpdated)
+	n.notify(ctx, subscriptionID, realtime.EventSubscriptionUpdated)
 }
 
 func (n *Notifier) NotifyPaymentSucceededAfter(subscriptionID uuid.UUID) {
-	n.notifyAfter(subscriptionID, centrifugo.EventPaymentSucceeded, PaymentNotificationDelay)
+	n.notifyAfter(subscriptionID, realtime.EventPaymentSucceeded, PaymentNotificationDelay)
 }
 
 func (n *Notifier) NotifyPaymentFailedAfter(subscriptionID uuid.UUID) {
-	n.notifyAfter(subscriptionID, centrifugo.EventPaymentFailed, PaymentNotificationDelay)
+	n.notifyAfter(subscriptionID, realtime.EventPaymentFailed, PaymentNotificationDelay)
 }
 
 func (n *Notifier) notifyAfter(subscriptionID uuid.UUID, eventType string, delay time.Duration) {
@@ -54,19 +56,19 @@ func (n *Notifier) notifyAfter(subscriptionID uuid.UUID, eventType string, delay
 }
 
 func (n *Notifier) notify(ctx context.Context, subscriptionID uuid.UUID, eventType string) {
-	subscription, err := (*n.subscriptionRepo).GetByID(ctx, subscriptionID)
+	subscription, err := n.subscriptionRepo.GetByID(ctx, subscriptionID)
 	if err != nil || subscription == nil {
 		log.Printf("subscription notifier: failed to reload subscription %s: %v", subscriptionID, err)
 		return
 	}
 
-	user, err := (*n.userRepo).GetBySubscriptionID(ctx, subscriptionID)
+	user, err := n.userRepo.GetBySubscriptionID(ctx, subscriptionID)
 	if err != nil || user == nil {
 		log.Printf("subscription notifier: no user for subscription %s: %v", subscriptionID, err)
 		return
 	}
 
-	event := centrifugo.NewSubscriptionEventWithType(subscription, user.ID, eventType)
+	event := realtime.NewSubscriptionEventWithType(subscription, user.ID, eventType)
 	if err := n.publisher.PublishSubscriptionToUser(ctx, user.ID, event); err != nil {
 		log.Printf("subscription notifier: failed to publish for user %s: %v", user.ID, err)
 	}

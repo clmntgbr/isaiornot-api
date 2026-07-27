@@ -8,9 +8,9 @@ import (
 
 	"go-api/domain/entity"
 	"go-api/domain/enum"
+	"go-api/domain/port"
 	"go-api/domain/repository"
-	mediadto "go-api/infrastructure/media"
-	"go-api/infrastructure/storage"
+	mediadto "go-api/domain/media"
 
 	"github.com/google/uuid"
 )
@@ -23,15 +23,15 @@ type PresignUploadResult struct {
 }
 
 type GeneratePresignedUploadUrlUseCase struct {
-	storage   *storage.MinIOStorage
-	scanRepo  *repository.ScanRepository
-	mediaRepo *repository.MediaRepository
+	storage   port.Storage
+	scanRepo  repository.ScanRepository
+	mediaRepo repository.MediaRepository
 }
 
 func NewGeneratePresignedUploadUrlUseCase(
-	storage *storage.MinIOStorage,
-	scanRepo *repository.ScanRepository,
-	mediaRepo *repository.MediaRepository,
+	storage port.Storage,
+	scanRepo repository.ScanRepository,
+	mediaRepo repository.MediaRepository,
 ) *GeneratePresignedUploadUrlUseCase {
 	return &GeneratePresignedUploadUrlUseCase{
 		storage:   storage,
@@ -59,7 +59,7 @@ func (uc *GeneratePresignedUploadUrlUseCase) Execute(ctx context.Context, userID
 		Status:   enum.ScanStatusUploaded,
 		Statuses: []enum.ScanStatus{enum.ScanStatusUploaded},
 	}
-	if err := (*uc.scanRepo).Create(ctx, &scanEntity); err != nil {
+	if err := uc.scanRepo.Create(ctx, &scanEntity); err != nil {
 		return nil, errors.New("failed to create scan")
 	}
 
@@ -73,7 +73,7 @@ func (uc *GeneratePresignedUploadUrlUseCase) Execute(ctx context.Context, userID
 		Status:      enum.MediaStatusProcessing,
 		Statuses:    []enum.MediaStatus{enum.MediaStatusProcessing},
 	}
-	if err := (*uc.mediaRepo).Create(ctx, &media); err != nil {
+	if err := uc.mediaRepo.Create(ctx, &media); err != nil {
 		return nil, errors.New("failed to create media")
 	}
 

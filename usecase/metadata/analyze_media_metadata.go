@@ -5,21 +5,21 @@ import (
 	"errors"
 	"fmt"
 
-	mediadto "go-api/infrastructure/media"
-	metadatainfra "go-api/infrastructure/metadata"
-	"go-api/infrastructure/storage"
+	"go-api/domain/entity"
+	"go-api/domain/port"
+	mediadto "go-api/domain/media"
 
 	"github.com/google/uuid"
 )
 
 type AnalyzeMediaMetadataUseCase struct {
-	storage  *storage.MinIOStorage
-	analyzer *metadatainfra.Analyzer
+	storage  port.Storage
+	analyzer port.MetadataAnalyzer
 }
 
 func NewAnalyzeMediaMetadataUseCase(
-	storage *storage.MinIOStorage,
-	analyzer *metadatainfra.Analyzer,
+	storage port.Storage,
+	analyzer port.MetadataAnalyzer,
 ) *AnalyzeMediaMetadataUseCase {
 	return &AnalyzeMediaMetadataUseCase{
 		storage:  storage,
@@ -31,7 +31,7 @@ func (uc *AnalyzeMediaMetadataUseCase) Execute(
 	ctx context.Context,
 	userID uuid.UUID,
 	mediaKey string,
-) (*metadatainfra.ScanResult, error) {
+) (*entity.Signal, error) {
 	objectKey := mediadto.NewObjectKey(userID, mediaKey)
 
 	reader, err := uc.storage.Get(ctx, objectKey)
@@ -40,10 +40,10 @@ func (uc *AnalyzeMediaMetadataUseCase) Execute(
 	}
 	defer reader.Close()
 
-	result, err := uc.analyzer.Analyze(reader)
+	signal, err := uc.analyzer.Analyze(reader)
 	if err != nil {
 		return nil, errors.New("failed to analyze media metadata")
 	}
 
-	return &result, nil
+	return &signal, nil
 }

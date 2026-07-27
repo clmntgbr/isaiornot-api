@@ -11,15 +11,15 @@ import (
 )
 
 type GetScanUseCase struct {
-	scanRepo *repository.ScanRepository
+	scanRepo repository.ScanRepository
 }
 
-func NewGetScanUseCase(scanRepo *repository.ScanRepository) *GetScanUseCase {
+func NewGetScanUseCase(scanRepo repository.ScanRepository) *GetScanUseCase {
 	return &GetScanUseCase{scanRepo: scanRepo}
 }
 
 func (u *GetScanUseCase) Execute(ctx context.Context, userID uuid.UUID, scanID uuid.UUID) (*entity.Scan, error) {
-	scan, err := (*u.scanRepo).GetByID(ctx, scanID)
+	scan, err := u.scanRepo.GetByID(ctx, scanID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("scan not found")

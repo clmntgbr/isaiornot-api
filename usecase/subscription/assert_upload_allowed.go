@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go-api/domain/repository"
-	mediadto "go-api/infrastructure/media"
+	mediadto "go-api/domain/media"
 
 	"github.com/google/uuid"
 )
@@ -20,15 +20,15 @@ var (
 )
 
 type AssertUploadAllowedUseCase struct {
-	userRepo                    *repository.UserRepository
-	subscriptionRepo            *repository.SubscriptionRepository
+	userRepo                    repository.UserRepository
+	subscriptionRepo            repository.SubscriptionRepository
 	resolveEffectivePlanUseCase *ResolveEffectivePlanUseCase
 	getQuotaUsageUseCase        *GetQuotaUsageUseCase
 }
 
 func NewAssertUploadAllowedUseCase(
-	userRepo *repository.UserRepository,
-	subscriptionRepo *repository.SubscriptionRepository,
+	userRepo repository.UserRepository,
+	subscriptionRepo repository.SubscriptionRepository,
 	resolveEffectivePlanUseCase *ResolveEffectivePlanUseCase,
 	getQuotaUsageUseCase *GetQuotaUsageUseCase,
 ) *AssertUploadAllowedUseCase {
@@ -48,7 +48,7 @@ type AssertUploadAllowedInput struct {
 }
 
 func (u *AssertUploadAllowedUseCase) Execute(ctx context.Context, input AssertUploadAllowedInput) error {
-	user, err := (*u.userRepo).GetByID(ctx, input.UserID)
+	user, err := u.userRepo.GetByID(ctx, input.UserID)
 	if err != nil || user == nil {
 		return errors.New("user not found")
 	}
@@ -56,7 +56,7 @@ func (u *AssertUploadAllowedUseCase) Execute(ctx context.Context, input AssertUp
 		return ErrSubscriptionNotFound
 	}
 
-	subscription, err := (*u.subscriptionRepo).GetByID(ctx, *user.SubscriptionID)
+	subscription, err := u.subscriptionRepo.GetByID(ctx, *user.SubscriptionID)
 	if err != nil || subscription == nil {
 		return ErrSubscriptionNotFound
 	}

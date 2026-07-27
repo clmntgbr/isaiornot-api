@@ -11,13 +11,13 @@ import (
 )
 
 type CreateMediaUseCase struct {
-	scanRepo  *repository.ScanRepository
-	mediaRepo *repository.MediaRepository
+	scanRepo  repository.ScanRepository
+	mediaRepo repository.MediaRepository
 }
 
 func NewCreateMediaUseCase(
-	scanRepo *repository.ScanRepository,
-	mediaRepo *repository.MediaRepository,
+	scanRepo repository.ScanRepository,
+	mediaRepo repository.MediaRepository,
 ) *CreateMediaUseCase {
 	return &CreateMediaUseCase{
 		scanRepo:  scanRepo,
@@ -26,11 +26,11 @@ func NewCreateMediaUseCase(
 }
 
 func (u *CreateMediaUseCase) Execute(ctx context.Context, userID uuid.UUID, key string, contentType string, size int64) (*entity.Media, error) {
-	existing, err := (*u.mediaRepo).GetByKey(ctx, key)
+	existing, err := u.mediaRepo.GetByKey(ctx, key)
 	if err == nil {
 		existing.ContentType = contentType
 		existing.Size = size
-		if err := (*u.mediaRepo).Update(ctx, existing); err != nil {
+		if err := u.mediaRepo.Update(ctx, existing); err != nil {
 			return nil, errors.New("failed to update media")
 		}
 		return existing, nil
@@ -41,7 +41,7 @@ func (u *CreateMediaUseCase) Execute(ctx context.Context, userID uuid.UUID, key 
 		Status:   enum.ScanStatusUploaded,
 		Statuses: []enum.ScanStatus{enum.ScanStatusUploaded},
 	}
-	if err := (*u.scanRepo).Create(ctx, &scan); err != nil {
+	if err := u.scanRepo.Create(ctx, &scan); err != nil {
 		return nil, errors.New("failed to create scan")
 	}
 
@@ -54,7 +54,7 @@ func (u *CreateMediaUseCase) Execute(ctx context.Context, userID uuid.UUID, key 
 		Status:      enum.MediaStatusProcessing,
 		Statuses:    []enum.MediaStatus{enum.MediaStatusProcessing},
 	}
-	if err := (*u.mediaRepo).Create(ctx, &media); err != nil {
+	if err := u.mediaRepo.Create(ctx, &media); err != nil {
 		return nil, errors.New("failed to create media")
 	}
 

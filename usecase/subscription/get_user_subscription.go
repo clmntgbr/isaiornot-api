@@ -10,13 +10,13 @@ import (
 var ErrSubscriptionNotFound = errors.New("subscription not found")
 
 type GetUserSubscriptionUseCase struct {
-	subscriptionRepo            *repository.SubscriptionRepository
+	subscriptionRepo            repository.SubscriptionRepository
 	resolveEffectivePlanUseCase *ResolveEffectivePlanUseCase
 	getQuotaUsageUseCase        *GetQuotaUsageUseCase
 }
 
 func NewGetUserSubscriptionUseCase(
-	subscriptionRepo *repository.SubscriptionRepository,
+	subscriptionRepo repository.SubscriptionRepository,
 	resolveEffectivePlanUseCase *ResolveEffectivePlanUseCase,
 	getQuotaUsageUseCase *GetQuotaUsageUseCase,
 ) *GetUserSubscriptionUseCase {
@@ -41,7 +41,7 @@ func (u *GetUserSubscriptionUseCase) Execute(ctx context.Context, user *entity.U
 		return nil, ErrSubscriptionNotFound
 	}
 
-	subscription, err := (*u.subscriptionRepo).GetByID(ctx, *user.SubscriptionID)
+	subscription, err := u.subscriptionRepo.GetByID(ctx, *user.SubscriptionID)
 	if err != nil {
 		return nil, errors.New("failed to get subscription")
 	}

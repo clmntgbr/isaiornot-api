@@ -10,10 +10,10 @@ import (
 )
 
 type CreateSignalUseCase struct {
-	signalRepo *repository.SignalRepository
+	signalRepo repository.SignalRepository
 }
 
-func NewCreateSignalUseCase(signalRepo *repository.SignalRepository) *CreateSignalUseCase {
+func NewCreateSignalUseCase(signalRepo repository.SignalRepository) *CreateSignalUseCase {
 	return &CreateSignalUseCase{signalRepo: signalRepo}
 }
 
@@ -26,7 +26,7 @@ func (u *CreateSignalUseCase) Execute(ctx context.Context, mediaID uuid.UUID, na
 		Details:    details,
 	}
 
-	err := (*u.signalRepo).Create(ctx, &signal)
+	err := u.signalRepo.Create(ctx, &signal)
 	if err != nil {
 		return nil, errors.New("failed to create signal")
 	}

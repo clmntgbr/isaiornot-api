@@ -3,27 +3,28 @@ package subscription
 import (
 	"context"
 	"errors"
-	"go-api/domain/entity"
-	"go-api/domain/repository"
-	"go-api/infrastructure/stripe"
 	"time"
+
+	"go-api/domain/entity"
+	"go-api/domain/port"
+	"go-api/domain/repository"
 
 	"github.com/google/uuid"
 )
 
 type CheckoutCompletedUseCase struct {
-	userRepo            *repository.UserRepository
-	planRepo            *repository.PlanRepository
-	subscriptionRepo    *repository.SubscriptionRepository
-	subscriptionGateway *stripe.SubscriptionGateway
+	userRepo            repository.UserRepository
+	planRepo            repository.PlanRepository
+	subscriptionRepo    repository.SubscriptionRepository
+	subscriptionGateway port.SubscriptionGateway
 	notifier            *Notifier
 }
 
 func NewCheckoutCompletedUseCase(
-	userRepo *repository.UserRepository,
-	planRepo *repository.PlanRepository,
-	subscriptionRepo *repository.SubscriptionRepository,
-	subscriptionGateway *stripe.SubscriptionGateway,
+	userRepo repository.UserRepository,
+	planRepo repository.PlanRepository,
+	subscriptionRepo repository.SubscriptionRepository,
+	subscriptionGateway port.SubscriptionGateway,
 	notifier *Notifier,
 ) *CheckoutCompletedUseCase {
 	return &CheckoutCompletedUseCase{
@@ -46,7 +47,7 @@ func (u *CheckoutCompletedUseCase) Execute(ctx context.Context, input CheckoutCo
 		return errors.New("stripe subscription id is required")
 	}
 
-	user, err := (*u.userRepo).GetByID(ctx, input.UserID)
+	user, err := u.userRepo.GetByID(ctx, input.UserID)
 	if err != nil {
 		return errors.New("failed to get user")
 	}
@@ -59,7 +60,7 @@ func (u *CheckoutCompletedUseCase) Execute(ctx context.Context, input CheckoutCo
 		return err
 	}
 
-	plan, err := (*u.planRepo).GetByStripePriceID(ctx, subData.PriceID)
+	plan, err := u.planRepo.GetByStripePriceID(ctx, subData.PriceID)
 	if err != nil {
 		return errors.New("failed to get plan")
 	}
@@ -76,7 +77,7 @@ func (u *CheckoutCompletedUseCase) Execute(ctx context.Context, input CheckoutCo
 
 	var subscription *entity.Subscription
 	if user.SubscriptionID != nil {
-		subscription, err = (*u.subscriptionRepo).GetByID(ctx, *user.SubscriptionID)
+		subscription, err = u.subscriptionRepo.GetByID(ctx, *user.SubscriptionID)
 		if err != nil {
 			return errors.New("failed to get subscription")
 		}
@@ -108,18 +109,18 @@ func (u *CheckoutCompletedUseCase) Execute(ctx context.Context, input CheckoutCo
 	}
 
 	if subscription.ID == uuid.Nil {
-		if err := (*u.subscriptionRepo).Create(ctx, subscription); err != nil {
+		if err := u.subscriptionRepo.Create(ctx, subscription); err != nil {
 			return errors.New("failed to create subscription")
 		}
 	} else {
-		if err := (*u.subscriptionRepo).Update(ctx, subscription); err != nil {
+		if err := u.subscriptionRepo.Update(ctx, subscription); err != nil {
 			return errors.New("failed to update subscription")
 		}
 	}
 
 	if user.SubscriptionID == nil || *user.SubscriptionID != subscription.ID {
 		user.SubscriptionID = &subscription.ID
-		if err := (*u.userRepo).Update(ctx, user); err != nil {
+		if err := u.userRepo.Update(ctx, user); err != nil {
 			return errors.New("failed to link subscription to user")
 		}
 	}

@@ -7,21 +7,21 @@ import (
 	"io"
 	"path/filepath"
 
-	aimodelinfra "go-api/infrastructure/aimodel"
-	mediadto "go-api/infrastructure/media"
-	"go-api/infrastructure/storage"
+	"go-api/domain/entity"
+	"go-api/domain/port"
+	mediadto "go-api/domain/media"
 
 	"github.com/google/uuid"
 )
 
 type AnalyzeMediaAiModelUseCase struct {
-	storage  *storage.MinIOStorage
-	analyzer *aimodelinfra.Analyzer
+	storage  port.Storage
+	analyzer port.AiModelAnalyzer
 }
 
 func NewAnalyzeMediaAiModelUseCase(
-	storage *storage.MinIOStorage,
-	analyzer *aimodelinfra.Analyzer,
+	storage port.Storage,
+	analyzer port.AiModelAnalyzer,
 ) *AnalyzeMediaAiModelUseCase {
 	return &AnalyzeMediaAiModelUseCase{
 		storage:  storage,
@@ -33,7 +33,7 @@ func (uc *AnalyzeMediaAiModelUseCase) Execute(
 	ctx context.Context,
 	userID uuid.UUID,
 	mediaKey string,
-) (*aimodelinfra.ScanResult, error) {
+) (*entity.Signal, error) {
 	objectKey := mediadto.NewObjectKey(userID, mediaKey)
 
 	reader, err := uc.storage.Get(ctx, objectKey)
@@ -52,10 +52,10 @@ func (uc *AnalyzeMediaAiModelUseCase) Execute(
 		filename = "media.jpg"
 	}
 
-	result, err := uc.analyzer.Analyze(ctx, imageData, filename)
+	signal, err := uc.analyzer.Analyze(ctx, imageData, filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to analyze media with ai model: %w", err)
 	}
 
-	return &result, nil
+	return &signal, nil
 }

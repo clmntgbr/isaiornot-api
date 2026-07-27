@@ -9,11 +9,11 @@ import (
 )
 
 type GetQuotaUsageUseCase struct {
-	mediaRepo *repository.MediaRepository
+	mediaRepo repository.MediaRepository
 }
 
 func NewGetQuotaUsageUseCase(
-	mediaRepo *repository.MediaRepository,
+	mediaRepo repository.MediaRepository,
 ) *GetQuotaUsageUseCase {
 	return &GetQuotaUsageUseCase{
 		mediaRepo: mediaRepo,
@@ -62,7 +62,7 @@ func (u *GetQuotaUsageUseCase) Execute(
 
 	periodStart, periodEnd := CurrentQuotaPeriod(anchor, time.Now().UTC())
 
-	counts, err := (*u.mediaRepo).CountUsageInPeriod(ctx, user.ID, periodStart, periodEnd)
+	counts, err := u.mediaRepo.CountUsageInPeriod(ctx, user.ID, periodStart, periodEnd)
 	if err != nil {
 		return nil, errors.New("failed to count media usage")
 	}

@@ -9,14 +9,14 @@ import (
 )
 
 type SubscriptionDeletedUseCase struct {
-	planRepo         *repository.PlanRepository
-	subscriptionRepo *repository.SubscriptionRepository
+	planRepo         repository.PlanRepository
+	subscriptionRepo repository.SubscriptionRepository
 	notifier         *Notifier
 }
 
 func NewSubscriptionDeletedUseCase(
-	planRepo *repository.PlanRepository,
-	subscriptionRepo *repository.SubscriptionRepository,
+	planRepo repository.PlanRepository,
+	subscriptionRepo repository.SubscriptionRepository,
 	notifier *Notifier,
 ) *SubscriptionDeletedUseCase {
 	return &SubscriptionDeletedUseCase{
@@ -31,7 +31,7 @@ func (u *SubscriptionDeletedUseCase) Execute(ctx context.Context, stripeSubscrip
 		return errors.New("stripe subscription id is required")
 	}
 
-	subscription, err := (*u.subscriptionRepo).GetByStripeSubscriptionID(ctx, stripeSubscriptionID)
+	subscription, err := u.subscriptionRepo.GetByStripeSubscriptionID(ctx, stripeSubscriptionID)
 	if err != nil {
 		return errors.New("failed to get subscription")
 	}
@@ -39,7 +39,7 @@ func (u *SubscriptionDeletedUseCase) Execute(ctx context.Context, stripeSubscrip
 		return nil
 	}
 
-	freePlan, err := (*u.planRepo).GetBySlug(ctx, entity.FreePlanSlug)
+	freePlan, err := u.planRepo.GetBySlug(ctx, entity.FreePlanSlug)
 	if err != nil {
 		return errors.New("failed to get free plan")
 	}
@@ -56,7 +56,7 @@ func (u *SubscriptionDeletedUseCase) Execute(ctx context.Context, stripeSubscrip
 	subscription.SubscriptionEndDate = now.AddDate(100, 0, 0)
 	subscription.QuotaPeriodStart = now
 
-	if err := (*u.subscriptionRepo).Update(ctx, subscription); err != nil {
+	if err := u.subscriptionRepo.Update(ctx, subscription); err != nil {
 		return errors.New("failed to update subscription")
 	}
 

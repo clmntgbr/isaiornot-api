@@ -8,14 +8,14 @@ import (
 )
 
 type SubscriptionUpdatedUseCase struct {
-	planRepo         *repository.PlanRepository
-	subscriptionRepo *repository.SubscriptionRepository
+	planRepo         repository.PlanRepository
+	subscriptionRepo repository.SubscriptionRepository
 	notifier         *Notifier
 }
 
 func NewSubscriptionUpdatedUseCase(
-	planRepo *repository.PlanRepository,
-	subscriptionRepo *repository.SubscriptionRepository,
+	planRepo repository.PlanRepository,
+	subscriptionRepo repository.SubscriptionRepository,
 	notifier *Notifier,
 ) *SubscriptionUpdatedUseCase {
 	return &SubscriptionUpdatedUseCase{
@@ -40,13 +40,13 @@ func (u *SubscriptionUpdatedUseCase) Execute(ctx context.Context, input Subscrip
 		return errors.New("stripe subscription id is required")
 	}
 
-	subscription, err := (*u.subscriptionRepo).GetByStripeSubscriptionID(ctx, input.StripeSubscriptionID)
+	subscription, err := u.subscriptionRepo.GetByStripeSubscriptionID(ctx, input.StripeSubscriptionID)
 	if err != nil {
 		return errors.New("failed to get subscription")
 	}
 
 	if subscription == nil && input.StripeCustomerID != "" {
-		subscription, err = (*u.subscriptionRepo).GetByStripeCustomerID(ctx, input.StripeCustomerID)
+		subscription, err = u.subscriptionRepo.GetByStripeCustomerID(ctx, input.StripeCustomerID)
 		if err != nil {
 			return errors.New("failed to get subscription by customer")
 		}
@@ -62,7 +62,7 @@ func (u *SubscriptionUpdatedUseCase) Execute(ctx context.Context, input Subscrip
 	}
 
 	if input.StripePriceID != "" {
-		plan, err := (*u.planRepo).GetByStripePriceID(ctx, input.StripePriceID)
+		plan, err := u.planRepo.GetByStripePriceID(ctx, input.StripePriceID)
 		if err != nil {
 			return errors.New("failed to get plan")
 		}
@@ -80,7 +80,7 @@ func (u *SubscriptionUpdatedUseCase) Execute(ctx context.Context, input Subscrip
 		subscription.SubscriptionEndDate = input.CurrentPeriodEnd
 	}
 
-	if err := (*u.subscriptionRepo).Update(ctx, subscription); err != nil {
+	if err := u.subscriptionRepo.Update(ctx, subscription); err != nil {
 		return errors.New("failed to update subscription")
 	}
 

@@ -9,12 +9,12 @@ import (
 )
 
 type CreateUserUseCase struct {
-	userRepo                      *repository.UserRepository
+	userRepo                      repository.UserRepository
 	createFreeSubscriptionUseCase *subscription.CreateFreeSubscriptionUseCase
 }
 
 func NewCreateUserUseCase(
-	userRepo *repository.UserRepository,
+	userRepo repository.UserRepository,
 	createFreeSubscriptionUseCase *subscription.CreateFreeSubscriptionUseCase,
 ) *CreateUserUseCase {
 	return &CreateUserUseCase{
@@ -32,7 +32,7 @@ func (u *CreateUserUseCase) Execute(ctx context.Context, clerkID string, firstNa
 		Email:     email,
 	}
 
-	err := (*u.userRepo).Create(ctx, &user)
+	err := u.userRepo.Create(ctx, &user)
 	if err != nil {
 		return nil, errors.New("failed to create user")
 	}
