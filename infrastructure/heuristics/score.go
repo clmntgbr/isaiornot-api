@@ -26,7 +26,7 @@ type HeuristicsResult struct {
 	Format           string  `json:"format"`
 }
 
-type AnalysisResult struct {
+type ScanResult struct {
 	Signal     entity.Signal    `json:"signal"`
 	Heuristics HeuristicsResult `json:"heuristics"`
 }

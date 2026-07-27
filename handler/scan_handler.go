@@ -6,34 +6,34 @@ import (
 	mediadto "go-api/infrastructure/media"
 	"go-api/infrastructure/paginate"
 	"go-api/presenter"
-	"go-api/usecase/analysis"
+	"go-api/usecase/scan"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 )
 
-type AnalysisHandler struct {
-	generatePresignedUploadUrlUseCase *analysis.GeneratePresignedUploadUrlUseCase
-	getAnalysisUseCase                *analysis.GetAnalysisUseCase
-	getAnalysesUseCase                *analysis.GetAnalysesUseCase
-	getStatisticsUseCase              *analysis.GetStatisticsUseCase
+type ScanHandler struct {
+	generatePresignedUploadUrlUseCase *scan.GeneratePresignedUploadUrlUseCase
+	getScanUseCase                    *scan.GetScanUseCase
+	getScansUseCase                   *scan.GetScansUseCase
+	getStatisticsUseCase              *scan.GetStatisticsUseCase
 }
 
-func NewAnalysisHandler(
-	generatePresignedUploadUrlUseCase *analysis.GeneratePresignedUploadUrlUseCase,
-	getAnalysisUseCase *analysis.GetAnalysisUseCase,
-	getAnalysesUseCase *analysis.GetAnalysesUseCase,
-	getStatisticsUseCase *analysis.GetStatisticsUseCase,
-) *AnalysisHandler {
-	return &AnalysisHandler{
+func NewScanHandler(
+	generatePresignedUploadUrlUseCase *scan.GeneratePresignedUploadUrlUseCase,
+	getScanUseCase *scan.GetScanUseCase,
+	getScansUseCase *scan.GetScansUseCase,
+	getStatisticsUseCase *scan.GetStatisticsUseCase,
+) *ScanHandler {
+	return &ScanHandler{
 		generatePresignedUploadUrlUseCase: generatePresignedUploadUrlUseCase,
-		getAnalysisUseCase:                getAnalysisUseCase,
-		getAnalysesUseCase:                getAnalysesUseCase,
+		getScanUseCase:                    getScanUseCase,
+		getScansUseCase:                   getScansUseCase,
 		getStatisticsUseCase:              getStatisticsUseCase,
 	}
 }
 
-func (h *AnalysisHandler) GeneratePresignedUploadUrl(c fiber.Ctx) error {
+func (h *ScanHandler) GeneratePresignedUploadUrl(c fiber.Ctx) error {
 	user, err := context.GetUser(c)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -51,7 +51,7 @@ func (h *AnalysisHandler) GeneratePresignedUploadUrl(c fiber.Ctx) error {
 
 	result, err := h.generatePresignedUploadUrlUseCase.Execute(c.Context(), user.ID, request)
 	if err != nil {
-		if errors.Is(err, analysis.ErrUnsupportedMediaType) {
+		if errors.Is(err, scan.ErrUnsupportedMediaType) {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"message": "Unsupported media type",
 				"errors":  err.Error(),
@@ -64,10 +64,10 @@ func (h *AnalysisHandler) GeneratePresignedUploadUrl(c fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(presenter.NewGeneratePresignedUploadUrlDetailResponse(result.URL, result.AnalysisID.String()))
+	return c.JSON(presenter.NewGeneratePresignedUploadUrlDetailResponse(result.URL, result.ScanID.String()))
 }
 
-func (h *AnalysisHandler) GetAnalyses(c fiber.Ctx) error {
+func (h *ScanHandler) GetScans(c fiber.Ctx) error {
 	user, err := context.GetUser(c)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -84,7 +84,7 @@ func (h *AnalysisHandler) GetAnalyses(c fiber.Ctx) error {
 	}
 	query.Normalize()
 
-	analyses, total, err := h.getAnalysesUseCase.Execute(c.Context(), user.ID, query)
+	scans, total, err := h.getScansUseCase.Execute(c.Context(), user.ID, query)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Internal server error",
@@ -92,10 +92,10 @@ func (h *AnalysisHandler) GetAnalyses(c fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(paginate.NewPaginateResponse(presenter.NewAnalysisListResponses(analyses), int(total), query))
+	return c.JSON(paginate.NewPaginateResponse(presenter.NewScanListResponses(scans), int(total), query))
 }
 
-func (h *AnalysisHandler) GetAnalysis(c fiber.Ctx) error {
+func (h *ScanHandler) GetScan(c fiber.Ctx) error {
 	user, err := context.GetUser(c)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -103,22 +103,22 @@ func (h *AnalysisHandler) GetAnalysis(c fiber.Ctx) error {
 		})
 	}
 
-	analysisID, err := uuid.Parse(c.Params("id"))
+	scanID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.SendStatus(fiber.StatusNotFound)
 	}
 
-	result, err := h.getAnalysisUseCase.Execute(c.Context(), user.ID, analysisID)
+	result, err := h.getScanUseCase.Execute(c.Context(), user.ID, scanID)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"message": "Analysis not found",
+			"message": "Scan not found",
 		})
 	}
 
-	return c.JSON(presenter.NewAnalysisDetailResponse(result))
+	return c.JSON(presenter.NewScanDetailResponse(result))
 }
 
-func (h *AnalysisHandler) GetStatistics(c fiber.Ctx) error {
+func (h *ScanHandler) GetStatistics(c fiber.Ctx) error {
 	user, err := context.GetUser(c)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{

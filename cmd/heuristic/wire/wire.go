@@ -9,10 +9,10 @@ import (
 	"go-api/infrastructure/messaging/security"
 	"go-api/infrastructure/storage"
 	repoGorm "go-api/repository/gorm"
-	analysisuc "go-api/usecase/analysis"
 	heuristicuc "go-api/usecase/heuristic"
 	insightuc "go-api/usecase/insight"
 	pipelineuc "go-api/usecase/pipeline"
+	scanuc "go-api/usecase/scan"
 	"go-api/usecase/signal"
 	"log"
 
@@ -37,19 +37,19 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	centrifugoPublisher := centrifugo.NewPublisher(env)
 
 	mediaRepo := repoGorm.NewMediaRepository(db)
-	analysisRepo := repoGorm.NewAnalysisRepository(db)
+	scanRepo := repoGorm.NewScanRepository(db)
 	signalRepo := repoGorm.NewSignalRepository(db)
 	insightRepo := repoGorm.NewInsightRepository(db)
 
-	updateAnalysisStatusUseCase := analysisuc.NewUpdateAnalysisStatusUseCase(&analysisRepo)
-	aggregateAnalysisUseCase := pipelineuc.NewAggregateAnalysisUseCase(
+	updateScanStatusUseCase := scanuc.NewUpdateScanStatusUseCase(&scanRepo)
+	aggregateScanUseCase := pipelineuc.NewAggregateScanUseCase(
 		&mediaRepo,
-		&analysisRepo,
+		&scanRepo,
 		&signalRepo,
-		updateAnalysisStatusUseCase,
+		updateScanStatusUseCase,
 		centrifugoPublisher,
 	)
-	dispatcher := pipelineuc.NewDispatcher(env, &mediaRepo, publisher, aggregateAnalysisUseCase)
+	dispatcher := pipelineuc.NewDispatcher(env, &mediaRepo, publisher, aggregateScanUseCase)
 
 	analyzer := heuristicsinfra.NewAnalyzer()
 	analyzeMediaHeuristicsUseCase := heuristicuc.NewAnalyzeMediaHeuristicsUseCase(storageClient, analyzer)

@@ -23,7 +23,7 @@ func (e *FrameExtractor) ExtractFrames(videoData []byte, maxFrames int) ([][]byt
 		maxFrames = MaxFrames
 	}
 
-	tmpDir, err := os.MkdirTemp("", "analyse-video-*")
+	tmpDir, err := os.MkdirTemp("", "scan-video-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp dir: %w", err)
 	}

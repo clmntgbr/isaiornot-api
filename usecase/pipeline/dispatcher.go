@@ -13,14 +13,14 @@ type Dispatcher struct {
 	config          *config.Config
 	mediaRepo       *repository.MediaRepository
 	publisher       rabbitmq.Publisher
-	finalizeUseCase *AggregateAnalysisUseCase
+	finalizeUseCase *AggregateScanUseCase
 }
 
 func NewDispatcher(
 	config *config.Config,
 	mediaRepo *repository.MediaRepository,
 	publisher rabbitmq.Publisher,
-	finalizeUseCase *AggregateAnalysisUseCase,
+	finalizeUseCase *AggregateScanUseCase,
 ) *Dispatcher {
 	return &Dispatcher{
 		config:          config,

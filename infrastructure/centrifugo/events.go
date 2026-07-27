@@ -8,14 +8,14 @@ import (
 )
 
 const (
-	EventAnalysisStarted   = "analysis_started"
-	EventAnalysisCompleted = "analysis_completed"
-	EventAnalysisFailed    = "analysis_failed"
+	EventScanStarted   = "scan_started"
+	EventScanCompleted = "scan_completed"
+	EventScanFailed    = "scan_failed"
 )
 
 type MediaEvent struct {
 	Type       string          `json:"type"`
-	AnalysisID string          `json:"analysisId"`
+	ScanID     string          `json:"scanId"`
 	MediaID    string          `json:"mediaId,omitempty"`
 	UserID     string          `json:"userId"`
 	Status     string          `json:"status"`
@@ -34,36 +34,36 @@ type SignalPayload struct {
 	Details    []string `json:"details"`
 }
 
-func NewAnalysisStartedEvent(media *entity.Media) (MediaEvent, error) {
+func NewScanStartedEvent(media *entity.Media) (MediaEvent, error) {
 	if media == nil {
 		return MediaEvent{}, ErrInvalidMedia
 	}
 
 	return MediaEvent{
-		Type:       EventAnalysisStarted,
-		AnalysisID: media.AnalysisID.String(),
-		MediaID:    media.ID.String(),
-		UserID:     media.UserID.String(),
-		Status:     string(media.Status),
-		UpdatedAt:  media.UpdatedAt,
+		Type:      EventScanStarted,
+		ScanID:    media.ScanID.String(),
+		MediaID:   media.ID.String(),
+		UserID:    media.UserID.String(),
+		Status:    string(media.Status),
+		UpdatedAt: media.UpdatedAt,
 	}, nil
 }
 
-func NewAnalysisCompletedEvent(analysis *entity.Analysis, media *entity.Media, signals []*entity.Signal) (MediaEvent, error) {
-	if analysis == nil || media == nil {
+func NewScanCompletedEvent(scan *entity.Scan, media *entity.Media, signals []*entity.Signal) (MediaEvent, error) {
+	if scan == nil || media == nil {
 		return MediaEvent{}, ErrInvalidMedia
 	}
 
 	event := MediaEvent{
-		Type:       EventAnalysisCompleted,
-		AnalysisID: analysis.ID.String(),
+		Type:       EventScanCompleted,
+		ScanID:     scan.ID.String(),
 		MediaID:    media.ID.String(),
-		UserID:     analysis.UserID.String(),
+		UserID:     scan.UserID.String(),
 		Status:     string(media.Status),
-		FinalScore: analysis.FinalScore,
-		Confidence: string(analysis.AnalysisConfidence),
-		Verdict:    analysis.Verdict,
-		UpdatedAt:  analysis.UpdatedAt,
+		FinalScore: scan.FinalScore,
+		Confidence: string(scan.ScanConfidence),
+		Verdict:    scan.Verdict,
+		UpdatedAt:  scan.UpdatedAt,
 		Signals:    make([]SignalPayload, 0, len(signals)),
 	}
 
@@ -83,24 +83,24 @@ func NewAnalysisCompletedEvent(analysis *entity.Analysis, media *entity.Media, s
 	return event, nil
 }
 
-func NewAnalysisFailedEvent(analysis *entity.Analysis) (MediaEvent, error) {
-	if analysis == nil {
+func NewScanFailedEvent(scan *entity.Scan) (MediaEvent, error) {
+	if scan == nil {
 		return MediaEvent{}, ErrInvalidMedia
 	}
 
 	mediaID := ""
-	if len(analysis.Medias) > 0 {
-		mediaID = analysis.Medias[0].ID.String()
+	if len(scan.Medias) > 0 {
+		mediaID = scan.Medias[0].ID.String()
 	}
 
 	return MediaEvent{
-		Type:       EventAnalysisFailed,
-		AnalysisID: analysis.ID.String(),
-		MediaID:    mediaID,
-		UserID:     analysis.UserID.String(),
-		Status:     string(analysis.Status),
-		Message:    analysis.Message,
-		UpdatedAt:  analysis.UpdatedAt,
+		Type:      EventScanFailed,
+		ScanID:    scan.ID.String(),
+		MediaID:   mediaID,
+		UserID:    scan.UserID.String(),
+		Status:    string(scan.Status),
+		Message:   scan.Message,
+		UpdatedAt: scan.UpdatedAt,
 	}, nil
 }
 

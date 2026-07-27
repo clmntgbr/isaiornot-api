@@ -10,15 +10,15 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (a *Analyzer) Analyze(r io.Reader) (AnalysisResult, error) {
-	data, err := io.ReadAll(io.LimitReader(r, maxAnalysisBytes))
+func (a *Analyzer) Analyze(r io.Reader) (ScanResult, error) {
+	data, err := io.ReadAll(io.LimitReader(r, maxScanBytes))
 	if err != nil {
-		return AnalysisResult{}, err
+		return ScanResult{}, err
 	}
 
 	img, format, err := DecodeImage(data)
 	if err != nil {
-		return AnalysisResult{}, err
+		return ScanResult{}, err
 	}
 
 	heuristics := HeuristicsResult{
@@ -31,7 +31,7 @@ func (a *Analyzer) Analyze(r io.Reader) (AnalysisResult, error) {
 		Format:           format,
 	}
 
-	return AnalysisResult{
+	return ScanResult{
 		Signal:     heuristics.ToSignal(),
 		Heuristics: heuristics,
 	}, nil

@@ -17,8 +17,8 @@ func main() {
 	db := config.ConnectDatabase(env)
 
 	app := fiber.New(fiber.Config{
-		AppName:       "Analyse API",
-		ServerHeader:  "Analyse API",
+		AppName:       "IsAIorNot API",
+		ServerHeader:  "IsAIorNot API",
 		CaseSensitive: true,
 		StrictRouting: true,
 		UnescapePath:  true,

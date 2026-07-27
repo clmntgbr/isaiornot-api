@@ -1,6 +1,6 @@
-# Analyse API
+# IsAIorNot API
 
-Backend Go for Analyse: media analysis pipeline, auth (Clerk), subscriptions (Stripe), realtime (Centrifugo), and object storage (MinIO).
+Backend Go for IsAIorNot: media scan pipeline, auth (Clerk), subscriptions (Stripe), realtime (Centrifugo), and object storage (MinIO).
 
 ## Tech stack
 
@@ -89,7 +89,7 @@ Requires a reachable Postgres and the env vars from `.env`.
 | `mc` | — | Creates buckets + MinIO webhook to API |
 | `rabbitmq` | `5000` (AMQP), `5001` (UI) | Message broker |
 | `centrifugo` | `8000` | Realtime websocket / pub-sub |
-| `dispatcher` | — | Dispatches analysis jobs |
+| `dispatcher` | — | Dispatches scan jobs |
 | `metadata` / `heuristic` / `aimodel` | — | Pipeline workers |
 | `ngrok` | `4040` | Public tunnel for Clerk/Stripe webhooks |
 
@@ -154,10 +154,10 @@ Base URL (dev): `http://localhost:4000`
 | `POST` | `/api/subscriptions` | Create Stripe Checkout (`{ "planId": "…" }`) → `{ "url" }` |
 | `GET` | `/api/subscriptions/portal` | Stripe Customer Portal URL (requires `stripeCustomerId`) |
 | `GET` | `/api/realtime/connection` | Centrifugo connection info |
-| `POST` | `/api/analyses/presign-upload-url` | Presigned upload URL |
-| `GET` | `/api/analyses` | List analyses |
-| `GET` | `/api/analyses/statistics` | Stats |
-| `GET` | `/api/analyses/:id` | Analysis detail |
+| `POST` | `/api/scans/presign-upload-url` | Presigned upload URL |
+| `GET` | `/api/scans` | List scans |
+| `GET` | `/api/scans/statistics` | Stats |
+| `GET` | `/api/scans/:id` | Scan detail |
 | `GET` | `/api/medias/:id/thumbnail` | Thumbnail |
 
 ### Webhooks
@@ -205,8 +205,8 @@ Stripe Customer Portal must be enabled in the Stripe Dashboard (Settings → Bil
 ## Production build
 
 ```bash
-docker build --target production -t analyse-api:prod .
-docker run -p 3000:3000 --env-file .env analyse-api:prod
+docker build --target production -t isaiornot-api:prod .
+docker run -p 3000:3000 --env-file .env isaiornot-api:prod
 ```
 
 ## Troubleshooting

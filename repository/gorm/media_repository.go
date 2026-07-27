@@ -37,7 +37,7 @@ func (r *mediaRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Me
 		Where("id = ?", id).
 		Preload("Signals").
 		Preload("Insight").
-		Preload("Analysis").
+		Preload("Scan").
 		First(&media).Error
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (r *mediaRepository) GetByKey(ctx context.Context, key string) (*entity.Med
 	var media entity.Media
 	err := dbWithContext(ctx, r.db).
 		Where("key = ?", key).
-		Preload("Analysis").
+		Preload("Scan").
 		First(&media).Error
 	if err != nil {
 		return nil, err
@@ -65,9 +65,9 @@ func (r *mediaRepository) GetByKey(ctx context.Context, key string) (*entity.Med
 
 func (r *mediaRepository) CountUsageInPeriod(ctx context.Context, userID uuid.UUID, from, to time.Time) (*repository.MediaUsageCounts, error) {
 	base := dbWithContext(ctx, r.db).Model(&entity.Media{}).
-		Joins("JOIN analyses ON analyses.id = medias.analysis_id").
+		Joins("JOIN scans ON scans.id = medias.scan_id").
 		Where("medias.user_id = ? AND medias.created_at >= ? AND medias.created_at < ?", userID, from, to).
-		Where("analyses.status <> ?", "failed")
+		Where("scans.status <> ?", "failed")
 
 	var images int64
 	if err := base.Session(&gorm.Session{}).
@@ -79,7 +79,7 @@ func (r *mediaRepository) CountUsageInPeriod(ctx context.Context, userID uuid.UU
 	var videos int64
 	if err := base.Session(&gorm.Session{}).
 		Where("medias.key LIKE ? OR medias.content_type LIKE ?", "frames/%", "video/%").
-		Distinct("medias.analysis_id").
+		Distinct("medias.scan_id").
 		Count(&videos).Error; err != nil {
 		return nil, err
 	}

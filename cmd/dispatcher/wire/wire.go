@@ -7,8 +7,8 @@ import (
 	"go-api/infrastructure/messaging/rabbitmq"
 	"go-api/infrastructure/messaging/security"
 	repoGorm "go-api/repository/gorm"
-	analysisuc "go-api/usecase/analysis"
 	pipelineuc "go-api/usecase/pipeline"
+	scanuc "go-api/usecase/scan"
 	"log"
 
 	"gorm.io/gorm"
@@ -29,18 +29,18 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	centrifugoPublisher := centrifugo.NewPublisher(env)
 
 	mediaRepo := repoGorm.NewMediaRepository(db)
-	analysisRepo := repoGorm.NewAnalysisRepository(db)
+	scanRepo := repoGorm.NewScanRepository(db)
 	signalRepo := repoGorm.NewSignalRepository(db)
 
-	updateAnalysisStatusUseCase := analysisuc.NewUpdateAnalysisStatusUseCase(&analysisRepo)
-	aggregateAnalysisUseCase := pipelineuc.NewAggregateAnalysisUseCase(
+	updateScanStatusUseCase := scanuc.NewUpdateScanStatusUseCase(&scanRepo)
+	aggregateScanUseCase := pipelineuc.NewAggregateScanUseCase(
 		&mediaRepo,
-		&analysisRepo,
+		&scanRepo,
 		&signalRepo,
-		updateAnalysisStatusUseCase,
+		updateScanStatusUseCase,
 		centrifugoPublisher,
 	)
-	dispatcher := pipelineuc.NewDispatcher(env, &mediaRepo, publisher, aggregateAnalysisUseCase)
+	dispatcher := pipelineuc.NewDispatcher(env, &mediaRepo, publisher, aggregateScanUseCase)
 
 	parser := security.NewWorkerParser(env)
 	securityValidator := security.NewWorkerSecurityValidator(env)

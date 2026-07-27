@@ -5,23 +5,23 @@ import (
 	"errors"
 	"go-api/domain/enum"
 	"go-api/domain/repository"
-	"go-api/usecase/analysis"
+	"go-api/usecase/scan"
 
 	"github.com/google/uuid"
 )
 
 type UpdateMediaStatusUseCase struct {
-	mediaRepo                   *repository.MediaRepository
-	updateAnalysisStatusUseCase *analysis.UpdateAnalysisStatusUseCase
+	mediaRepo               *repository.MediaRepository
+	updateScanStatusUseCase *scan.UpdateScanStatusUseCase
 }
 
 func NewUpdateMediaStatusUseCase(
 	mediaRepo *repository.MediaRepository,
-	updateAnalysisStatusUseCase *analysis.UpdateAnalysisStatusUseCase,
+	updateScanStatusUseCase *scan.UpdateScanStatusUseCase,
 ) *UpdateMediaStatusUseCase {
 	return &UpdateMediaStatusUseCase{
-		mediaRepo:                   mediaRepo,
-		updateAnalysisStatusUseCase: updateAnalysisStatusUseCase,
+		mediaRepo:               mediaRepo,
+		updateScanStatusUseCase: updateScanStatusUseCase,
 	}
 }
 
@@ -38,5 +38,5 @@ func (u *UpdateMediaStatusUseCase) Execute(ctx context.Context, mediaID uuid.UUI
 		return err
 	}
 
-	return u.updateAnalysisStatusUseCase.Execute(ctx, media.AnalysisID)
+	return u.updateScanStatusUseCase.Execute(ctx, media.ScanID)
 }

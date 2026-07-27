@@ -30,7 +30,7 @@ INSERT INTO plans (
     updated_at
 )
 VALUES
-(gen_random_uuid(),'free','Free','Découverte du produit, analyses limitées','monthly',0,'eur','price_1TwdhH5vcjninxNhcRf8qkUH',true,'e75e7940-2683-4ea1-a5c7-6d1724892369',now(),now()),
+(gen_random_uuid(),'free','Free','Découverte du produit, scans limitées','monthly',0,'eur','price_1TwdhH5vcjninxNhcRf8qkUH',true,'e75e7940-2683-4ea1-a5c7-6d1724892369',now(),now()),
 (gen_random_uuid(),'starter','Starter','Pour un usage régulier, image uniquement','monthly',1200,'eur','price_1Twdhe5vcjninxNhbAVuBcEG',true,'e437e948-9ac7-422a-8a86-79ca43ca9d5d',now(),now()),
 (gen_random_uuid(),'starter','Starter','Pour un usage régulier, image uniquement','annually',11500,'eur','price_1TwdiA5vcjninxNhk4J7n7Tt',true,'aca09dc8-1c60-4670-9e2a-2eac0a8dc268',now(),now()),
 (gen_random_uuid(),'pro','Pro','Pipeline complet, images et vidéos','monthly',3900,'eur','price_1TwdjN5vcjninxNh3vLqLC6W',true,'dcad50c5-7a2d-4de6-958f-e9d7827fab4d',now(),now()),

@@ -10,8 +10,8 @@ import (
 type Media struct {
 	ID uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 
-	AnalysisID uuid.UUID `gorm:"type:uuid;index:idx_media_analysis_id" json:"analysis_id"`
-	Analysis   Analysis  `gorm:"foreignKey:AnalysisID" json:"-"`
+	ScanID uuid.UUID `gorm:"type:uuid;index:idx_media_scan_id" json:"scan_id"`
+	Scan   Scan      `gorm:"foreignKey:ScanID" json:"-"`
 
 	UserID uuid.UUID `gorm:"type:uuid;not null" json:"user_id"`
 	User   User      `gorm:"foreignKey:UserID" json:"user"`

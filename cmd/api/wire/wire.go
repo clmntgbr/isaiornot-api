@@ -11,11 +11,11 @@ import (
 	infraStripe "go-api/infrastructure/stripe"
 	"go-api/infrastructure/video"
 	repoGorm "go-api/repository/gorm"
-	"go-api/usecase/analysis"
 	"go-api/usecase/auth"
 	"go-api/usecase/clerk"
 	"go-api/usecase/media"
 	"go-api/usecase/plan"
+	"go-api/usecase/scan"
 	"go-api/usecase/subscription"
 	"go-api/usecase/thumbnail"
 	"go-api/usecase/user"
@@ -32,7 +32,7 @@ type Container struct {
 	ClerkHandler           *handler.ClerkHandler
 	MinIOHandler           *handler.MinIOHandler
 	UserHandler            *handler.UserHandler
-	AnalysisHandler        *handler.AnalysisHandler
+	ScanHandler            *handler.ScanHandler
 	MediaHandler           *handler.MediaHandler
 	RealtimeHandler        *handler.RealtimeHandler
 	PlanHandler            *handler.PlanHandler
@@ -53,7 +53,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 
 	userRepo := repoGorm.NewUserRepository(db)
 	mediaRepo := repoGorm.NewMediaRepository(db)
-	analysisRepo := repoGorm.NewAnalysisRepository(db)
+	scanRepo := repoGorm.NewScanRepository(db)
 	planRepo := repoGorm.NewPlanRepository(db)
 	subscriptionRepo := repoGorm.NewSubscriptionRepository(db)
 
@@ -68,7 +68,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	updateUserUseCase := user.NewUpdateUserUseCase(&userRepo)
 	deleteUserByClerkIDUseCase := user.NewDeleteUserByClerkIDUseCase(&userRepo)
 
-	createMediaUseCase := media.NewCreateMediaUseCase(&analysisRepo, &mediaRepo)
+	createMediaUseCase := media.NewCreateMediaUseCase(&scanRepo, &mediaRepo)
 	resolveEffectivePlanUseCase := subscription.NewResolveEffectivePlanUseCase(&planRepo)
 	getQuotaUsageUseCase := subscription.NewGetQuotaUsageUseCase(&mediaRepo)
 	assertUploadAllowedUseCase := subscription.NewAssertUploadAllowedUseCase(
@@ -77,21 +77,21 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		resolveEffectivePlanUseCase,
 		getQuotaUsageUseCase,
 	)
-	failAnalysisUseCase := analysis.NewFailAnalysisUseCase(&analysisRepo, centrifugoPublisher)
-	generatePresignedUploadUrlUseCase := analysis.NewGeneratePresignedUploadUrlUseCase(
+	failScanUseCase := scan.NewFailScanUseCase(&scanRepo, centrifugoPublisher)
+	generatePresignedUploadUrlUseCase := scan.NewGeneratePresignedUploadUrlUseCase(
 		storageClient,
-		&analysisRepo,
+		&scanRepo,
 		&mediaRepo,
 	)
-	getAnalysesUseCase := analysis.NewGetAnalysesUseCase(&analysisRepo)
-	getAnalysisUseCase := analysis.NewGetAnalysisUseCase(&analysisRepo)
-	getStatisticsUseCase := analysis.NewGetStatisticsUseCase(&analysisRepo)
+	getScansUseCase := scan.NewGetScansUseCase(&scanRepo)
+	getScanUseCase := scan.NewGetScanUseCase(&scanRepo)
+	getStatisticsUseCase := scan.NewGetStatisticsUseCase(&scanRepo)
 	getMediaByIDUseCase := media.NewGetMediaByIDUseCase(&mediaRepo)
 	generateImageThumbnailUseCase := thumbnail.NewGenerateImageThumbnailUseCase()
 	generateThumbnailUseCase := media.NewGenerateThumbnailUseCase(storageClient, &mediaRepo, generateImageThumbnailUseCase)
 	publishMetadataUseCase := media.NewPublishMetadataUseCase(&mediaRepo, publisher, centrifugoPublisher, env)
-	updateAnalysisStatusUseCase := analysis.NewUpdateAnalysisStatusUseCase(&analysisRepo)
-	updateMediaStatusUseCase := media.NewUpdateMediaStatusUseCase(&mediaRepo, updateAnalysisStatusUseCase)
+	updateScanStatusUseCase := scan.NewUpdateScanStatusUseCase(&scanRepo)
+	updateMediaStatusUseCase := media.NewUpdateMediaStatusUseCase(&mediaRepo, updateScanStatusUseCase)
 	frameExtractor := video.NewFrameExtractor()
 	processUploadedMediaUseCase := media.NewProcessUploadedMediaUseCase(
 		storageClient,
@@ -101,7 +101,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		updateMediaStatusUseCase,
 		publishMetadataUseCase,
 		assertUploadAllowedUseCase,
-		failAnalysisUseCase,
+		failScanUseCase,
 		frameExtractor,
 		generateImageThumbnailUseCase,
 	)
@@ -184,10 +184,10 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 			processUploadedMediaUseCase,
 		),
 		UserHandler: handler.NewUserHandler(),
-		AnalysisHandler: handler.NewAnalysisHandler(
+		ScanHandler: handler.NewScanHandler(
 			generatePresignedUploadUrlUseCase,
-			getAnalysisUseCase,
-			getAnalysesUseCase,
+			getScanUseCase,
+			getScansUseCase,
 			getStatisticsUseCase,
 		),
 		MediaHandler: handler.NewMediaHandler(

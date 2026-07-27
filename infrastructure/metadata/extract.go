@@ -9,7 +9,7 @@ import (
 	"github.com/rwcarlsen/goexif/exif"
 )
 
-const MaxAnalysisBytes = 512 * 1024
+const MaxScanBytes = 512 * 1024
 
 const maxMetadataTextBytes = 64 * 1024
 

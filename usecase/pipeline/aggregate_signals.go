@@ -9,38 +9,38 @@ import (
 	"go-api/domain/enum"
 	"go-api/domain/repository"
 	"go-api/infrastructure/centrifugo"
-	analysisuc "go-api/usecase/analysis"
+	scanuc "go-api/usecase/scan"
 
 	"github.com/google/uuid"
 )
 
 var requiredSignalNames = []string{"metadata", "heuristics", "ai_model"}
 
-type AggregateAnalysisUseCase struct {
-	mediaRepo                   *repository.MediaRepository
-	analysisRepo                *repository.AnalysisRepository
-	signalRepo                  *repository.SignalRepository
-	updateAnalysisStatusUseCase *analysisuc.UpdateAnalysisStatusUseCase
-	centrifugoPublisher         *centrifugo.Publisher
+type AggregateScanUseCase struct {
+	mediaRepo               *repository.MediaRepository
+	scanRepo                *repository.ScanRepository
+	signalRepo              *repository.SignalRepository
+	updateScanStatusUseCase *scanuc.UpdateScanStatusUseCase
+	centrifugoPublisher     *centrifugo.Publisher
 }
 
-func NewAggregateAnalysisUseCase(
+func NewAggregateScanUseCase(
 	mediaRepo *repository.MediaRepository,
-	analysisRepo *repository.AnalysisRepository,
+	scanRepo *repository.ScanRepository,
 	signalRepo *repository.SignalRepository,
-	updateAnalysisStatusUseCase *analysisuc.UpdateAnalysisStatusUseCase,
+	updateScanStatusUseCase *scanuc.UpdateScanStatusUseCase,
 	centrifugoPublisher *centrifugo.Publisher,
-) *AggregateAnalysisUseCase {
-	return &AggregateAnalysisUseCase{
-		mediaRepo:                   mediaRepo,
-		analysisRepo:                analysisRepo,
-		signalRepo:                  signalRepo,
-		updateAnalysisStatusUseCase: updateAnalysisStatusUseCase,
-		centrifugoPublisher:         centrifugoPublisher,
+) *AggregateScanUseCase {
+	return &AggregateScanUseCase{
+		mediaRepo:               mediaRepo,
+		scanRepo:                scanRepo,
+		signalRepo:              signalRepo,
+		updateScanStatusUseCase: updateScanStatusUseCase,
+		centrifugoPublisher:     centrifugoPublisher,
 	}
 }
 
-func (u *AggregateAnalysisUseCase) Execute(ctx context.Context, mediaID uuid.UUID) error {
+func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) error {
 	media, err := (*u.mediaRepo).GetByID(ctx, mediaID)
 	if err != nil {
 		return errors.New("media not found")
@@ -61,24 +61,24 @@ func (u *AggregateAnalysisUseCase) Execute(ctx context.Context, mediaID uuid.UUI
 		return err
 	}
 
-	if err := u.updateAnalysisStatusUseCase.Execute(ctx, media.AnalysisID); err != nil {
+	if err := u.updateScanStatusUseCase.Execute(ctx, media.ScanID); err != nil {
 		return err
 	}
 
-	analysis, err := (*u.analysisRepo).GetByID(ctx, media.AnalysisID)
+	scan, err := (*u.scanRepo).GetByID(ctx, media.ScanID)
 	if err != nil {
-		return errors.New("analysis not found")
+		return errors.New("scan not found")
 	}
 
-	if analysis.Status != enum.AnalysisStatusAnalyzed {
+	if scan.Status != enum.ScanStatusAnalyzed {
 		return nil
 	}
 
-	mediaResults := make([]aggregate.AggregationResult, 0, len(analysis.Medias))
+	mediaResults := make([]aggregate.AggregationResult, 0, len(scan.Medias))
 	var allSignals []*entity.Signal
 
-	for _, analysisMedia := range analysis.Medias {
-		mediaSignals, err := (*u.signalRepo).GetByMediaID(ctx, analysisMedia.ID)
+	for _, scanMedia := range scan.Medias {
+		mediaSignals, err := (*u.signalRepo).GetByMediaID(ctx, scanMedia.ID)
 		if err != nil {
 			return errors.New("failed to load signals")
 		}
@@ -92,20 +92,20 @@ func (u *AggregateAnalysisUseCase) Execute(ctx context.Context, mediaID uuid.UUI
 
 	result := aggregate.AggregateMediaResults(mediaResults)
 
-	analysis.FinalScore = result.FinalScore
-	analysis.AnalysisConfidence = result.Confidence
-	analysis.Verdict = result.Verdict
-	if err := (*u.analysisRepo).Update(ctx, analysis); err != nil {
+	scan.FinalScore = result.FinalScore
+	scan.ScanConfidence = result.Confidence
+	scan.Verdict = result.Verdict
+	if err := (*u.scanRepo).Update(ctx, scan); err != nil {
 		return err
 	}
 
-	realtimeEvent, err := centrifugo.NewAnalysisCompletedEvent(analysis, media, allSignals)
+	realtimeEvent, err := centrifugo.NewScanCompletedEvent(scan, media, allSignals)
 	if err != nil {
-		return errors.New("failed to build analysis completed event")
+		return errors.New("failed to build scan completed event")
 	}
 
-	if err := u.centrifugoPublisher.PublishToUser(ctx, analysis.UserID, realtimeEvent); err != nil {
-		return errors.New("failed to publish analysis completed event")
+	if err := u.centrifugoPublisher.PublishToUser(ctx, scan.UserID, realtimeEvent); err != nil {
+		return errors.New("failed to publish scan completed event")
 	}
 
 	return nil

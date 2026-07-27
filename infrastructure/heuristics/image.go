@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	maxAnalysisBytes = 8 * 1024 * 1024
+	maxScanBytes      = 8 * 1024 * 1024
 	minReliablePixels = 128 * 128
 )
 
@@ -31,8 +31,8 @@ func (g *GrayscaleImage) Pixel(x, y int) float64 {
 }
 
 func DecodeImage(data []byte) (*GrayscaleImage, string, error) {
-	if len(data) > maxAnalysisBytes {
-		data = data[:maxAnalysisBytes]
+	if len(data) > maxScanBytes {
+		data = data[:maxScanBytes]
 	}
 
 	img, format, err := image.Decode(bytes.NewReader(data))

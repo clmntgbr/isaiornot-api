@@ -11,8 +11,8 @@ import (
 	"go-api/infrastructure/storage"
 	repoGorm "go-api/repository/gorm"
 	aimodeluc "go-api/usecase/aimodel"
-	analysisuc "go-api/usecase/analysis"
 	pipelineuc "go-api/usecase/pipeline"
+	scanuc "go-api/usecase/scan"
 	"go-api/usecase/signal"
 	"log"
 
@@ -37,18 +37,18 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	centrifugoPublisher := centrifugo.NewPublisher(env)
 
 	mediaRepo := repoGorm.NewMediaRepository(db)
-	analysisRepo := repoGorm.NewAnalysisRepository(db)
+	scanRepo := repoGorm.NewScanRepository(db)
 	signalRepo := repoGorm.NewSignalRepository(db)
 
-	updateAnalysisStatusUseCase := analysisuc.NewUpdateAnalysisStatusUseCase(&analysisRepo)
-	aggregateAnalysisUseCase := pipelineuc.NewAggregateAnalysisUseCase(
+	updateScanStatusUseCase := scanuc.NewUpdateScanStatusUseCase(&scanRepo)
+	aggregateScanUseCase := pipelineuc.NewAggregateScanUseCase(
 		&mediaRepo,
-		&analysisRepo,
+		&scanRepo,
 		&signalRepo,
-		updateAnalysisStatusUseCase,
+		updateScanStatusUseCase,
 		centrifugoPublisher,
 	)
-	dispatcher := pipelineuc.NewDispatcher(env, &mediaRepo, publisher, aggregateAnalysisUseCase)
+	dispatcher := pipelineuc.NewDispatcher(env, &mediaRepo, publisher, aggregateScanUseCase)
 
 	sightengineClient := sightengine.NewClient(env)
 	analyzer := aimodel.NewAnalyzer(sightengineClient)

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	mediadto "go-api/infrastructure/media"
 	heuristicsinfra "go-api/infrastructure/heuristics"
+	mediadto "go-api/infrastructure/media"
 	"go-api/infrastructure/storage"
 
 	"github.com/google/uuid"
@@ -31,7 +31,7 @@ func (uc *AnalyzeMediaHeuristicsUseCase) Execute(
 	ctx context.Context,
 	userID uuid.UUID,
 	mediaKey string,
-) (*heuristicsinfra.AnalysisResult, error) {
+) (*heuristicsinfra.ScanResult, error) {
 	objectKey := mediadto.NewObjectKey(userID, mediaKey)
 
 	reader, err := uc.storage.Get(ctx, objectKey)

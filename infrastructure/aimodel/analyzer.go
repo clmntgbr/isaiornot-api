@@ -12,8 +12,8 @@ import (
 
 const signalName = "ai_model"
 
-type AnalysisResult struct {
-	Signal     entity.Signal              `json:"signal"`
+type ScanResult struct {
+	Signal      entity.Signal             `json:"signal"`
 	Sightengine sightengine.CheckResponse `json:"sightengine"`
 }
 
@@ -25,15 +25,15 @@ func NewAnalyzer(client *sightengine.Client) *Analyzer {
 	return &Analyzer{client: client}
 }
 
-func (a *Analyzer) Analyze(ctx context.Context, imageData []byte, filename string) (AnalysisResult, error) {
+func (a *Analyzer) Analyze(ctx context.Context, imageData []byte, filename string) (ScanResult, error) {
 	response, err := a.client.CheckGenAI(ctx, imageData, filename)
 	if err != nil {
-		return AnalysisResult{}, err
+		return ScanResult{}, err
 	}
 
 	signal := toSignal(*response)
 
-	return AnalysisResult{
+	return ScanResult{
 		Signal:      signal,
 		Sightengine: *response,
 	}, nil

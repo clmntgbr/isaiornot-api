@@ -31,7 +31,7 @@ func (uc *AnalyzeMediaMetadataUseCase) Execute(
 	ctx context.Context,
 	userID uuid.UUID,
 	mediaKey string,
-) (*metadatainfra.AnalysisResult, error) {
+) (*metadatainfra.ScanResult, error) {
 	objectKey := mediadto.NewObjectKey(userID, mediaKey)
 
 	reader, err := uc.storage.Get(ctx, objectKey)

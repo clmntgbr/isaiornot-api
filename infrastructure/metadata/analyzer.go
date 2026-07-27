@@ -6,9 +6,9 @@ import (
 	"go-api/domain/entity"
 )
 
-const maxAnalysisBytes = MaxAnalysisBytes
+const maxScanBytes = MaxScanBytes
 
-type AnalysisResult struct {
+type ScanResult struct {
 	Signal    entity.Signal     `json:"signal"`
 	Extracted ExtractedMetadata `json:"extracted"`
 }
@@ -19,16 +19,16 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (a *Analyzer) Analyze(r io.Reader) (AnalysisResult, error) {
-	data, err := io.ReadAll(io.LimitReader(r, maxAnalysisBytes))
+func (a *Analyzer) Analyze(r io.Reader) (ScanResult, error) {
+	data, err := io.ReadAll(io.LimitReader(r, maxScanBytes))
 	if err != nil {
-		return AnalysisResult{}, err
+		return ScanResult{}, err
 	}
 
 	extracted := Extract(data)
 	signal := Score(extracted)
 
-	return AnalysisResult{
+	return ScanResult{
 		Signal:    signal,
 		Extracted: extracted,
 	}, nil

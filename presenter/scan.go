@@ -7,18 +7,18 @@ import (
 )
 
 type GeneratePresignedUploadUrlDetailResponse struct {
-	UploadURL  string `json:"uploadUrl,omitempty"`
-	AnalysisID string `json:"analysisId"`
+	UploadURL string `json:"uploadUrl,omitempty"`
+	ScanID    string `json:"scanId"`
 }
 
-func NewGeneratePresignedUploadUrlDetailResponse(url string, analysisID string) GeneratePresignedUploadUrlDetailResponse {
+func NewGeneratePresignedUploadUrlDetailResponse(url string, scanID string) GeneratePresignedUploadUrlDetailResponse {
 	return GeneratePresignedUploadUrlDetailResponse{
-		UploadURL:  url,
-		AnalysisID: analysisID,
+		UploadURL: url,
+		ScanID:    scanID,
 	}
 }
 
-type AnalysisListResponse struct {
+type ScanListResponse struct {
 	ID         string              `json:"id"`
 	Status     string              `json:"status"`
 	Statuses   []string            `json:"statuses"`
@@ -33,7 +33,7 @@ type AnalysisListResponse struct {
 	UpdatedAt  time.Time           `json:"updatedAt"`
 }
 
-type AnalysisDetailResponse struct {
+type ScanDetailResponse struct {
 	ID         string              `json:"id"`
 	Status     string              `json:"status"`
 	Statuses   []string            `json:"statuses"`
@@ -49,65 +49,65 @@ type AnalysisDetailResponse struct {
 	UpdatedAt  time.Time           `json:"updatedAt"`
 }
 
-func primaryMedia(analysis *entity.Analysis) *entity.Media {
-	if analysis == nil || len(analysis.Medias) == 0 {
+func primaryMedia(scan *entity.Scan) *entity.Media {
+	if scan == nil || len(scan.Medias) == 0 {
 		return nil
 	}
-	return &analysis.Medias[0]
+	return &scan.Medias[0]
 }
 
-func NewAnalysisListResponse(analysis *entity.Analysis) *AnalysisListResponse {
-	response := &AnalysisListResponse{
-		ID:        analysis.ID.String(),
-		Status:    string(analysis.Status),
-		Statuses:  analysisStatusStrings(analysis.Statuses),
-		Message:   analysis.Message,
-		Medias:    NewMediaItemResponses(analysis.Medias),
-		CreatedAt: analysis.CreatedAt,
-		UpdatedAt: analysis.UpdatedAt,
+func NewScanListResponse(scan *entity.Scan) *ScanListResponse {
+	response := &ScanListResponse{
+		ID:        scan.ID.String(),
+		Status:    string(scan.Status),
+		Statuses:  scanStatusStrings(scan.Statuses),
+		Message:   scan.Message,
+		Medias:    NewMediaItemResponses(scan.Medias),
+		CreatedAt: scan.CreatedAt,
+		UpdatedAt: scan.UpdatedAt,
 	}
 
-	if media := primaryMedia(analysis); media != nil {
+	if media := primaryMedia(scan); media != nil {
 		response.Filename = media.Filename
 		response.Thumbnail = thumbnailURL(*media)
 	}
 
-	if analysis.Verdict != "" {
-		response.FinalScore = analysis.FinalScore
-		response.Confidence = string(analysis.AnalysisConfidence)
-		response.Verdict = analysis.Verdict
+	if scan.Verdict != "" {
+		response.FinalScore = scan.FinalScore
+		response.Confidence = string(scan.ScanConfidence)
+		response.Verdict = scan.Verdict
 	}
 
 	return response
 }
 
-func NewAnalysisDetailResponse(analysis *entity.Analysis) *AnalysisDetailResponse {
-	response := &AnalysisDetailResponse{
-		ID:        analysis.ID.String(),
-		Status:    string(analysis.Status),
-		Statuses:  analysisStatusStrings(analysis.Statuses),
-		Message:   analysis.Message,
-		Insight:   aggregatedInsight(analysis.Medias),
-		Medias:    NewMediaItemResponses(analysis.Medias),
-		CreatedAt: analysis.CreatedAt,
-		UpdatedAt: analysis.UpdatedAt,
+func NewScanDetailResponse(scan *entity.Scan) *ScanDetailResponse {
+	response := &ScanDetailResponse{
+		ID:        scan.ID.String(),
+		Status:    string(scan.Status),
+		Statuses:  scanStatusStrings(scan.Statuses),
+		Message:   scan.Message,
+		Insight:   aggregatedInsight(scan.Medias),
+		Medias:    NewMediaItemResponses(scan.Medias),
+		CreatedAt: scan.CreatedAt,
+		UpdatedAt: scan.UpdatedAt,
 	}
 
-	if media := primaryMedia(analysis); media != nil {
+	if media := primaryMedia(scan); media != nil {
 		response.Filename = media.Filename
 		response.Thumbnail = thumbnailURL(*media)
 	}
 
-	if analysis.Verdict != "" {
-		response.FinalScore = analysis.FinalScore
-		response.Confidence = string(analysis.AnalysisConfidence)
-		response.Verdict = analysis.Verdict
+	if scan.Verdict != "" {
+		response.FinalScore = scan.FinalScore
+		response.Confidence = string(scan.ScanConfidence)
+		response.Verdict = scan.Verdict
 	}
 
 	return response
 }
 
-func analysisStatusStrings(statuses []enum.AnalysisStatus) []string {
+func scanStatusStrings(statuses []enum.ScanStatus) []string {
 	result := make([]string, 0, len(statuses))
 	for _, status := range statuses {
 		result = append(result, string(status))
@@ -149,10 +149,10 @@ func aggregatedInsight(medias []entity.Media) *InsightResponse {
 	}
 }
 
-func NewAnalysisListResponses(analyses []*entity.Analysis) []*AnalysisListResponse {
-	responses := make([]*AnalysisListResponse, len(analyses))
-	for i, analysis := range analyses {
-		responses[i] = NewAnalysisListResponse(analysis)
+func NewScanListResponses(scans []*entity.Scan) []*ScanListResponse {
+	responses := make([]*ScanListResponse, len(scans))
+	for i, scan := range scans {
+		responses[i] = NewScanListResponse(scan)
 	}
 	return responses
 }

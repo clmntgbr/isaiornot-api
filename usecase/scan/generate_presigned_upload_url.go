@@ -1,4 +1,4 @@
-package analysis
+package scan
 
 import (
 	"context"
@@ -18,25 +18,25 @@ import (
 var ErrUnsupportedMediaType = errors.New("unsupported media type")
 
 type PresignUploadResult struct {
-	URL        string
-	AnalysisID uuid.UUID
+	URL    string
+	ScanID uuid.UUID
 }
 
 type GeneratePresignedUploadUrlUseCase struct {
-	storage      *storage.MinIOStorage
-	analysisRepo *repository.AnalysisRepository
-	mediaRepo    *repository.MediaRepository
+	storage   *storage.MinIOStorage
+	scanRepo  *repository.ScanRepository
+	mediaRepo *repository.MediaRepository
 }
 
 func NewGeneratePresignedUploadUrlUseCase(
 	storage *storage.MinIOStorage,
-	analysisRepo *repository.AnalysisRepository,
+	scanRepo *repository.ScanRepository,
 	mediaRepo *repository.MediaRepository,
 ) *GeneratePresignedUploadUrlUseCase {
 	return &GeneratePresignedUploadUrlUseCase{
-		storage:      storage,
-		analysisRepo: analysisRepo,
-		mediaRepo:    mediaRepo,
+		storage:   storage,
+		scanRepo:  scanRepo,
+		mediaRepo: mediaRepo,
 	}
 }
 
@@ -54,17 +54,17 @@ func (uc *GeneratePresignedUploadUrlUseCase) Execute(ctx context.Context, userID
 	objectKey := mediadto.NewObjectKey(userID, fileKey)
 	filename := filepath.Base(input.Filename)
 
-	analysisEntity := entity.Analysis{
+	scanEntity := entity.Scan{
 		UserID:   userID,
-		Status:   enum.AnalysisStatusUploaded,
-		Statuses: []enum.AnalysisStatus{enum.AnalysisStatusUploaded},
+		Status:   enum.ScanStatusUploaded,
+		Statuses: []enum.ScanStatus{enum.ScanStatusUploaded},
 	}
-	if err := (*uc.analysisRepo).Create(ctx, &analysisEntity); err != nil {
-		return nil, errors.New("failed to create analysis")
+	if err := (*uc.scanRepo).Create(ctx, &scanEntity); err != nil {
+		return nil, errors.New("failed to create scan")
 	}
 
 	media := entity.Media{
-		AnalysisID:  analysisEntity.ID,
+		ScanID:      scanEntity.ID,
 		UserID:      userID,
 		Key:         fileKey,
 		Filename:    filename,
@@ -83,7 +83,7 @@ func (uc *GeneratePresignedUploadUrlUseCase) Execute(ctx context.Context, userID
 	}
 
 	return &PresignUploadResult{
-		URL:        url,
-		AnalysisID: analysisEntity.ID,
+		URL:    url,
+		ScanID: scanEntity.ID,
 	}, nil
 }

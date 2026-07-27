@@ -11,17 +11,17 @@ import (
 )
 
 type CreateMediaUseCase struct {
-	analysisRepo *repository.AnalysisRepository
-	mediaRepo    *repository.MediaRepository
+	scanRepo  *repository.ScanRepository
+	mediaRepo *repository.MediaRepository
 }
 
 func NewCreateMediaUseCase(
-	analysisRepo *repository.AnalysisRepository,
+	scanRepo *repository.ScanRepository,
 	mediaRepo *repository.MediaRepository,
 ) *CreateMediaUseCase {
 	return &CreateMediaUseCase{
-		analysisRepo: analysisRepo,
-		mediaRepo:    mediaRepo,
+		scanRepo:  scanRepo,
+		mediaRepo: mediaRepo,
 	}
 }
 
@@ -36,17 +36,17 @@ func (u *CreateMediaUseCase) Execute(ctx context.Context, userID uuid.UUID, key 
 		return existing, nil
 	}
 
-	analysis := entity.Analysis{
+	scan := entity.Scan{
 		UserID:   userID,
-		Status:   enum.AnalysisStatusUploaded,
-		Statuses: []enum.AnalysisStatus{enum.AnalysisStatusUploaded},
+		Status:   enum.ScanStatusUploaded,
+		Statuses: []enum.ScanStatus{enum.ScanStatusUploaded},
 	}
-	if err := (*u.analysisRepo).Create(ctx, &analysis); err != nil {
-		return nil, errors.New("failed to create analysis")
+	if err := (*u.scanRepo).Create(ctx, &scan); err != nil {
+		return nil, errors.New("failed to create scan")
 	}
 
 	media := entity.Media{
-		AnalysisID:  analysis.ID,
+		ScanID:      scan.ID,
 		UserID:      userID,
 		Key:         key,
 		ContentType: contentType,

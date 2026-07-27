@@ -7,8 +7,8 @@ import (
 	"io"
 	"path/filepath"
 
-	mediadto "go-api/infrastructure/media"
 	aimodelinfra "go-api/infrastructure/aimodel"
+	mediadto "go-api/infrastructure/media"
 	"go-api/infrastructure/storage"
 
 	"github.com/google/uuid"
@@ -33,7 +33,7 @@ func (uc *AnalyzeMediaAiModelUseCase) Execute(
 	ctx context.Context,
 	userID uuid.UUID,
 	mediaKey string,
-) (*aimodelinfra.AnalysisResult, error) {
+) (*aimodelinfra.ScanResult, error) {
 	objectKey := mediadto.NewObjectKey(userID, mediaKey)
 
 	reader, err := uc.storage.Get(ctx, objectKey)

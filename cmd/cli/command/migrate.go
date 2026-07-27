@@ -10,7 +10,6 @@ import (
 	"gorm.io/gorm"
 )
 
-//go:embed sql/*.sql
 var sqlFiles embed.FS
 
 func NewMigrateCommand() *cobra.Command {
@@ -29,7 +28,7 @@ func NewMigrateCommand() *cobra.Command {
 					&entity.Subscription{},
 					&entity.User{},
 					&entity.Insight{},
-					&entity.Analysis{},
+					&entity.Scan{},
 					&entity.Media{},
 					&entity.Signal{},
 				); err != nil {

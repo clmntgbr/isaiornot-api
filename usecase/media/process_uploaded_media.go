@@ -13,7 +13,7 @@ import (
 	mediadto "go-api/infrastructure/media"
 	"go-api/infrastructure/storage"
 	"go-api/infrastructure/video"
-	"go-api/usecase/analysis"
+	"go-api/usecase/scan"
 	"go-api/usecase/subscription"
 	"go-api/usecase/thumbnail"
 
@@ -28,7 +28,7 @@ type ProcessUploadedMediaUseCase struct {
 	updateMediaStatusUseCase   *UpdateMediaStatusUseCase
 	publishMetadataUseCase     *PublishMetadataUseCase
 	assertUploadAllowedUseCase *subscription.AssertUploadAllowedUseCase
-	failAnalysisUseCase        *analysis.FailAnalysisUseCase
+	failScanUseCase            *scan.FailScanUseCase
 	frameExtractor             *video.FrameExtractor
 	imageThumbnailUseCase      *thumbnail.GenerateImageThumbnailUseCase
 }
@@ -41,7 +41,7 @@ func NewProcessUploadedMediaUseCase(
 	updateMediaStatusUseCase *UpdateMediaStatusUseCase,
 	publishMetadataUseCase *PublishMetadataUseCase,
 	assertUploadAllowedUseCase *subscription.AssertUploadAllowedUseCase,
-	failAnalysisUseCase *analysis.FailAnalysisUseCase,
+	failScanUseCase *scan.FailScanUseCase,
 	frameExtractor *video.FrameExtractor,
 	imageThumbnailUseCase *thumbnail.GenerateImageThumbnailUseCase,
 ) *ProcessUploadedMediaUseCase {
@@ -53,7 +53,7 @@ func NewProcessUploadedMediaUseCase(
 		updateMediaStatusUseCase:   updateMediaStatusUseCase,
 		publishMetadataUseCase:     publishMetadataUseCase,
 		assertUploadAllowedUseCase: assertUploadAllowedUseCase,
-		failAnalysisUseCase:        failAnalysisUseCase,
+		failScanUseCase:            failScanUseCase,
 		frameExtractor:             frameExtractor,
 		imageThumbnailUseCase:      imageThumbnailUseCase,
 	}
@@ -85,7 +85,7 @@ func (u *ProcessUploadedMediaUseCase) processImage(
 		return fmt.Errorf("failed to generate thumbnail: %w", err)
 	}
 
-	if err := u.assertBeforePipeline(ctx, userID, media.AnalysisID, contentType, size); err != nil {
+	if err := u.assertBeforePipeline(ctx, userID, media.ScanID, contentType, size); err != nil {
 		return err
 	}
 
@@ -128,7 +128,7 @@ func (u *ProcessUploadedMediaUseCase) processVideo(
 	}
 
 	baseFilename := sourceMedia.Filename
-	analysisID := sourceMedia.AnalysisID
+	scanID := sourceMedia.ScanID
 	frameMedias := make([]*entity.Media, 0, len(frames))
 
 	for i, frame := range frames {
@@ -155,7 +155,7 @@ func (u *ProcessUploadedMediaUseCase) processVideo(
 			frameMedia = sourceMedia
 		} else {
 			created := entity.Media{
-				AnalysisID:  analysisID,
+				ScanID:      scanID,
 				UserID:      userID,
 				Key:         frameKey,
 				Filename:    filename,
@@ -177,7 +177,7 @@ func (u *ProcessUploadedMediaUseCase) processVideo(
 		frameMedias = append(frameMedias, frameMedia)
 	}
 
-	if err := u.assertBeforePipeline(ctx, userID, analysisID, contentType, size); err != nil {
+	if err := u.assertBeforePipeline(ctx, userID, scanID, contentType, size); err != nil {
 		return err
 	}
 
@@ -187,7 +187,7 @@ func (u *ProcessUploadedMediaUseCase) processVideo(
 		}
 
 		if err := u.publishMetadataUseCase.Execute(ctx, frameMedia.ID); err != nil {
-			return fmt.Errorf("failed to publish frame %d analysis: %w", i, err)
+			return fmt.Errorf("failed to publish frame %d scan: %w", i, err)
 		}
 	}
 
@@ -197,7 +197,7 @@ func (u *ProcessUploadedMediaUseCase) processVideo(
 func (u *ProcessUploadedMediaUseCase) assertBeforePipeline(
 	ctx context.Context,
 	userID uuid.UUID,
-	analysisID uuid.UUID,
+	scanID uuid.UUID,
 	contentType string,
 	size int64,
 ) error {
@@ -211,7 +211,7 @@ func (u *ProcessUploadedMediaUseCase) assertBeforePipeline(
 		if errors.Is(err, subscription.ErrSubscriptionNotFound) {
 			message = "No active subscription found"
 		}
-		if failErr := u.failAnalysisUseCase.Execute(ctx, analysisID, message); failErr != nil {
+		if failErr := u.failScanUseCase.Execute(ctx, scanID, message); failErr != nil {
 			return failErr
 		}
 		return nil
