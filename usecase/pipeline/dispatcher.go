@@ -7,13 +7,15 @@ import (
 	"go-api/domain/messaging"
 	"go-api/domain/port"
 	"go-api/domain/repository"
+	"go-api/usecase/subscription"
 )
 
 type Dispatcher struct {
-	queues          port.AnalyzeQueues
-	mediaRepo       repository.MediaRepository
-	publisher       port.MessagePublisher
-	finalizeUseCase *AggregateScanUseCase
+	queues                       port.AnalyzeQueues
+	mediaRepo                    repository.MediaRepository
+	publisher                    port.MessagePublisher
+	finalizeUseCase              *AggregateScanUseCase
+	resolvePipelineAccessUseCase *subscription.ResolvePipelineAccessUseCase
 }
 
 func NewDispatcher(
@@ -21,12 +23,14 @@ func NewDispatcher(
 	mediaRepo repository.MediaRepository,
 	publisher port.MessagePublisher,
 	finalizeUseCase *AggregateScanUseCase,
+	resolvePipelineAccessUseCase *subscription.ResolvePipelineAccessUseCase,
 ) *Dispatcher {
 	return &Dispatcher{
-		queues:          queues,
-		mediaRepo:       mediaRepo,
-		publisher:       publisher,
-		finalizeUseCase: finalizeUseCase,
+		queues:                       queues,
+		mediaRepo:                    mediaRepo,
+		publisher:                    publisher,
+		finalizeUseCase:              finalizeUseCase,
+		resolvePipelineAccessUseCase: resolvePipelineAccessUseCase,
 	}
 }
 
@@ -40,7 +44,12 @@ func (d *Dispatcher) HandleStageDone(ctx context.Context, message messaging.Stag
 		return fmt.Errorf("media not found: %w", err)
 	}
 
-	next := d.nextStage(message.Stage)
+	fullPipeline, err := d.resolvePipelineAccessUseCase.FullPipelineForUser(ctx, media.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to resolve pipeline access: %w", err)
+	}
+
+	next := nextStage(message.Stage, fullPipeline)
 	if next == "" {
 		return d.finalizeUseCase.Execute(ctx, media.ID)
 	}
@@ -60,8 +69,12 @@ func (d *Dispatcher) HandleStageDone(ctx context.Context, message messaging.Stag
 	return d.publisher.Publish(ctx, queueName, analyzeMessage)
 }
 
-func (d *Dispatcher) nextStage(current string) string {
-	order := []string{"metadata", "heuristics", "ai_model"}
+func nextStage(current string, fullPipeline bool) string {
+	order := []string{"metadata", "heuristics"}
+	if fullPipeline {
+		order = append(order, "ai_model")
+	}
+
 	for i, stage := range order {
 		if stage == current && i+1 < len(order) {
 			return order[i+1]

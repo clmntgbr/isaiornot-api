@@ -11,18 +11,18 @@ import (
 	"go-api/domain/realtime"
 	"go-api/domain/repository"
 	scanUseCase "go-api/usecase/scan"
+	"go-api/usecase/subscription"
 
 	"github.com/google/uuid"
 )
 
-var requiredSignalNames = []string{"metadata", "heuristics", "ai_model"}
-
 type AggregateScanUseCase struct {
-	mediaRepo               repository.MediaRepository
-	scanRepo                repository.ScanRepository
-	signalRepo              repository.SignalRepository
-	updateScanStatusUseCase *scanUseCase.UpdateScanStatusUseCase
-	centrifugoPublisher     port.RealtimePublisher
+	mediaRepo                    repository.MediaRepository
+	scanRepo                     repository.ScanRepository
+	signalRepo                   repository.SignalRepository
+	updateScanStatusUseCase      *scanUseCase.UpdateScanStatusUseCase
+	centrifugoPublisher          port.RealtimePublisher
+	resolvePipelineAccessUseCase *subscription.ResolvePipelineAccessUseCase
 }
 
 func NewAggregateScanUseCase(
@@ -31,13 +31,15 @@ func NewAggregateScanUseCase(
 	signalRepo repository.SignalRepository,
 	updateScanStatusUseCase *scanUseCase.UpdateScanStatusUseCase,
 	centrifugoPublisher port.RealtimePublisher,
+	resolvePipelineAccessUseCase *subscription.ResolvePipelineAccessUseCase,
 ) *AggregateScanUseCase {
 	return &AggregateScanUseCase{
-		mediaRepo:               mediaRepo,
-		scanRepo:                scanRepo,
-		signalRepo:              signalRepo,
-		updateScanStatusUseCase: updateScanStatusUseCase,
-		centrifugoPublisher:     centrifugoPublisher,
+		mediaRepo:                    mediaRepo,
+		scanRepo:                     scanRepo,
+		signalRepo:                   signalRepo,
+		updateScanStatusUseCase:      updateScanStatusUseCase,
+		centrifugoPublisher:          centrifugoPublisher,
+		resolvePipelineAccessUseCase: resolvePipelineAccessUseCase,
 	}
 }
 
@@ -47,12 +49,18 @@ func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) e
 		return errors.New("media not found")
 	}
 
+	fullPipeline, err := u.resolvePipelineAccessUseCase.FullPipelineForUser(ctx, media.UserID)
+	if err != nil {
+		return err
+	}
+	required := requiredSignalNames(fullPipeline)
+
 	signals, err := u.signalRepo.GetByMediaID(ctx, mediaID)
 	if err != nil {
 		return errors.New("failed to load signals")
 	}
 
-	if !hasAllRequiredSignals(signals) {
+	if !hasAllRequiredSignals(signals, required) {
 		return errors.New("not all signals are ready")
 	}
 
@@ -83,7 +91,7 @@ func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) e
 		if err != nil {
 			return errors.New("failed to load signals")
 		}
-		if !hasAllRequiredSignals(mediaSignals) {
+		if !hasAllRequiredSignals(mediaSignals, required) {
 			return errors.New("not all signals are ready")
 		}
 
@@ -112,13 +120,21 @@ func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) e
 	return nil
 }
 
-func hasAllRequiredSignals(signals []*entity.Signal) bool {
-	found := make(map[string]struct{}, len(requiredSignalNames))
+func requiredSignalNames(fullPipeline bool) []string {
+	names := []string{"metadata", "heuristics"}
+	if fullPipeline {
+		names = append(names, "ai_model")
+	}
+	return names
+}
+
+func hasAllRequiredSignals(signals []*entity.Signal, required []string) bool {
+	found := make(map[string]struct{}, len(required))
 	for _, signal := range signals {
 		found[signal.Name] = struct{}{}
 	}
 
-	for _, name := range requiredSignalNames {
+	for _, name := range required {
 		if _, ok := found[name]; !ok {
 			return false
 		}

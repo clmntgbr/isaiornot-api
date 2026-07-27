@@ -10,6 +10,7 @@ import (
 	repoGorm "go-api/repository/gorm"
 	pipelineUseCase "go-api/usecase/pipeline"
 	scanUseCase "go-api/usecase/scan"
+	"go-api/usecase/subscription"
 
 	"gorm.io/gorm"
 )
@@ -36,6 +37,16 @@ func New(db *gorm.DB, env *config.Config) (*Shared, error) {
 	mediaRepo := repoGorm.NewMediaRepository(db)
 	scanRepo := repoGorm.NewScanRepository(db)
 	signalRepo := repoGorm.NewSignalRepository(db)
+	userRepo := repoGorm.NewUserRepository(db)
+	subscriptionRepo := repoGorm.NewSubscriptionRepository(db)
+	planRepo := repoGorm.NewPlanRepository(db)
+
+	resolveEffectivePlanUseCase := subscription.NewResolveEffectivePlanUseCase(planRepo)
+	resolvePipelineAccessUseCase := subscription.NewResolvePipelineAccessUseCase(
+		userRepo,
+		subscriptionRepo,
+		resolveEffectivePlanUseCase,
+	)
 
 	updateScanStatusUseCase := scanUseCase.NewUpdateScanStatusUseCase(scanRepo)
 	aggregateScanUseCase := pipelineUseCase.NewAggregateScanUseCase(
@@ -44,8 +55,15 @@ func New(db *gorm.DB, env *config.Config) (*Shared, error) {
 		signalRepo,
 		updateScanStatusUseCase,
 		centrifugoPublisher,
+		resolvePipelineAccessUseCase,
 	)
-	dispatcher := pipelineUseCase.NewDispatcher(env.AnalyzeQueues(), mediaRepo, publisher, aggregateScanUseCase)
+	dispatcher := pipelineUseCase.NewDispatcher(
+		env.AnalyzeQueues(),
+		mediaRepo,
+		publisher,
+		aggregateScanUseCase,
+		resolvePipelineAccessUseCase,
+	)
 
 	return &Shared{
 		Publisher:           publisher,

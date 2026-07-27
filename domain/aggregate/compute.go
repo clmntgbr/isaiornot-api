@@ -13,12 +13,14 @@ type AggregationResult struct {
 	Confidence entity.ConfidenceLevel
 	Verdict    string
 	Signals    []entity.Signal
+	HasAIModel bool
 }
 
 func Compute(signals []entity.Signal) AggregationResult {
 	available := make([]entity.Signal, 0, len(signals))
 	var weightedSum float64
 	var totalWeight float64
+	hasAIModel := false
 
 	for _, signal := range signals {
 		if signal.Score < 0 {
@@ -28,6 +30,10 @@ func Compute(signals []entity.Signal) AggregationResult {
 		weight := effectiveWeight(signal)
 		if weight == 0 {
 			continue
+		}
+
+		if signal.Name == "ai_model" {
+			hasAIModel = true
 		}
 
 		available = append(available, signal)
@@ -41,6 +47,7 @@ func Compute(signals []entity.Signal) AggregationResult {
 			Confidence: entity.ConfidenceUnknown,
 			Verdict:    VerdictUncertain,
 			Signals:    signals,
+			HasAIModel: hasAIModel,
 		}
 	}
 
@@ -49,8 +56,9 @@ func Compute(signals []entity.Signal) AggregationResult {
 	return AggregationResult{
 		FinalScore: finalScore,
 		Confidence: globalConfidence(available),
-		Verdict:    verdict(finalScore),
+		Verdict:    verdict(finalScore, hasAIModel),
 		Signals:    signals,
+		HasAIModel: hasAIModel,
 	}
 }
 
@@ -66,10 +74,14 @@ func AggregateMediaResults(results []AggregationResult) AggregationResult {
 	scores := make([]float64, 0, len(results))
 	levels := make([]entity.ConfidenceLevel, 0, len(results)+1)
 	var sum float64
+	hasAIModel := true
 	for _, result := range results {
 		scores = append(scores, result.FinalScore)
 		levels = append(levels, result.Confidence)
 		sum += result.FinalScore
+		if !result.HasAIModel {
+			hasAIModel = false
+		}
 	}
 	levels = append(levels, agreementConfidence(scores))
 
@@ -78,11 +90,21 @@ func AggregateMediaResults(results []AggregationResult) AggregationResult {
 	return AggregationResult{
 		FinalScore: finalScore,
 		Confidence: minConfidenceLevels(levels...),
-		Verdict:    verdict(finalScore),
+		Verdict:    verdict(finalScore, hasAIModel),
+		HasAIModel: hasAIModel,
 	}
 }
 
-func verdict(score float64) string {
+// verdict maps a score to a label. Without the AI model stage, the uncertain
+// band is removed so free-tier scans still return likely_real / likely_ai.
+func verdict(score float64, hasAIModel bool) string {
+	if !hasAIModel {
+		if score < 50 {
+			return VerdictLikelyReal
+		}
+		return VerdictLikelyAI
+	}
+
 	switch {
 	case score < 30:
 		return VerdictLikelyReal
