@@ -1,0 +1,60 @@
+---
+description: IsAIorNot API — hexagonal architecture and project conventions
+alwaysApply: true
+---
+
+# IsAIorNot API guidelines
+
+Go Fiber API. Module path: `go-api`. Code and comments in **English**.
+
+## Layers (dependency rule)
+
+```
+cmd/*/di → handler/{http,worker} → usecase → domain
+                ↑                      ↑
+         presenter (HTTP only)   repository/gorm + infrastructure (adapters)
+```
+
+- **domain** never imports `infrastructure`, `handler`, `usecase`, or `cmd`
+- **usecase** depends only on `domain` (`entity`, `repository`, `port`, `paginate`, `media`, `messaging`, `realtime`, `aggregate`) — never concrete adapters
+- Wire concrete implementations only in `cmd/*/di` (or `cmd/shared/pipeline`)
+
+## Ports & adapters
+
+- External deps (storage, Stripe, Centrifugo, RabbitMQ, analyzers, Clerk, video) go through `domain/port`
+- Adapters live in `infrastructure/*` and implement those ports
+- Vendor packages (`clerk`, `stripe`, `sightengine`, `rabbitmq`) stay under `infrastructure/` — OK to name by vendor there
+- Prefer interface **values** in constructors: `repository.UserRepository`, not `*repository.UserRepository`
+
+## Delivery split
+
+- HTTP / webhooks / middleware / dto → `handler/http/`
+- AMQP workers → `handler/worker/`
+- Webhook Go types use business names (`UserWebhookHandler`, `BillingWebhookHandler`, `MediaUploadWebhookHandler`); HTTP routes may keep vendor paths (`/webhooks/clerk`, …)
+
+## Naming
+
+- Usecase packages by domain: `scan`, `media`, `subscription`, `identity` (not vendor names)
+- Import aliases: `aimodelUseCase`, `pipelineUseCase` — not `aimodeluc`
+- DI folders: `cmd/*/di` (manual composition, not google/wire)
+- JSON tags for API/entities/presenters: **camelCase** (`scansCount`, `createdAt`)
+- Do not camelCase external contracts (Clerk webhooks, MinIO `Records`, RabbitMQ payloads, Sightengine)
+
+## Where new code goes
+
+| Kind | Place |
+|------|--------|
+| Business flow | `usecase/<domain>/` |
+| Entity / repo interface / port | `domain/` |
+| GORM impl | `repository/gorm/` |
+| External client | `infrastructure/<adapter>/` |
+| HTTP response shape | `presenter/` |
+| HTTP ingress DTO | `handler/http/dto/` |
+| Composition root | `cmd/<binary>/di/` |
+
+## Do not
+
+- Put DTOs or helpers under `infrastructure/` unless they are adapter-specific
+- Import adapters from usecases
+- Rename pipeline stage `aimodel` / signal `ai_model` to a vendor name
+- Expand scope beyond the request (no drive-by refactors)
