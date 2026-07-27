@@ -8,17 +8,17 @@ import (
 	"github.com/stripe/stripe-go/v82/webhook"
 )
 
-type StripeMiddleware struct {
+type BillingWebhookMiddleware struct {
 	secret string
 }
 
-func NewStripeMiddleware(secret string) *StripeMiddleware {
-	return &StripeMiddleware{
+func NewBillingWebhookMiddleware(secret string) *BillingWebhookMiddleware {
+	return &BillingWebhookMiddleware{
 		secret: secret,
 	}
 }
 
-func (m *StripeMiddleware) Protected() fiber.Handler {
+func (m *BillingWebhookMiddleware) Protected() fiber.Handler {
 	return func(c fiber.Ctx) error {
 		if m.secret == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{

@@ -1,4 +1,4 @@
-package clerk
+package identity
 
 import (
 	"context"
@@ -14,6 +14,6 @@ func NewFetchUserUseCase(userFetcher port.ClerkUserFetcher) *FetchUserUseCase {
 	return &FetchUserUseCase{userFetcher: userFetcher}
 }
 
-func (s *FetchUserUseCase) Execute(ctx context.Context, clerkID string) (port.ClerkUser, error) {
-	return s.userFetcher.Get(ctx, clerkID)
+func (s *FetchUserUseCase) Execute(ctx context.Context, externalID string) (port.ClerkUser, error) {
+	return s.userFetcher.Get(ctx, externalID)
 }

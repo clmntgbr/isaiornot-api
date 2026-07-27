@@ -1,7 +1,7 @@
 package main
 
 import (
-	"go-api/cmd/dispatcher/wire"
+	"go-api/cmd/dispatcher/di"
 	"go-api/infrastructure/config"
 	"log"
 	"os"
@@ -13,7 +13,7 @@ func main() {
 	env := config.Load()
 	db := config.ConnectDatabase(env)
 
-	container := wire.NewContainer(db, env)
+	container := di.NewContainer(db, env)
 
 	go container.WorkerPool.Start()
 

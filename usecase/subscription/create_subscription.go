@@ -7,7 +7,7 @@ import (
 	"go-api/domain/entity"
 	"go-api/domain/port"
 	"go-api/domain/repository"
-	"go-api/usecase/clerk"
+	"go-api/usecase/identity"
 
 	"github.com/google/uuid"
 )
@@ -21,13 +21,13 @@ var (
 
 type CreateSubscriptionUseCase struct {
 	planRepo               repository.PlanRepository
-	fetchUserUseCase       *clerk.FetchUserUseCase
+	fetchUserUseCase       *identity.FetchUserUseCase
 	checkoutSessionGateway port.CheckoutSessionGateway
 }
 
 func NewCreateSubscriptionUseCase(
 	planRepo repository.PlanRepository,
-	fetchUserUseCase *clerk.FetchUserUseCase,
+	fetchUserUseCase *identity.FetchUserUseCase,
 	checkoutSessionGateway port.CheckoutSessionGateway,
 ) *CreateSubscriptionUseCase {
 	return &CreateSubscriptionUseCase{

@@ -9,17 +9,17 @@ import (
 	svix "github.com/svix/svix-webhooks/go"
 )
 
-type ClerkMiddleware struct {
+type UserWebhookMiddleware struct {
 	secret string
 }
 
-func NewClerkMiddleware(secret string) *ClerkMiddleware {
-	return &ClerkMiddleware{
+func NewUserWebhookMiddleware(secret string) *UserWebhookMiddleware {
+	return &UserWebhookMiddleware{
 		secret: secret,
 	}
 }
 
-func (m *ClerkMiddleware) Protected() fiber.Handler {
+func (m *UserWebhookMiddleware) Protected() fiber.Handler {
 	return func(c fiber.Ctx) error {
 		wh, err := svix.NewWebhook(m.secret)
 		if err != nil {

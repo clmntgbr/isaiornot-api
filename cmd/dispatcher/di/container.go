@@ -1,4 +1,4 @@
-package wire
+package di
 
 import (
 	"go-api/cmd/shared/pipeline"

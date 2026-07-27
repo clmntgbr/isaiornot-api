@@ -4,17 +4,17 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-type MinIOMiddleware struct {
+type MediaUploadWebhookMiddleware struct {
 	secret string
 }
 
-func NewMinIOMiddleware(secret string) *MinIOMiddleware {
-	return &MinIOMiddleware{
+func NewMediaUploadWebhookMiddleware(secret string) *MediaUploadWebhookMiddleware {
+	return &MediaUploadWebhookMiddleware{
 		secret: secret,
 	}
 }
 
-func (m *MinIOMiddleware) Protected() fiber.Handler {
+func (m *MediaUploadWebhookMiddleware) Protected() fiber.Handler {
 	return func(c fiber.Ctx) error {
 		if m.secret == "" {
 			return c.Next()

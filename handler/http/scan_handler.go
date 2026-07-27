@@ -16,20 +16,20 @@ type ScanHandler struct {
 	generatePresignedUploadUrlUseCase *scan.GeneratePresignedUploadUrlUseCase
 	getScanUseCase                    *scan.GetScanUseCase
 	getScansUseCase                   *scan.GetScansUseCase
-	getStatisticsUseCase              *scan.GetStatisticsUseCase
+	getMediaStatisticsUseCase         *scan.GetMediaStatisticsUseCase
 }
 
 func NewScanHandler(
 	generatePresignedUploadUrlUseCase *scan.GeneratePresignedUploadUrlUseCase,
 	getScanUseCase *scan.GetScanUseCase,
 	getScansUseCase *scan.GetScansUseCase,
-	getStatisticsUseCase *scan.GetStatisticsUseCase,
+	getMediaStatisticsUseCase *scan.GetMediaStatisticsUseCase,
 ) *ScanHandler {
 	return &ScanHandler{
 		generatePresignedUploadUrlUseCase: generatePresignedUploadUrlUseCase,
 		getScanUseCase:                    getScanUseCase,
 		getScansUseCase:                   getScansUseCase,
-		getStatisticsUseCase:              getStatisticsUseCase,
+		getMediaStatisticsUseCase:         getMediaStatisticsUseCase,
 	}
 }
 
@@ -126,7 +126,7 @@ func (h *ScanHandler) GetStatistics(c fiber.Ctx) error {
 		})
 	}
 
-	stats, err := h.getStatisticsUseCase.Execute(c.Context(), user.ID)
+	stats, err := h.getMediaStatisticsUseCase.Execute(c.Context(), user.ID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Internal server error",

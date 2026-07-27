@@ -1,4 +1,4 @@
-package wire
+package di
 
 import (
 	"go-api/domain/port"
@@ -17,19 +17,19 @@ import (
 )
 
 type Container struct {
-	AuthenticateMiddleware *middleware.AuthenticateMiddleware
-	ClerkMiddleware        *middleware.ClerkMiddleware
-	MinIOMiddleware        *middleware.MinIOMiddleware
-	StripeMiddleware       *middleware.StripeMiddleware
-	ClerkHandler           *httphandler.ClerkHandler
-	MinIOHandler           *httphandler.MinIOHandler
-	UserHandler            *httphandler.UserHandler
-	ScanHandler            *httphandler.ScanHandler
-	MediaHandler           *httphandler.MediaHandler
-	RealtimeHandler        *httphandler.RealtimeHandler
-	PlanHandler            *httphandler.PlanHandler
-	StripeHandler          *httphandler.StripeHandler
-	SubscriptionHandler    *httphandler.SubscriptionHandler
+	AuthenticateMiddleware       *middleware.AuthenticateMiddleware
+	UserWebhookMiddleware        *middleware.UserWebhookMiddleware
+	MediaUploadWebhookMiddleware *middleware.MediaUploadWebhookMiddleware
+	BillingWebhookMiddleware     *middleware.BillingWebhookMiddleware
+	UserWebhookHandler           *httphandler.UserWebhookHandler
+	MediaUploadWebhookHandler    *httphandler.MediaUploadWebhookHandler
+	UserHandler                  *httphandler.UserHandler
+	ScanHandler                  *httphandler.ScanHandler
+	MediaHandler                 *httphandler.MediaHandler
+	RealtimeHandler              *httphandler.RealtimeHandler
+	PlanHandler                  *httphandler.PlanHandler
+	BillingWebhookHandler        *httphandler.BillingWebhookHandler
+	SubscriptionHandler          *httphandler.SubscriptionHandler
 }
 
 type apiDeps struct {
@@ -77,18 +77,18 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	subscriptionBundle := wireSubscription(d, authBundle)
 
 	return &Container{
-		AuthenticateMiddleware: authBundle.authenticateMiddleware,
-		ClerkMiddleware:        middleware.NewClerkMiddleware(env.ClerkWebhookSecret),
-		MinIOMiddleware:        middleware.NewMinIOMiddleware(env.MinIOWebhookSecret),
-		StripeMiddleware:       middleware.NewStripeMiddleware(env.StripeWebhookSecret),
-		StripeHandler:          subscriptionBundle.stripeHandler,
-		ClerkHandler:           authBundle.clerkHandler,
-		MinIOHandler:           mediaBundle.minIOHandler,
-		UserHandler:            httphandler.NewUserHandler(),
-		ScanHandler:            scanBundle.scanHandler,
-		MediaHandler:           mediaBundle.mediaHandler,
-		RealtimeHandler:        httphandler.NewRealtimeHandler(env),
-		PlanHandler:            subscriptionBundle.planHandler,
-		SubscriptionHandler:    subscriptionBundle.subscriptionHandler,
+		AuthenticateMiddleware:       authBundle.authenticateMiddleware,
+		UserWebhookMiddleware:        middleware.NewUserWebhookMiddleware(env.ClerkWebhookSecret),
+		MediaUploadWebhookMiddleware: middleware.NewMediaUploadWebhookMiddleware(env.MinIOWebhookSecret),
+		BillingWebhookMiddleware:     middleware.NewBillingWebhookMiddleware(env.StripeWebhookSecret),
+		BillingWebhookHandler:        subscriptionBundle.billingWebhookHandler,
+		UserWebhookHandler:           authBundle.userWebhookHandler,
+		MediaUploadWebhookHandler:    mediaBundle.mediaUploadWebhookHandler,
+		UserHandler:                  httphandler.NewUserHandler(),
+		ScanHandler:                  scanBundle.scanHandler,
+		MediaHandler:                 mediaBundle.mediaHandler,
+		RealtimeHandler:              httphandler.NewRealtimeHandler(env),
+		PlanHandler:                  subscriptionBundle.planHandler,
+		SubscriptionHandler:          subscriptionBundle.subscriptionHandler,
 	}
 }

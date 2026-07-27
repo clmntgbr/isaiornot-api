@@ -2,7 +2,7 @@ package subscription
 
 import "go-api/domain/entity"
 
-func MapStripeStatus(stripeStatus string) entity.SubscriptionStatus {
+func MapBillingStatus(stripeStatus string) entity.SubscriptionStatus {
 	switch stripeStatus {
 	case "active", "trialing":
 		return entity.SubscriptionStatusActive

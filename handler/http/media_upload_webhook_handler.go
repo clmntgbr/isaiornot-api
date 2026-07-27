@@ -14,22 +14,22 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-type MinIOHandler struct {
+type MediaUploadWebhookHandler struct {
 	mediaBucket                 string
 	processUploadedMediaUseCase *media.ProcessUploadedMediaUseCase
 }
 
-func NewMinIOHandler(
+func NewMediaUploadWebhookHandler(
 	mediaBucket string,
 	processUploadedMediaUseCase *media.ProcessUploadedMediaUseCase,
-) *MinIOHandler {
-	return &MinIOHandler{
+) *MediaUploadWebhookHandler {
+	return &MediaUploadWebhookHandler{
 		mediaBucket:                 mediaBucket,
 		processUploadedMediaUseCase: processUploadedMediaUseCase,
 	}
 }
 
-func (h *MinIOHandler) ObjectCreated(c fiber.Ctx) error {
+func (h *MediaUploadWebhookHandler) ObjectCreated(c fiber.Ctx) error {
 	payload := c.Body()
 
 	var event dto.ObjectCreatedEvent
@@ -50,7 +50,7 @@ func (h *MinIOHandler) ObjectCreated(c fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-func (h *MinIOHandler) process(ctx context.Context, event dto.ObjectCreatedEvent) {
+func (h *MediaUploadWebhookHandler) process(ctx context.Context, event dto.ObjectCreatedEvent) {
 	for _, record := range event.Records {
 		if record.S3.Bucket.Name != h.mediaBucket {
 			continue

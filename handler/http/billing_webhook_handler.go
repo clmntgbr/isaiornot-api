@@ -13,7 +13,7 @@ import (
 	"github.com/stripe/stripe-go/v82"
 )
 
-type StripeHandler struct {
+type BillingWebhookHandler struct {
 	checkoutCompletedUseCase       *subscription.CheckoutCompletedUseCase
 	subscriptionUpdatedUseCase     *subscription.SubscriptionUpdatedUseCase
 	subscriptionDeletedUseCase     *subscription.SubscriptionDeletedUseCase
@@ -21,14 +21,14 @@ type StripeHandler struct {
 	invoicePaymentFailedUseCase    *subscription.InvoicePaymentFailedUseCase
 }
 
-func NewStripeHandler(
+func NewBillingWebhookHandler(
 	checkoutCompletedUseCase *subscription.CheckoutCompletedUseCase,
 	subscriptionUpdatedUseCase *subscription.SubscriptionUpdatedUseCase,
 	subscriptionDeletedUseCase *subscription.SubscriptionDeletedUseCase,
 	invoicePaymentSucceededUseCase *subscription.InvoicePaymentSucceededUseCase,
 	invoicePaymentFailedUseCase *subscription.InvoicePaymentFailedUseCase,
-) *StripeHandler {
-	return &StripeHandler{
+) *BillingWebhookHandler {
+	return &BillingWebhookHandler{
 		checkoutCompletedUseCase:       checkoutCompletedUseCase,
 		subscriptionUpdatedUseCase:     subscriptionUpdatedUseCase,
 		subscriptionDeletedUseCase:     subscriptionDeletedUseCase,
@@ -37,7 +37,7 @@ func NewStripeHandler(
 	}
 }
 
-func (h *StripeHandler) Execute(c fiber.Ctx) error {
+func (h *BillingWebhookHandler) Execute(c fiber.Ctx) error {
 	event := c.Locals("payload").(stripe.Event)
 
 	go func() {
@@ -52,7 +52,7 @@ func (h *StripeHandler) Execute(c fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-func (h *StripeHandler) dispatch(ctx context.Context, event stripe.Event) error {
+func (h *BillingWebhookHandler) dispatch(ctx context.Context, event stripe.Event) error {
 	switch event.Type {
 	case "checkout.session.completed":
 		return h.handleCheckoutCompleted(ctx, event)
@@ -74,7 +74,7 @@ func (h *StripeHandler) dispatch(ctx context.Context, event stripe.Event) error 
 	}
 }
 
-func (h *StripeHandler) handleCheckoutCompleted(ctx context.Context, event stripe.Event) error {
+func (h *BillingWebhookHandler) handleCheckoutCompleted(ctx context.Context, event stripe.Event) error {
 	var session stripe.CheckoutSession
 	if err := json.Unmarshal(event.Data.Raw, &session); err != nil {
 		return err
@@ -98,7 +98,7 @@ func (h *StripeHandler) handleCheckoutCompleted(ctx context.Context, event strip
 	return h.checkoutCompletedUseCase.Execute(ctx, input)
 }
 
-func (h *StripeHandler) handleSubscriptionUpdated(ctx context.Context, event stripe.Event) error {
+func (h *BillingWebhookHandler) handleSubscriptionUpdated(ctx context.Context, event stripe.Event) error {
 	var sub stripe.Subscription
 	if err := json.Unmarshal(event.Data.Raw, &sub); err != nil {
 		return err
@@ -117,7 +117,7 @@ func (h *StripeHandler) handleSubscriptionUpdated(ctx context.Context, event str
 	})
 }
 
-func (h *StripeHandler) handleSubscriptionDeleted(ctx context.Context, event stripe.Event) error {
+func (h *BillingWebhookHandler) handleSubscriptionDeleted(ctx context.Context, event stripe.Event) error {
 	var sub stripe.Subscription
 	if err := json.Unmarshal(event.Data.Raw, &sub); err != nil {
 		return err
@@ -126,7 +126,7 @@ func (h *StripeHandler) handleSubscriptionDeleted(ctx context.Context, event str
 	return h.subscriptionDeletedUseCase.Execute(ctx, sub.ID)
 }
 
-func (h *StripeHandler) handleInvoicePaymentSucceeded(ctx context.Context, event stripe.Event) error {
+func (h *BillingWebhookHandler) handleInvoicePaymentSucceeded(ctx context.Context, event stripe.Event) error {
 	var invoice stripe.Invoice
 	if err := json.Unmarshal(event.Data.Raw, &invoice); err != nil {
 		return err
@@ -141,7 +141,7 @@ func (h *StripeHandler) handleInvoicePaymentSucceeded(ctx context.Context, event
 	})
 }
 
-func (h *StripeHandler) handleInvoicePaymentFailed(ctx context.Context, event stripe.Event) error {
+func (h *BillingWebhookHandler) handleInvoicePaymentFailed(ctx context.Context, event stripe.Event) error {
 	var invoice stripe.Invoice
 	if err := json.Unmarshal(event.Data.Raw, &invoice); err != nil {
 		return err

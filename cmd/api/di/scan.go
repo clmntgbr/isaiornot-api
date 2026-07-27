@@ -1,4 +1,4 @@
-package wire
+package di
 
 import (
 	httphandler "go-api/handler/http"
@@ -35,7 +35,7 @@ func wireScan(d *apiDeps) scanBundle {
 			generatePresignedUploadUrlUseCase,
 			scan.NewGetScanUseCase(d.scanRepo),
 			scan.NewGetScansUseCase(d.scanRepo),
-			scan.NewGetStatisticsUseCase(d.scanRepo),
+			scan.NewGetMediaStatisticsUseCase(d.scanRepo),
 		),
 	}
 }

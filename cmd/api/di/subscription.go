@@ -1,4 +1,4 @@
-package wire
+package di
 
 import (
 	httphandler "go-api/handler/http"
@@ -8,9 +8,9 @@ import (
 )
 
 type subscriptionBundle struct {
-	planHandler         *httphandler.PlanHandler
-	stripeHandler       *httphandler.StripeHandler
-	subscriptionHandler *httphandler.SubscriptionHandler
+	planHandler           *httphandler.PlanHandler
+	billingWebhookHandler *httphandler.BillingWebhookHandler
+	subscriptionHandler   *httphandler.SubscriptionHandler
 }
 
 func subscriptionFree(d *apiDeps) *subscription.CreateFreeSubscriptionUseCase {
@@ -42,7 +42,7 @@ func wireSubscription(d *apiDeps, auth authBundle) subscriptionBundle {
 
 	return subscriptionBundle{
 		planHandler: httphandler.NewPlanHandler(plan.NewGetPlansUseCase(d.planRepo)),
-		stripeHandler: httphandler.NewStripeHandler(
+		billingWebhookHandler: httphandler.NewBillingWebhookHandler(
 			subscription.NewCheckoutCompletedUseCase(
 				d.userRepo,
 				d.planRepo,

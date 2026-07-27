@@ -71,7 +71,7 @@ func (u *SubscriptionUpdatedUseCase) Execute(ctx context.Context, input Subscrip
 		}
 	}
 
-	subscription.SubscriptionStatus = MapStripeStatus(input.Status)
+	subscription.SubscriptionStatus = MapBillingStatus(input.Status)
 	subscription.CancelAtPeriodEnd = input.CancelAtPeriodEnd
 	if !input.CurrentPeriodStart.IsZero() {
 		subscription.SubscriptionStartDate = input.CurrentPeriodStart

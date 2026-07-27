@@ -11,28 +11,28 @@ import (
 	"gorm.io/gorm"
 )
 
-type ClerkHandler struct {
-	getUserByClerkIDUseCase    *user.GetUserByClerkIDUseCase
-	createUserUseCase          *user.CreateUserUseCase
-	updateUserUseCase          *user.UpdateUserUseCase
-	deleteUserByClerkIDUseCase *user.DeleteUserByClerkIDUseCase
+type UserWebhookHandler struct {
+	getUserByExternalIDUseCase    *user.GetUserByExternalIDUseCase
+	createUserUseCase             *user.CreateUserUseCase
+	updateUserUseCase             *user.UpdateUserUseCase
+	deleteUserByExternalIDUseCase *user.DeleteUserByExternalIDUseCase
 }
 
-func NewClerkHandler(
-	getUserByClerkIDUseCase *user.GetUserByClerkIDUseCase,
+func NewUserWebhookHandler(
+	getUserByExternalIDUseCase *user.GetUserByExternalIDUseCase,
 	createUserUseCase *user.CreateUserUseCase,
 	updateUserUseCase *user.UpdateUserUseCase,
-	deleteUserByClerkIDUseCase *user.DeleteUserByClerkIDUseCase,
-) *ClerkHandler {
-	return &ClerkHandler{
-		getUserByClerkIDUseCase:    getUserByClerkIDUseCase,
-		createUserUseCase:          createUserUseCase,
-		updateUserUseCase:          updateUserUseCase,
-		deleteUserByClerkIDUseCase: deleteUserByClerkIDUseCase,
+	deleteUserByExternalIDUseCase *user.DeleteUserByExternalIDUseCase,
+) *UserWebhookHandler {
+	return &UserWebhookHandler{
+		getUserByExternalIDUseCase:    getUserByExternalIDUseCase,
+		createUserUseCase:             createUserUseCase,
+		updateUserUseCase:             updateUserUseCase,
+		deleteUserByExternalIDUseCase: deleteUserByExternalIDUseCase,
 	}
 }
 
-func (h *ClerkHandler) Execute(c fiber.Ctx) error {
+func (h *UserWebhookHandler) Execute(c fiber.Ctx) error {
 	clerkEvent := c.Locals("payload").(dto.ClerkEvent)
 	validate := validator.New()
 
@@ -102,8 +102,8 @@ func (h *ClerkHandler) Execute(c fiber.Ctx) error {
 	}
 }
 
-func (h *ClerkHandler) CreateUser(c fiber.Ctx, data dto.ClerkUserCreated) error {
-	user, err := h.getUserByClerkIDUseCase.Execute(c.Context(), data.ID)
+func (h *UserWebhookHandler) CreateUser(c fiber.Ctx, data dto.ClerkUserCreated) error {
+	user, err := h.getUserByExternalIDUseCase.Execute(c.Context(), data.ID)
 	if err != nil {
 		log.Printf("Error finding user by Clerk ID %s: %v", data.ID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -130,8 +130,8 @@ func (h *ClerkHandler) CreateUser(c fiber.Ctx, data dto.ClerkUserCreated) error 
 	return txFunc(nil)
 }
 
-func (h *ClerkHandler) UpdateUser(c fiber.Ctx, data dto.ClerkUserUpdated) error {
-	user, err := h.getUserByClerkIDUseCase.Execute(c.Context(), data.ID)
+func (h *UserWebhookHandler) UpdateUser(c fiber.Ctx, data dto.ClerkUserUpdated) error {
+	user, err := h.getUserByExternalIDUseCase.Execute(c.Context(), data.ID)
 	if err != nil {
 		log.Printf("Error finding user by Clerk ID %s: %v", data.ID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -163,8 +163,8 @@ func (h *ClerkHandler) UpdateUser(c fiber.Ctx, data dto.ClerkUserUpdated) error 
 	return nil
 }
 
-func (h *ClerkHandler) DeleteUser(c fiber.Ctx, data dto.ClerkUserDeleted) error {
-	if err := h.deleteUserByClerkIDUseCase.Execute(c.Context(), data.ID); err != nil {
+func (h *UserWebhookHandler) DeleteUser(c fiber.Ctx, data dto.ClerkUserDeleted) error {
+	if err := h.deleteUserByExternalIDUseCase.Execute(c.Context(), data.ID); err != nil {
 		log.Printf("Error deleting user with Clerk ID %s: %v", data.ID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to delete user",

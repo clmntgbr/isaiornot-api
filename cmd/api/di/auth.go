@@ -1,28 +1,28 @@
-package wire
+package di
 
 import (
 	httphandler "go-api/handler/http"
 	"go-api/handler/http/middleware"
 	infraClerk "go-api/infrastructure/clerk"
 	"go-api/usecase/auth"
-	"go-api/usecase/clerk"
+	"go-api/usecase/identity"
 	"go-api/usecase/user"
 )
 
 type authBundle struct {
-	fetchUserUseCase       *clerk.FetchUserUseCase
+	fetchUserUseCase       *identity.FetchUserUseCase
 	authenticateMiddleware *middleware.AuthenticateMiddleware
-	clerkHandler           *httphandler.ClerkHandler
+	userWebhookHandler     *httphandler.UserWebhookHandler
 }
 
 func wireAuth(d *apiDeps) authBundle {
 	validateTokenUseCase := auth.NewValidateTokenUseCase(d.jwksProvider, d.userRepo)
-	fetchUserUseCase := clerk.NewFetchUserUseCase(infraClerk.NewUserGateway(d.env.ClerkSecretKey))
-	getUserByClerkIDUseCase := user.NewGetUserByClerkIDUseCase(d.userRepo)
+	fetchUserUseCase := identity.NewFetchUserUseCase(infraClerk.NewUserGateway(d.env.ClerkSecretKey))
+	getUserByExternalIDUseCase := user.NewGetUserByExternalIDUseCase(d.userRepo)
 	createFreeSubscriptionUseCase := subscriptionFree(d)
 	createUserUseCase := user.NewCreateUserUseCase(d.userRepo, createFreeSubscriptionUseCase)
 	updateUserUseCase := user.NewUpdateUserUseCase(d.userRepo)
-	deleteUserByClerkIDUseCase := user.NewDeleteUserByClerkIDUseCase(d.userRepo)
+	deleteUserByExternalIDUseCase := user.NewDeleteUserByExternalIDUseCase(d.userRepo)
 
 	return authBundle{
 		fetchUserUseCase: fetchUserUseCase,
@@ -32,11 +32,11 @@ func wireAuth(d *apiDeps) authBundle {
 			createUserUseCase,
 			updateUserUseCase,
 		),
-		clerkHandler: httphandler.NewClerkHandler(
-			getUserByClerkIDUseCase,
+		userWebhookHandler: httphandler.NewUserWebhookHandler(
+			getUserByExternalIDUseCase,
 			createUserUseCase,
 			updateUserUseCase,
-			deleteUserByClerkIDUseCase,
+			deleteUserByExternalIDUseCase,
 		),
 	}
 }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"go-api/cmd/api/wire"
+	"go-api/cmd/api/di"
 	"go-api/infrastructure/config"
 	"log"
 	"time"
@@ -46,7 +46,7 @@ func main() {
 		return err
 	})
 
-	container := wire.NewContainer(db, env)
+	container := di.NewContainer(db, env)
 	setupRoutes(app, container)
 
 	log.Println("🚀 Server is running on port", env.Port)

@@ -3,7 +3,7 @@ package middleware
 import (
 	"go-api/handler/http/context"
 	"go-api/usecase/auth"
-	"go-api/usecase/clerk"
+	"go-api/usecase/identity"
 	"go-api/usecase/user"
 	"strings"
 
@@ -12,14 +12,14 @@ import (
 
 type AuthenticateMiddleware struct {
 	validateTokenUseCase *auth.ValidateTokenUseCase
-	fetchUserUseCase     *clerk.FetchUserUseCase
+	fetchUserUseCase     *identity.FetchUserUseCase
 	createUserUseCase    *user.CreateUserUseCase
 	updateUserUseCase    *user.UpdateUserUseCase
 }
 
 func NewAuthenticateMiddleware(
 	validateTokenUseCase *auth.ValidateTokenUseCase,
-	fetchUserUseCase *clerk.FetchUserUseCase,
+	fetchUserUseCase *identity.FetchUserUseCase,
 	createUserUseCase *user.CreateUserUseCase,
 	updateUserUseCase *user.UpdateUserUseCase,
 ) *AuthenticateMiddleware {

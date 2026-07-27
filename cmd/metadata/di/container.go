@@ -1,14 +1,12 @@
-package wire
+package di
 
 import (
 	"go-api/cmd/shared/pipeline"
 	"go-api/handler/worker"
 	"go-api/infrastructure/config"
-	heuristicsinfra "go-api/infrastructure/heuristics"
+	metadatainfra "go-api/infrastructure/metadata"
 	"go-api/infrastructure/storage"
-	repoGorm "go-api/repository/gorm"
-	heuristicUseCase "go-api/usecase/heuristic"
-	insightUseCase "go-api/usecase/insight"
+	metadataUseCase "go-api/usecase/metadata"
 	"go-api/usecase/signal"
 	"log"
 
@@ -16,7 +14,7 @@ import (
 )
 
 type Container struct {
-	HeuristicHandler *worker.HeuristicHandler
+	MetadataHandler *worker.MetadataHandler
 }
 
 func NewContainer(db *gorm.DB, env *config.Config) *Container {
@@ -30,20 +28,17 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		log.Fatalf("failed to create storage client: %v", err)
 	}
 
-	insightRepo := repoGorm.NewInsightRepository(db)
-	analyzer := heuristicsinfra.NewAnalyzer()
-	analyzeMediaHeuristicsUseCase := heuristicUseCase.NewAnalyzeMediaHeuristicsUseCase(storageClient, analyzer)
+	analyzer := metadatainfra.NewAnalyzer()
+	analyzeMediaMetadataUseCase := metadataUseCase.NewAnalyzeMediaMetadataUseCase(storageClient, analyzer)
 	createSignalUseCase := signal.NewCreateSignalUseCase(shared.SignalRepo)
-	createInsightUseCase := insightUseCase.NewCreateInsightUseCase(insightRepo, shared.MediaRepo)
 
 	return &Container{
-		HeuristicHandler: worker.NewHeuristicHandler(
+		MetadataHandler: worker.NewMetadataHandler(
 			shared.Parser,
 			shared.SecurityValidator,
 			shared.Dispatcher,
-			analyzeMediaHeuristicsUseCase,
+			analyzeMediaMetadataUseCase,
 			createSignalUseCase,
-			createInsightUseCase,
 		),
 	}
 }

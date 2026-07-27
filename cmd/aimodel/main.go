@@ -1,7 +1,7 @@
 package main
 
 import (
-	"go-api/cmd/aimodel/wire"
+	"go-api/cmd/aimodel/di"
 	"go-api/infrastructure/config"
 	"go-api/infrastructure/messaging/rabbitmq"
 	"log"
@@ -14,7 +14,7 @@ func main() {
 	env := config.Load()
 	db := config.ConnectDatabase(env)
 
-	container := wire.NewContainer(db, env)
+	container := di.NewContainer(db, env)
 
 	aiModelWorker := rabbitmq.NewWorker(
 		env,

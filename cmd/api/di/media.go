@@ -1,4 +1,4 @@
-package wire
+package di
 
 import (
 	httphandler "go-api/handler/http"
@@ -9,8 +9,8 @@ import (
 )
 
 type mediaBundle struct {
-	minIOHandler *httphandler.MinIOHandler
-	mediaHandler *httphandler.MediaHandler
+	mediaUploadWebhookHandler *httphandler.MediaUploadWebhookHandler
+	mediaHandler              *httphandler.MediaHandler
 }
 
 func wireMedia(d *apiDeps, scanBundle scanBundle) mediaBundle {
@@ -39,7 +39,7 @@ func wireMedia(d *apiDeps, scanBundle scanBundle) mediaBundle {
 	)
 
 	return mediaBundle{
-		minIOHandler: httphandler.NewMinIOHandler(d.env.StorageBucket, processUploadedMediaUseCase),
+		mediaUploadWebhookHandler: httphandler.NewMediaUploadWebhookHandler(d.env.StorageBucket, processUploadedMediaUseCase),
 		mediaHandler: httphandler.NewMediaHandler(
 			d.storage,
 			media.NewGetMediaByIDUseCase(d.mediaRepo),

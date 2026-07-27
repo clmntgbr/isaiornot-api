@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	VerdictLikelyReal  = "likely_real"
-	VerdictUncertain   = "uncertain"
-	VerdictLikelyAI    = "likely_ai"
+	VerdictLikelyReal = "likely_real"
+	VerdictUncertain  = "uncertain"
+	VerdictLikelyAI   = "likely_ai"
 )
 
 type AggregationResult struct {

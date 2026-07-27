@@ -73,7 +73,7 @@ func (u *CheckoutCompletedUseCase) Execute(ctx context.Context, input CheckoutCo
 		customerID = subData.CustomerID
 	}
 
-	status := MapStripeStatus(subData.Status)
+	status := MapBillingStatus(subData.Status)
 
 	var subscription *entity.Subscription
 	if user.SubscriptionID != nil {
