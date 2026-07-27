@@ -105,15 +105,12 @@ func AggregateMediaResults(results []AggregationResult) AggregationResult {
 }
 
 // verdict maps a score to a label.
-// Without the AI model stage, never greenlight as likely_real on weak /
-// low-confidence-only evidence (common for stripped AI images).
+// Without the AI model stage, weak/low-confidence-only evidence stays
+// uncertain — metadata+heuristics alone cannot reliably separate real vs AI.
 func verdict(score float64, hasAIModel bool, available []entity.Signal) string {
 	if !hasAIModel {
 		if !hasReliableNonAIEvidence(available) {
-			if score < 25 {
-				return VerdictLikelyReal
-			}
-			return VerdictLikelyAI
+			return VerdictUncertain
 		}
 		if score < 50 {
 			return VerdictLikelyReal
