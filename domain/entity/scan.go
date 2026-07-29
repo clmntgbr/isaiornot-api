@@ -23,10 +23,19 @@ type Scan struct {
 	Confidence ConfidenceLevel `gorm:"type:varchar(20);default:'unknown'" json:"confidence"`
 	Verdict    string          `gorm:"type:varchar(20);default:''" json:"verdict"`
 
+	Duration int `gorm:"default:0" json:"duration"`
+
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"createdAt"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updatedAt"`
 }
 
 func (Scan) TableName() string {
 	return "scans"
+}
+
+func (s *Scan) FreezeDuration() {
+	if s == nil || s.Duration > 0 {
+		return
+	}
+	s.Duration = int(time.Since(s.CreatedAt).Milliseconds())
 }

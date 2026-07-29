@@ -23,6 +23,7 @@ type MediaEvent struct {
 	FinalScore float64         `json:"finalScore,omitempty"`
 	Confidence string          `json:"confidence,omitempty"`
 	Verdict    string          `json:"verdict,omitempty"`
+	Duration   int             `json:"duration,omitempty"`
 	Signals    []SignalPayload `json:"signals,omitempty"`
 	UpdatedAt  time.Time       `json:"updatedAt"`
 }
@@ -63,6 +64,7 @@ func NewScanCompletedEvent(scan *entity.Scan, media *entity.Media, signals []*en
 		FinalScore: scan.FinalScore,
 		Confidence: string(scan.Confidence),
 		Verdict:    scan.Verdict,
+		Duration:   scan.Duration,
 		UpdatedAt:  scan.UpdatedAt,
 		Signals:    make([]SignalPayload, 0, len(signals)),
 	}
@@ -100,6 +102,7 @@ func NewScanFailedEvent(scan *entity.Scan) (MediaEvent, error) {
 		UserID:    scan.UserID.String(),
 		Status:    string(scan.Status),
 		Message:   scan.Message,
+		Duration:  scan.Duration,
 		UpdatedAt: scan.UpdatedAt,
 	}, nil
 }

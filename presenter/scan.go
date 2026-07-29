@@ -26,6 +26,7 @@ type ScanListResponse struct {
 	FinalScore float64             `json:"finalScore,omitempty"`
 	Confidence string              `json:"confidence,omitempty"`
 	Verdict    string              `json:"verdict,omitempty"`
+	Duration   int                 `json:"duration,omitempty"`
 	Filename   string              `json:"filename,omitempty"`
 	Thumbnail  string              `json:"thumbnail,omitempty"`
 	Medias     []MediaItemResponse `json:"medias"`
@@ -41,6 +42,7 @@ type ScanDetailResponse struct {
 	FinalScore float64             `json:"finalScore,omitempty"`
 	Confidence string              `json:"confidence,omitempty"`
 	Verdict    string              `json:"verdict,omitempty"`
+	Duration   int                 `json:"duration,omitempty"`
 	Filename   string              `json:"filename,omitempty"`
 	Thumbnail  string              `json:"thumbnail,omitempty"`
 	Insight    *InsightResponse    `json:"insight,omitempty"`
@@ -65,6 +67,7 @@ func NewScanListResponse(scan *entity.Scan) *ScanListResponse {
 		Medias:    NewMediaItemResponses(scan.Medias),
 		CreatedAt: scan.CreatedAt,
 		UpdatedAt: scan.UpdatedAt,
+		Duration:  scan.Duration,
 	}
 
 	if media := primaryMedia(scan); media != nil {
@@ -91,6 +94,7 @@ func NewScanDetailResponse(scan *entity.Scan) *ScanDetailResponse {
 		Medias:    NewMediaItemResponses(scan.Medias),
 		CreatedAt: scan.CreatedAt,
 		UpdatedAt: scan.UpdatedAt,
+		Duration:  scan.Duration,
 	}
 
 	if media := primaryMedia(scan); media != nil {
@@ -103,7 +107,6 @@ func NewScanDetailResponse(scan *entity.Scan) *ScanDetailResponse {
 		response.Confidence = string(scan.Confidence)
 		response.Verdict = scan.Verdict
 	}
-
 	return response
 }
 

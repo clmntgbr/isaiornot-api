@@ -104,6 +104,7 @@ func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) e
 	scan.FinalScore = result.FinalScore
 	scan.Confidence = result.Confidence
 	scan.Verdict = result.Verdict
+	scan.FreezeDuration()
 	if err := u.scanRepo.Update(ctx, scan); err != nil {
 		return err
 	}

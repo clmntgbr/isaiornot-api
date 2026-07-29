@@ -1,19 +1,24 @@
+COMPOSE_DEV := docker compose -f compose.dev.yaml
+
 # ============================================
-# Development commands (docker-compose.yml)
+# Development (compose.dev.yaml)
 # ============================================
 
 dev:
-	docker-compose up -d
+	$(COMPOSE_DEV) up -d
+
+dev-down:
+	$(COMPOSE_DEV) down
 
 lint:
-	docker-compose exec api golangci-lint run --fix
-	
+	$(COMPOSE_DEV) exec api golangci-lint run --fix
+
 # ============================================
 # CLI Commands (via Docker)
 # ============================================
 
 migrate:
 	@echo "🔨 Building CLI..."
-	@docker-compose exec api go build -o bin/cli ./cmd/cli
+	@$(COMPOSE_DEV) exec api go build -o bin/cli ./cmd/cli
 	@echo "🔄 Running migrate command..."
-	@docker-compose exec api ./bin/cli migrate
+	@$(COMPOSE_DEV) exec api ./bin/cli migrate

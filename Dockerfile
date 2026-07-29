@@ -36,23 +36,39 @@ CMD ["air", "-c", ".air.toml"]
 
 
 # ============================================
-# Builder stage - Build the binary
+# Builder stage - Build all binaries
 # ============================================
 FROM base AS builder
 
-# Build the server application
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -a -installsuffix cgo \
     -ldflags="-w -s" \
     -o api \
     ./cmd/api
 
-# Build the metadata application
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -a -installsuffix cgo \
+    -ldflags="-w -s" \
+    -o dispatcher \
+    ./cmd/dispatcher
+
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -a -installsuffix cgo \
     -ldflags="-w -s" \
     -o metadata \
     ./cmd/metadata
+
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -a -installsuffix cgo \
+    -ldflags="-w -s" \
+    -o heuristic \
+    ./cmd/heuristic
+
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -a -installsuffix cgo \
+    -ldflags="-w -s" \
+    -o aimodel \
+    ./cmd/aimodel
 
 # ============================================
 # Production stage - Minimal runtime
@@ -68,9 +84,12 @@ RUN addgroup -g 1000 appuser && \
 
 WORKDIR /home/appuser
 
-# Copy binary from builder
+# Copy binaries from builder
 COPY --from=builder --chown=appuser:appuser /app/api .
+COPY --from=builder --chown=appuser:appuser /app/dispatcher .
 COPY --from=builder --chown=appuser:appuser /app/metadata .
+COPY --from=builder --chown=appuser:appuser /app/heuristic .
+COPY --from=builder --chown=appuser:appuser /app/aimodel .
 
 # Switch to non-root user
 USER appuser

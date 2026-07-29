@@ -53,6 +53,7 @@ func (u *FailScanUseCase) Execute(ctx context.Context, scanID uuid.UUID, message
 		scan.Statuses = append(scan.Statuses, enum.ScanStatusFailed)
 		scan.Status = enum.ScanStatusFailed
 	}
+	scan.FreezeDuration()
 
 	if err := u.scanRepo.Update(ctx, scan); err != nil {
 		return errors.New("failed to update scan")
