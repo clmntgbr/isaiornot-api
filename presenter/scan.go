@@ -29,6 +29,7 @@ type ScanListResponse struct {
 	Duration   int                 `json:"duration,omitempty"`
 	Filename   string              `json:"filename,omitempty"`
 	Thumbnail  string              `json:"thumbnail,omitempty"`
+	RetryCount int                 `json:"retryCount,omitempty"`
 	Medias     []MediaItemResponse `json:"medias"`
 	CreatedAt  time.Time           `json:"createdAt"`
 	UpdatedAt  time.Time           `json:"updatedAt"`
@@ -45,6 +46,7 @@ type ScanDetailResponse struct {
 	Duration   int                 `json:"duration,omitempty"`
 	Filename   string              `json:"filename,omitempty"`
 	Thumbnail  string              `json:"thumbnail,omitempty"`
+	RetryCount int                 `json:"retryCount,omitempty"`
 	Insight    *InsightResponse    `json:"insight,omitempty"`
 	Medias     []MediaItemResponse `json:"medias"`
 	CreatedAt  time.Time           `json:"createdAt"`
@@ -60,14 +62,15 @@ func primaryMedia(scan *entity.Scan) *entity.Media {
 
 func NewScanListResponse(scan *entity.Scan) *ScanListResponse {
 	response := &ScanListResponse{
-		ID:        scan.ID.String(),
-		Status:    string(scan.Status),
-		Statuses:  scanStatusStrings(scan.Statuses),
-		Message:   scan.Message,
-		Medias:    NewMediaItemResponses(scan.Medias),
-		CreatedAt: scan.CreatedAt,
-		UpdatedAt: scan.UpdatedAt,
-		Duration:  scan.Duration,
+		ID:         scan.ID.String(),
+		Status:     string(scan.Status),
+		Statuses:   scanStatusStrings(scan.Statuses),
+		Message:    scan.Message,
+		Medias:     NewMediaItemResponses(scan.Medias),
+		RetryCount: scan.RetryCount,
+		CreatedAt:  scan.CreatedAt,
+		UpdatedAt:  scan.UpdatedAt,
+		Duration:   scan.Duration,
 	}
 
 	if media := primaryMedia(scan); media != nil {
@@ -86,15 +89,16 @@ func NewScanListResponse(scan *entity.Scan) *ScanListResponse {
 
 func NewScanDetailResponse(scan *entity.Scan) *ScanDetailResponse {
 	response := &ScanDetailResponse{
-		ID:        scan.ID.String(),
-		Status:    string(scan.Status),
-		Statuses:  scanStatusStrings(scan.Statuses),
-		Message:   scan.Message,
-		Insight:   aggregatedInsight(scan.Medias),
-		Medias:    NewMediaItemResponses(scan.Medias),
-		CreatedAt: scan.CreatedAt,
-		UpdatedAt: scan.UpdatedAt,
-		Duration:  scan.Duration,
+		ID:         scan.ID.String(),
+		Status:     string(scan.Status),
+		Statuses:   scanStatusStrings(scan.Statuses),
+		Message:    scan.Message,
+		Insight:    aggregatedInsight(scan.Medias),
+		Medias:     NewMediaItemResponses(scan.Medias),
+		CreatedAt:  scan.CreatedAt,
+		UpdatedAt:  scan.UpdatedAt,
+		Duration:   scan.Duration,
+		RetryCount: scan.RetryCount,
 	}
 
 	if media := primaryMedia(scan); media != nil {
