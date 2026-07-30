@@ -7,7 +7,9 @@ import (
 	"go-api/infrastructure/config"
 	"go-api/infrastructure/messaging/rabbitmq"
 	"go-api/infrastructure/messaging/security"
+	"go-api/infrastructure/storage"
 	repoGorm "go-api/repository/gorm"
+	"go-api/usecase/media"
 	pipelineUseCase "go-api/usecase/pipeline"
 	scanUseCase "go-api/usecase/scan"
 	"go-api/usecase/subscription"
@@ -34,6 +36,11 @@ func New(db *gorm.DB, env *config.Config) (*Shared, error) {
 
 	centrifugoPublisher := centrifugo.NewPublisher(env)
 
+	storageClient, err := storage.NewMinIOStorage(env)
+	if err != nil {
+		return nil, err
+	}
+
 	mediaRepo := repoGorm.NewMediaRepository(db)
 	scanRepo := repoGorm.NewScanRepository(db)
 	signalRepo := repoGorm.NewSignalRepository(db)
@@ -47,6 +54,7 @@ func New(db *gorm.DB, env *config.Config) (*Shared, error) {
 		subscriptionRepo,
 		resolveEffectivePlanUseCase,
 	)
+	deleteOriginalsUseCase := media.NewDeleteOriginalsUseCase(storageClient)
 
 	updateScanStatusUseCase := scanUseCase.NewUpdateScanStatusUseCase(scanRepo)
 	aggregateScanUseCase := pipelineUseCase.NewAggregateScanUseCase(
@@ -56,6 +64,7 @@ func New(db *gorm.DB, env *config.Config) (*Shared, error) {
 		updateScanStatusUseCase,
 		centrifugoPublisher,
 		resolvePipelineAccessUseCase,
+		deleteOriginalsUseCase,
 	)
 	dispatcher := pipelineUseCase.NewDispatcher(
 		env.AnalyzeQueues(),

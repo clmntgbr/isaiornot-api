@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"go-api/domain/entity"
 	"go-api/domain/enum"
 	"go-api/domain/port"
 	"go-api/domain/realtime"
@@ -12,21 +13,28 @@ import (
 	"github.com/google/uuid"
 )
 
+type OriginalsDeleter interface {
+	Execute(ctx context.Context, userID uuid.UUID, medias []entity.Media)
+}
+
 type FailScanUseCase struct {
 	scanRepo            repository.ScanRepository
 	mediaRepo           repository.MediaRepository
 	centrifugoPublisher port.RealtimePublisher
+	deleteOriginals     OriginalsDeleter
 }
 
 func NewFailScanUseCase(
 	scanRepo repository.ScanRepository,
 	mediaRepo repository.MediaRepository,
 	centrifugoPublisher port.RealtimePublisher,
+	deleteOriginals OriginalsDeleter,
 ) *FailScanUseCase {
 	return &FailScanUseCase{
 		scanRepo:            scanRepo,
 		mediaRepo:           mediaRepo,
 		centrifugoPublisher: centrifugoPublisher,
+		deleteOriginals:     deleteOriginals,
 	}
 }
 
@@ -57,6 +65,10 @@ func (u *FailScanUseCase) Execute(ctx context.Context, scanID uuid.UUID, message
 
 	if err := u.scanRepo.Update(ctx, scan); err != nil {
 		return errors.New("failed to update scan")
+	}
+
+	if u.deleteOriginals != nil {
+		u.deleteOriginals.Execute(ctx, scan.UserID, scan.Medias)
 	}
 
 	scan, err = u.scanRepo.GetByID(ctx, scanID)

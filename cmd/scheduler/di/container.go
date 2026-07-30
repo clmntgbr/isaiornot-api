@@ -5,6 +5,7 @@ import (
 	"go-api/infrastructure/centrifugo"
 	"go-api/infrastructure/config"
 	"go-api/infrastructure/messaging/rabbitmq"
+	"go-api/infrastructure/storage"
 	repoGorm "go-api/repository/gorm"
 	"go-api/usecase/media"
 	"go-api/usecase/scan"
@@ -24,7 +25,13 @@ func NewContainer(db *gorm.DB, env *config.Config) (*Container, error) {
 	var publisher port.MessagePublisher = rabbitmq.NewLazyPublisherFromEnv(env)
 	centrifugoPublisher := centrifugo.NewPublisher(env)
 
-	failScanUseCase := scan.NewFailScanUseCase(scanRepo, mediaRepo, centrifugoPublisher)
+	storageClient, err := storage.NewMinIOStorage(env)
+	if err != nil {
+		return nil, err
+	}
+
+	deleteOriginalsUseCase := media.NewDeleteOriginalsUseCase(storageClient)
+	failScanUseCase := scan.NewFailScanUseCase(scanRepo, mediaRepo, centrifugoPublisher, deleteOriginalsUseCase)
 	publishMetadataUseCase := media.NewPublishMetadataUseCase(
 		mediaRepo,
 		publisher,

@@ -10,6 +10,7 @@ import (
 	"go-api/domain/port"
 	"go-api/domain/realtime"
 	"go-api/domain/repository"
+	"go-api/usecase/media"
 	scanUseCase "go-api/usecase/scan"
 	"go-api/usecase/subscription"
 
@@ -23,6 +24,7 @@ type AggregateScanUseCase struct {
 	updateScanStatusUseCase      *scanUseCase.UpdateScanStatusUseCase
 	centrifugoPublisher          port.RealtimePublisher
 	resolvePipelineAccessUseCase *subscription.ResolvePipelineAccessUseCase
+	deleteOriginalsUseCase       *media.DeleteOriginalsUseCase
 }
 
 func NewAggregateScanUseCase(
@@ -32,6 +34,7 @@ func NewAggregateScanUseCase(
 	updateScanStatusUseCase *scanUseCase.UpdateScanStatusUseCase,
 	centrifugoPublisher port.RealtimePublisher,
 	resolvePipelineAccessUseCase *subscription.ResolvePipelineAccessUseCase,
+	deleteOriginalsUseCase *media.DeleteOriginalsUseCase,
 ) *AggregateScanUseCase {
 	return &AggregateScanUseCase{
 		mediaRepo:                    mediaRepo,
@@ -40,6 +43,7 @@ func NewAggregateScanUseCase(
 		updateScanStatusUseCase:      updateScanStatusUseCase,
 		centrifugoPublisher:          centrifugoPublisher,
 		resolvePipelineAccessUseCase: resolvePipelineAccessUseCase,
+		deleteOriginalsUseCase:       deleteOriginalsUseCase,
 	}
 }
 
@@ -108,6 +112,8 @@ func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) e
 	if err := u.scanRepo.Update(ctx, scan); err != nil {
 		return err
 	}
+
+	u.deleteOriginalsUseCase.Execute(ctx, scan.UserID, scan.Medias)
 
 	realtimeEvent, err := realtime.NewScanCompletedEvent(scan, media, allSignals)
 	if err != nil {

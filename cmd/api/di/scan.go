@@ -2,6 +2,7 @@ package di
 
 import (
 	httphandler "go-api/handler/http"
+	"go-api/usecase/media"
 	"go-api/usecase/scan"
 	"go-api/usecase/subscription"
 )
@@ -21,7 +22,12 @@ func wireScan(d *apiDeps) scanBundle {
 		resolveEffectivePlanUseCase,
 		getQuotaUsageUseCase,
 	)
-	failScanUseCase := scan.NewFailScanUseCase(d.scanRepo, d.mediaRepo, d.centrifugoPublisher)
+	failScanUseCase := scan.NewFailScanUseCase(
+		d.scanRepo,
+		d.mediaRepo,
+		d.centrifugoPublisher,
+		media.NewDeleteOriginalsUseCase(d.storage),
+	)
 	generatePresignedUploadUrlUseCase := scan.NewGeneratePresignedUploadUrlUseCase(
 		d.storage,
 		d.scanRepo,
