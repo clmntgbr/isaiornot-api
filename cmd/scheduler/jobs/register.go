@@ -8,7 +8,7 @@ import (
 	"go-api/usecase/scan"
 )
 
-const retryStaleSpec = "@every 1h"
+const retryStaleSpec = "@every 10m"
 
 func Register(sched *scheduler.Scheduler, retryStale *scan.RetryStaleScansUseCase) error {
 	return sched.Register("retry-stale-scans", retryStaleSpec, func() {
