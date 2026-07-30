@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	StaleRetryAfter             = time.Hour
+	StaleRetryAfter             = 30 * time.Minute
 	MaxStaleRetries             = 3
 	StaleScanTimeoutMessage     = "Scan processing timed out after retries"
 	StaleUploadedTimeoutMessage = "Scan stuck in uploaded status"
