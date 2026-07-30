@@ -1,7 +1,3 @@
-# Production-oriented compose (app + workers).
-# Expects managed/external Postgres, RabbitMQ, object storage, Centrifugo via .env.
-# For local infra (RabbitMQ, MinIO, ngrok, Air, Go caches): use compose.dev.yaml
-
 services:
   api:
     build:

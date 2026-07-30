@@ -1,7 +1,3 @@
-# Local development stack (Air, source mounts, RabbitMQ, MinIO, ngrok, Go caches).
-# Usage: docker compose -f compose.dev.yaml up -d
-# Or:    make dev
-
 services:
   api:
     build:

@@ -30,6 +30,10 @@ func (r *signalRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return dbWithContext(ctx, r.db).Delete(&entity.Signal{}, id).Error
 }
 
+func (r *signalRepository) DeleteByMediaID(ctx context.Context, mediaID uuid.UUID) error {
+	return dbWithContext(ctx, r.db).Where("media_id = ?", mediaID).Delete(&entity.Signal{}).Error
+}
+
 func (r *signalRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Signal, error) {
 	var signal entity.Signal
 	err := dbWithContext(ctx, r.db).Where("id = ?", id).First(&signal).Error

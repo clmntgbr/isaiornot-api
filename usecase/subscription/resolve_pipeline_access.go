@@ -27,7 +27,6 @@ func NewResolvePipelineAccessUseCase(
 	}
 }
 
-// FullPipelineForUser reports whether the user's effective plan includes the AI model stage.
 func (u *ResolvePipelineAccessUseCase) FullPipelineForUser(ctx context.Context, userID uuid.UUID) (bool, error) {
 	user, err := u.userRepo.GetByID(ctx, userID)
 	if err != nil || user == nil {

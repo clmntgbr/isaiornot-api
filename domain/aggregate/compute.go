@@ -104,9 +104,6 @@ func AggregateMediaResults(results []AggregationResult) AggregationResult {
 	}
 }
 
-// verdict maps a score to a label.
-// Without the AI model stage, weak/low-confidence-only evidence stays
-// uncertain — metadata+heuristics alone cannot reliably separate real vs AI.
 func verdict(score float64, hasAIModel bool, available []entity.Signal) string {
 	if !hasAIModel {
 		if !hasReliableNonAIEvidence(available) {
@@ -128,8 +125,6 @@ func verdict(score float64, hasAIModel bool, available []entity.Signal) string {
 	}
 }
 
-// hasReliableNonAIEvidence is true when at least one non-AI signal has
-// medium+ confidence, or metadata contributes a decisive camera/real lean.
 func hasReliableNonAIEvidence(available []entity.Signal) bool {
 	for _, signal := range available {
 		if signal.Name == "ai_model" {

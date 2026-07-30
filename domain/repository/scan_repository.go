@@ -17,4 +17,5 @@ type ScanRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Scan, error)
 	GetByUserID(ctx context.Context, userID uuid.UUID, query scan.ListQuery, since time.Time) ([]*entity.Scan, int64, error)
 	GetStatisticsByUserID(ctx context.Context, userID uuid.UUID, since time.Time) (*entity.MediaStatistics, error)
+	ListInProgressCreatedBefore(ctx context.Context, before time.Time) ([]*entity.Scan, error)
 }

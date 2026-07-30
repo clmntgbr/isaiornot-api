@@ -22,3 +22,12 @@ migrate:
 	@$(COMPOSE_DEV) exec api go build -o bin/cli ./cmd/cli
 	@echo "🔄 Running migrate command..."
 	@$(COMPOSE_DEV) exec api ./bin/cli migrate
+
+
+fail-stale-scans:
+	@$(COMPOSE_DEV) exec api go build -o bin/cli ./cmd/cli
+	@$(COMPOSE_DEV) exec api ./bin/cli fail-stale-scans
+
+retry-stale-scans:
+	@$(COMPOSE_DEV) exec api go build -o bin/cli ./cmd/cli
+	@$(COMPOSE_DEV) exec api ./bin/cli retry-stale-scans

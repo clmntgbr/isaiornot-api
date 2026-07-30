@@ -5,6 +5,7 @@ import (
 	"errors"
 	"go-api/domain/aggregate"
 	"go-api/domain/entity"
+	"go-api/domain/enum"
 	"go-api/domain/repository"
 	"go-api/domain/scan"
 	"time"
@@ -126,4 +127,20 @@ func (r *scanRepository) GetStatisticsByUserID(ctx context.Context, userID uuid.
 	}
 
 	return &stats, nil
+}
+
+func (r *scanRepository) ListInProgressCreatedBefore(ctx context.Context, before time.Time) ([]*entity.Scan, error) {
+	var scans []*entity.Scan
+	err := dbWithContext(ctx, r.db).
+		Where("status IN ?", []string{string(enum.ScanStatusUploaded), string(enum.ScanStatusProcessing)}).
+		Where("created_at < ?", before).
+		Preload("Medias", func(db *gorm.DB) *gorm.DB {
+			return db.Order("medias.created_at ASC")
+		}).
+		Order("created_at ASC").
+		Find(&scans).Error
+	if err != nil {
+		return nil, err
+	}
+	return scans, nil
 }

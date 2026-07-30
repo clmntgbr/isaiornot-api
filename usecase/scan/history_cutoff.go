@@ -31,8 +31,6 @@ func NewHistoryCutoffResolver(
 	}
 }
 
-// ForUser returns the earliest created_at included in history/statistics for the user's effective plan.
-// A zero time means no retention limit.
 func (r *HistoryCutoffResolver) ForUser(ctx context.Context, userID uuid.UUID) (time.Time, error) {
 	user, err := r.userRepo.GetByID(ctx, userID)
 	if err != nil || user == nil {

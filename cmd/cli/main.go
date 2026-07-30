@@ -11,12 +11,14 @@ import (
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "cli",
-		Short: "Analyse CLI - cmd commands",
-		Long:  "Analyse CLI provides commands for cmd tasks",
+		Short: "IsAIorNot CLI",
+		Long:  "Operational commands for IsAIorNot API",
 	}
 
 	rootCmd.AddCommand(
 		cliCommand.NewMigrateCommand(),
+		cliCommand.NewFailStaleScansCommand(),
+		cliCommand.NewRetryStaleScansCommand(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {
