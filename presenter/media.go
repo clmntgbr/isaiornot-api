@@ -26,9 +26,9 @@ type MediaItemResponse struct {
 	Thumbnail   string           `json:"thumbnail"`
 	ContentType string           `json:"contentType"`
 	Status      string           `json:"status"`
-	Signals     []SignalResponse `json:"signals,omitempty"`
-	Insight     *InsightResponse `json:"insight,omitempty"`
-	Size        int64            `json:"size,omitempty"`
+	Signals     []SignalResponse `json:"signals"`
+	Insight     *InsightResponse `json:"insight"`
+	Size        int64            `json:"size"`
 	CreatedAt   time.Time        `json:"createdAt"`
 	UpdatedAt   time.Time        `json:"updatedAt"`
 }

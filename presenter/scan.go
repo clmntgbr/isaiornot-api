@@ -7,7 +7,7 @@ import (
 )
 
 type GeneratePresignedUploadUrlDetailResponse struct {
-	UploadURL string `json:"uploadUrl,omitempty"`
+	UploadURL string `json:"uploadUrl"`
 	ScanID    string `json:"scanId"`
 }
 
@@ -22,14 +22,14 @@ type ScanListResponse struct {
 	ID         string              `json:"id"`
 	Status     string              `json:"status"`
 	Statuses   []string            `json:"statuses"`
-	Message    string              `json:"message,omitempty"`
-	FinalScore float64             `json:"finalScore,omitempty"`
-	Confidence string              `json:"confidence,omitempty"`
-	Verdict    string              `json:"verdict,omitempty"`
-	Duration   int                 `json:"duration,omitempty"`
-	Filename   string              `json:"filename,omitempty"`
-	Thumbnail  string              `json:"thumbnail,omitempty"`
-	RetryCount int                 `json:"retryCount,omitempty"`
+	Message    string              `json:"message"`
+	FinalScore float64             `json:"finalScore"`
+	Confidence string              `json:"confidence"`
+	Verdict    string              `json:"verdict"`
+	Duration   int                 `json:"duration"`
+	Filename   string              `json:"filename"`
+	Thumbnail  string              `json:"thumbnail"`
+	RetryCount int                 `json:"retryCount"`
 	Medias     []MediaItemResponse `json:"medias"`
 	CreatedAt  time.Time           `json:"createdAt"`
 	UpdatedAt  time.Time           `json:"updatedAt"`
@@ -39,15 +39,15 @@ type ScanDetailResponse struct {
 	ID         string              `json:"id"`
 	Status     string              `json:"status"`
 	Statuses   []string            `json:"statuses"`
-	Message    string              `json:"message,omitempty"`
-	FinalScore float64             `json:"finalScore,omitempty"`
-	Confidence string              `json:"confidence,omitempty"`
-	Verdict    string              `json:"verdict,omitempty"`
-	Duration   int                 `json:"duration,omitempty"`
-	Filename   string              `json:"filename,omitempty"`
-	Thumbnail  string              `json:"thumbnail,omitempty"`
-	RetryCount int                 `json:"retryCount,omitempty"`
-	Insight    *InsightResponse    `json:"insight,omitempty"`
+	Message    string              `json:"message"`
+	FinalScore float64             `json:"finalScore"`
+	Confidence string              `json:"confidence"`
+	Verdict    string              `json:"verdict"`
+	Duration   int                 `json:"duration"`
+	Filename   string              `json:"filename"`
+	Thumbnail  string              `json:"thumbnail"`
+	RetryCount int                 `json:"retryCount"`
+	Insight    *InsightResponse    `json:"insight"`
 	Medias     []MediaItemResponse `json:"medias"`
 	CreatedAt  time.Time           `json:"createdAt"`
 	UpdatedAt  time.Time           `json:"updatedAt"`
