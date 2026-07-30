@@ -20,6 +20,7 @@ func main() {
 		env,
 		env.HeuristicsAnalyzeQueueName,
 		container.HeuristicHandler,
+		env.WorkerConcurrency,
 	)
 
 	go func() {

@@ -20,6 +20,7 @@ func main() {
 		env,
 		env.AiModelAnalyzeQueueName,
 		container.AiModelHandler,
+		env.WorkerConcurrency,
 	)
 
 	go func() {

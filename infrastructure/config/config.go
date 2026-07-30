@@ -37,6 +37,8 @@ type Config struct {
 	AiModelDoneQueueName       string
 	AiModelFailedQueueName     string
 
+	WorkerConcurrency int
+
 	StorageEndpoint         string
 	StorageInternalEndpoint string
 	StorageRegion           string
@@ -95,6 +97,7 @@ func Load() *Config {
 		AiModelFailedQueueName:     getEnv("AI_MODEL_FAILED_QUEUE_NAME"),
 		RabbitMQURL:                getEnv("RABBITMQ_URL"),
 		RabbitMQSecretKey:          getEnvOrDefault("RABBITMQ_SECRET_KEY", ""),
+		WorkerConcurrency:          getEnvIntOrDefault("WORKER_CONCURRENCY", 5),
 
 		StorageEndpoint:         getEnvOrDefault("STORAGE_ENDPOINT", ""),
 		StorageInternalEndpoint: getEnvOrDefault("STORAGE_INTERNAL_ENDPOINT", ""),
@@ -153,6 +156,21 @@ func getEnvInt(key string) int {
 	if value == "" {
 		log.Panicf("required environment variable %s is not set", key)
 		return 0
+	}
+
+	parsedValue, err := strconv.Atoi(value)
+	if err != nil {
+		log.Panicf("invalid integer for %s: %q", key, value)
+		return 0
+	}
+
+	return parsedValue
+}
+
+func getEnvIntOrDefault(key string, defaultValue int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
 	}
 
 	parsedValue, err := strconv.Atoi(value)

@@ -20,6 +20,7 @@ func main() {
 		env,
 		env.MetadataAnalyzeQueueName,
 		container.MetadataHandler,
+		env.WorkerConcurrency,
 	)
 
 	go func() {

@@ -47,9 +47,9 @@ func NewDispatcherWorkers(
 	stageDoneHandler MessageHandler,
 ) *WorkerPool {
 	return NewWorkerPool(
-		NewWorker(env, env.AnalyzeRequestQueueName, analyzeRequestHandler),
-		NewWorker(env, env.MetadataDoneQueueName, stageDoneHandler),
-		NewWorker(env, env.HeuristicsDoneQueueName, stageDoneHandler),
-		NewWorker(env, env.AiModelDoneQueueName, stageDoneHandler),
+		NewWorker(env, env.AnalyzeRequestQueueName, analyzeRequestHandler, 1),
+		NewWorker(env, env.MetadataDoneQueueName, stageDoneHandler, 1),
+		NewWorker(env, env.HeuristicsDoneQueueName, stageDoneHandler, 1),
+		NewWorker(env, env.AiModelDoneQueueName, stageDoneHandler, 1),
 	)
 }

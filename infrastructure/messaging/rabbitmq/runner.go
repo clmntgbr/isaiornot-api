@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 
 	"go-api/infrastructure/config"
 
@@ -15,23 +16,34 @@ type MessageHandler interface {
 }
 
 type Worker struct {
-	env       *config.Config
-	queueName string
-	handler   MessageHandler
+	env         *config.Config
+	queueName   string
+	handler     MessageHandler
+	concurrency int
 
 	conn    *amqp.Connection
 	channel *amqp.Channel
+	sem     chan struct{}
+	ackMu   sync.Mutex
+	wg      sync.WaitGroup
 }
 
 func NewWorker(
 	env *config.Config,
 	queueName string,
 	handler MessageHandler,
+	concurrency int,
 ) *Worker {
+	if concurrency < 1 {
+		concurrency = 1
+	}
+
 	return &Worker{
-		env:       env,
-		queueName: queueName,
-		handler:   handler,
+		env:         env,
+		queueName:   queueName,
+		handler:     handler,
+		concurrency: concurrency,
+		sem:         make(chan struct{}, concurrency),
 	}
 }
 
@@ -49,6 +61,10 @@ func (w *Worker) Start() error {
 	}
 
 	w.channel = channel
+
+	if err := w.channel.Qos(w.concurrency, 0, false); err != nil {
+		return fmt.Errorf("failed to set QoS for queue %q: %w", w.queueName, err)
+	}
 
 	if err := w.channel.ExchangeDeclare(
 		w.env.ExchangeName,
@@ -100,27 +116,43 @@ func (w *Worker) Start() error {
 	}
 
 	for message := range messages {
-		if err := w.handler.HandleMessage(context.Background(), &message); err != nil {
-			log.Printf(
-				"rejected message (routing key: %q): %v, body: %s",
-				message.RoutingKey,
-				err,
-				message.Body,
-			)
-
-			if nackErr := message.Nack(false, false); nackErr != nil {
-				log.Printf("failed to nack message: %v", nackErr)
-			}
-
-			continue
-		}
-
-		if ackErr := message.Ack(false); ackErr != nil {
-			log.Printf("failed to ack message: %v", ackErr)
-		}
+		msg := message
+		w.wg.Add(1)
+		w.sem <- struct{}{}
+		go func() {
+			defer func() { <-w.sem }()
+			w.process(&msg)
+		}()
 	}
 
+	w.wg.Wait()
 	return nil
+}
+
+func (w *Worker) process(message *amqp.Delivery) {
+	defer w.wg.Done()
+
+	if err := w.handler.HandleMessage(context.Background(), message); err != nil {
+		log.Printf(
+			"rejected message (routing key: %q): %v, body: %s",
+			message.RoutingKey,
+			err,
+			message.Body,
+		)
+
+		w.ackMu.Lock()
+		defer w.ackMu.Unlock()
+		if nackErr := message.Nack(false, false); nackErr != nil {
+			log.Printf("failed to nack message: %v", nackErr)
+		}
+		return
+	}
+
+	w.ackMu.Lock()
+	defer w.ackMu.Unlock()
+	if ackErr := message.Ack(false); ackErr != nil {
+		log.Printf("failed to ack message: %v", ackErr)
+	}
 }
 
 func (w *Worker) Stop() error {
