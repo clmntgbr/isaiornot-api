@@ -25,6 +25,8 @@ type Scan struct {
 
 	Duration int `gorm:"default:0" json:"duration"`
 
+	RetryCount int `gorm:"not null;default:0" json:"retryCount"`
+
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"createdAt"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updatedAt"`
 }

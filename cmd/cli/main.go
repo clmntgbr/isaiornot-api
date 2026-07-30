@@ -17,7 +17,6 @@ func main() {
 
 	rootCmd.AddCommand(
 		cliCommand.NewMigrateCommand(),
-		cliCommand.NewFailStaleScansCommand(),
 		cliCommand.NewRetryStaleScansCommand(),
 	)
 

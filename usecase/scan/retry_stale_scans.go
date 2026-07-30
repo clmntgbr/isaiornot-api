@@ -11,6 +11,12 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	StaleRetryAfter         = time.Hour
+	MaxStaleRetries         = 3
+	StaleScanTimeoutMessage = "Scan processing timed out after retries"
+)
+
 type AnalyzePublisher interface {
 	Execute(ctx context.Context, mediaID uuid.UUID) error
 }
@@ -20,6 +26,7 @@ type RetryStaleScansUseCase struct {
 	mediaRepo        repository.MediaRepository
 	signalRepo       repository.SignalRepository
 	analyzePublisher AnalyzePublisher
+	failScanUseCase  *FailScanUseCase
 }
 
 func NewRetryStaleScansUseCase(
@@ -27,35 +34,43 @@ func NewRetryStaleScansUseCase(
 	mediaRepo repository.MediaRepository,
 	signalRepo repository.SignalRepository,
 	analyzePublisher AnalyzePublisher,
+	failScanUseCase *FailScanUseCase,
 ) *RetryStaleScansUseCase {
 	return &RetryStaleScansUseCase{
 		scanRepo:         scanRepo,
 		mediaRepo:        mediaRepo,
 		signalRepo:       signalRepo,
 		analyzePublisher: analyzePublisher,
+		failScanUseCase:  failScanUseCase,
 	}
 }
 
 type RetryStaleScansResult struct {
 	Retried int
+	Failed  int
 	Medias  int
 }
 
-func (u *RetryStaleScansUseCase) Execute(ctx context.Context, olderThan time.Duration) (*RetryStaleScansResult, error) {
-	if olderThan <= 0 {
-		return nil, fmt.Errorf("olderThan must be positive")
-	}
-
-	before := time.Now().UTC().Add(-olderThan)
+func (u *RetryStaleScansUseCase) Execute(ctx context.Context) (*RetryStaleScansResult, error) {
+	before := time.Now().UTC().Add(-StaleRetryAfter)
 	scans, err := u.scanRepo.ListInProgressCreatedBefore(ctx, before)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list stale scans: %w", err)
 	}
 
 	result := &RetryStaleScansResult{}
-	for _, scan := range scans {
-		for i := range scan.Medias {
-			mediaEntity := &scan.Medias[i]
+	for _, scanEntity := range scans {
+		if scanEntity.RetryCount >= MaxStaleRetries {
+			if err := u.failScanUseCase.Execute(ctx, scanEntity.ID, StaleScanTimeoutMessage); err != nil {
+				return result, fmt.Errorf("failed to fail scan %s: %w", scanEntity.ID, err)
+			}
+			result.Failed++
+			continue
+		}
+
+		retriedMedia := 0
+		for i := range scanEntity.Medias {
+			mediaEntity := &scanEntity.Medias[i]
 			if mediaEntity.Status == enum.MediaStatusCompleted || mediaEntity.Status == enum.MediaStatusFailed {
 				continue
 			}
@@ -75,8 +90,19 @@ func (u *RetryStaleScansUseCase) Execute(ctx context.Context, olderThan time.Dur
 			if err := u.analyzePublisher.Execute(ctx, mediaEntity.ID); err != nil {
 				return result, fmt.Errorf("failed to republish media %s: %w", mediaEntity.ID, err)
 			}
-			result.Medias++
+			retriedMedia++
 		}
+
+		if retriedMedia == 0 {
+			continue
+		}
+
+		scanEntity.RetryCount++
+		if err := u.scanRepo.Update(ctx, scanEntity); err != nil {
+			return result, fmt.Errorf("failed to update retry count for scan %s: %w", scanEntity.ID, err)
+		}
+
+		result.Medias += retriedMedia
 		result.Retried++
 	}
 
