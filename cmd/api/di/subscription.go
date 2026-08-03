@@ -11,6 +11,7 @@ type subscriptionBundle struct {
 	planHandler           *httphandler.PlanHandler
 	billingWebhookHandler *httphandler.BillingWebhookHandler
 	subscriptionHandler   *httphandler.SubscriptionHandler
+	invoiceHandler        *httphandler.InvoiceHandler
 }
 
 func subscriptionFree(d *apiDeps) *subscription.CreateFreeSubscriptionUseCase {
@@ -24,6 +25,11 @@ func wireSubscription(d *apiDeps, auth authBundle) subscriptionBundle {
 	subscriptionGateway := infraStripe.NewSubscriptionGateway(d.env)
 	billingPortalGateway := infraStripe.NewBillingPortalGateway(d.env)
 	subscriptionNotifier := subscription.NewNotifier(d.userRepo, d.subscriptionRepo, d.centrifugoPublisher)
+	upsertInvoiceUseCase := subscription.NewUpsertInvoiceUseCase(
+		d.invoiceRepo,
+		d.subscriptionRepo,
+		d.userRepo,
+	)
 
 	createSubscriptionUseCase := subscription.NewCreateSubscriptionUseCase(
 		d.planRepo,
@@ -39,6 +45,7 @@ func wireSubscription(d *apiDeps, auth authBundle) subscriptionBundle {
 		resolveEffectivePlanUseCase,
 		getQuotaUsageUseCase,
 	)
+	getInvoicesUseCase := subscription.NewGetInvoicesUseCase(d.invoiceRepo)
 
 	return subscriptionBundle{
 		planHandler: httphandler.NewPlanHandler(plan.NewGetPlansUseCase(d.planRepo)),
@@ -54,11 +61,13 @@ func wireSubscription(d *apiDeps, auth authBundle) subscriptionBundle {
 			subscription.NewSubscriptionDeletedUseCase(d.planRepo, d.subscriptionRepo, subscriptionNotifier),
 			subscription.NewInvoicePaymentSucceededUseCase(d.subscriptionRepo, subscriptionNotifier),
 			subscription.NewInvoicePaymentFailedUseCase(d.subscriptionRepo, subscriptionNotifier),
+			upsertInvoiceUseCase,
 		),
 		subscriptionHandler: httphandler.NewSubscriptionHandler(
 			createSubscriptionUseCase,
 			createBillingPortalUseCase,
 			getUserSubscriptionUseCase,
 		),
+		invoiceHandler: httphandler.NewInvoiceHandler(getInvoicesUseCase),
 	}
 }

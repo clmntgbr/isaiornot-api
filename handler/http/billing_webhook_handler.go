@@ -3,10 +3,11 @@ package http
 import (
 	"context"
 	"encoding/json"
-	infraStripe "go-api/infrastructure/stripe"
-	"go-api/usecase/subscription"
 	"log"
 	"time"
+
+	infraStripe "go-api/infrastructure/stripe"
+	"go-api/usecase/subscription"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -19,6 +20,7 @@ type BillingWebhookHandler struct {
 	subscriptionDeletedUseCase     *subscription.SubscriptionDeletedUseCase
 	invoicePaymentSucceededUseCase *subscription.InvoicePaymentSucceededUseCase
 	invoicePaymentFailedUseCase    *subscription.InvoicePaymentFailedUseCase
+	upsertInvoiceUseCase           *subscription.UpsertInvoiceUseCase
 }
 
 func NewBillingWebhookHandler(
@@ -27,6 +29,7 @@ func NewBillingWebhookHandler(
 	subscriptionDeletedUseCase *subscription.SubscriptionDeletedUseCase,
 	invoicePaymentSucceededUseCase *subscription.InvoicePaymentSucceededUseCase,
 	invoicePaymentFailedUseCase *subscription.InvoicePaymentFailedUseCase,
+	upsertInvoiceUseCase *subscription.UpsertInvoiceUseCase,
 ) *BillingWebhookHandler {
 	return &BillingWebhookHandler{
 		checkoutCompletedUseCase:       checkoutCompletedUseCase,
@@ -34,19 +37,24 @@ func NewBillingWebhookHandler(
 		subscriptionDeletedUseCase:     subscriptionDeletedUseCase,
 		invoicePaymentSucceededUseCase: invoicePaymentSucceededUseCase,
 		invoicePaymentFailedUseCase:    invoicePaymentFailedUseCase,
+		upsertInvoiceUseCase:           upsertInvoiceUseCase,
 	}
 }
 
 func (h *BillingWebhookHandler) Execute(c fiber.Ctx) error {
 	event := c.Locals("payload").(stripe.Event)
+	log.Printf("stripe webhook: queueing event id=%s type=%s", event.ID, event.Type)
 
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
+		log.Printf("stripe webhook: processing event id=%s type=%s", event.ID, event.Type)
 		if err := h.dispatch(ctx, event); err != nil {
-			log.Printf("failed to handle stripe event %s: %v", event.Type, err)
+			log.Printf("stripe webhook: failed event id=%s type=%s: %v", event.ID, event.Type, err)
+			return
 		}
+		log.Printf("stripe webhook: processed event id=%s type=%s", event.ID, event.Type)
 	}()
 
 	return c.SendStatus(fiber.StatusOK)
@@ -70,6 +78,7 @@ func (h *BillingWebhookHandler) dispatch(ctx context.Context, event stripe.Event
 		return h.handleInvoicePaymentFailed(ctx, event)
 
 	default:
+		log.Printf("stripe webhook: ignoring unhandled event id=%s type=%s", event.ID, event.Type)
 		return nil
 	}
 }
@@ -132,6 +141,10 @@ func (h *BillingWebhookHandler) handleInvoicePaymentSucceeded(ctx context.Contex
 		return err
 	}
 
+	if err := h.upsertInvoiceUseCase.Execute(ctx, upsertInvoiceInputFromStripe(&invoice)); err != nil {
+		return err
+	}
+
 	return h.invoicePaymentSucceededUseCase.Execute(ctx, subscription.InvoicePaymentSucceededInput{
 		StripeSubscriptionID: subscriptionIDFromInvoice(&invoice),
 		StripeCustomerID:     customerIDFromInvoice(&invoice),
@@ -147,10 +160,51 @@ func (h *BillingWebhookHandler) handleInvoicePaymentFailed(ctx context.Context, 
 		return err
 	}
 
+	if err := h.upsertInvoiceUseCase.Execute(ctx, upsertInvoiceInputFromStripe(&invoice)); err != nil {
+		return err
+	}
+
 	return h.invoicePaymentFailedUseCase.Execute(ctx, subscription.InvoicePaymentFailedInput{
 		StripeSubscriptionID: subscriptionIDFromInvoice(&invoice),
 		StripeCustomerID:     customerIDFromInvoice(&invoice),
 	})
+}
+
+func upsertInvoiceInputFromStripe(invoice *stripe.Invoice) subscription.UpsertInvoiceInput {
+	input := subscription.UpsertInvoiceInput{
+		StripeInvoiceID:      invoice.ID,
+		StripeCustomerID:     customerIDFromInvoice(invoice),
+		StripeSubscriptionID: subscriptionIDFromInvoice(invoice),
+		Number:               invoice.Number,
+		Status:               string(invoice.Status),
+		Currency:             string(invoice.Currency),
+		AmountDue:            invoice.AmountDue,
+		AmountPaid:           invoice.AmountPaid,
+		Total:                invoice.Total,
+		HostedInvoiceURL:     invoice.HostedInvoiceURL,
+		InvoicePDF:           invoice.InvoicePDF,
+		BillingReason:        string(invoice.BillingReason),
+		Description:          invoiceDescription(invoice),
+		AttemptCount:         invoice.AttemptCount,
+		PeriodStart:          unixToTime(invoice.PeriodStart),
+		PeriodEnd:            unixToTime(invoice.PeriodEnd),
+		StripeCreatedAt:      unixToTime(invoice.Created),
+	}
+
+	if invoice.StatusTransitions != nil {
+		if paidAt := unixToTime(invoice.StatusTransitions.PaidAt); !paidAt.IsZero() {
+			input.PaidAt = &paidAt
+		}
+	}
+
+	return input
+}
+
+func invoiceDescription(invoice *stripe.Invoice) string {
+	if invoice.Lines == nil || len(invoice.Lines.Data) == 0 {
+		return ""
+	}
+	return invoice.Lines.Data[0].Description
 }
 
 func subscriptionIDFromInvoice(invoice *stripe.Invoice) string {

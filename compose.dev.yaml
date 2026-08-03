@@ -7,9 +7,9 @@ services:
     container_name: api
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/livez"]
-      interval: 5s
+      interval: 30s
       timeout: 3s
-      retries: 10
+      retries: 3
       start_period: 60s
     ports:
       - "4000:3000"

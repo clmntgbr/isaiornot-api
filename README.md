@@ -153,6 +153,7 @@ Base URL (dev): `http://localhost:4000`
 | `GET` | `/api/subscription` | Subscription, effective plan, quota usage |
 | `POST` | `/api/subscriptions` | Create Stripe Checkout (`{ "planId": "…" }`) → `{ "url" }` |
 | `GET` | `/api/subscriptions/portal` | Stripe Customer Portal URL (requires `stripeCustomerId`) |
+| `GET` | `/api/invoices` | List invoices (paginated) |
 | `GET` | `/api/realtime/connection` | Centrifugo connection info |
 | `POST` | `/api/scans/presign-upload-url` | Presigned upload URL |
 | `GET` | `/api/scans` | List scans |
@@ -169,6 +170,8 @@ Base URL (dev): `http://localhost:4000`
 | `POST` | `/webhooks/minio/object-created` | `MINIO_WEBHOOK_SECRET` |
 
 Stripe events handled: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`.
+
+`invoice.payment_succeeded` / `invoice.payment_failed` also upsert a local `invoices` row (PDF/hosted URL, amounts, status, etc.).
 
 Processing is async (goroutine); always respond `200` after signature validation.
 

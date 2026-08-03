@@ -36,6 +36,14 @@ func main() {
 
 	app.Use(logger.New(logger.Config{
 		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
+		Next: func(c fiber.Ctx) bool {
+			switch c.Path() {
+			case "/livez", "/readyz", "/startupz":
+				return true
+			default:
+				return false
+			}
+		},
 	}))
 
 	app.Use(func(c fiber.Ctx) error {

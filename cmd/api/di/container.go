@@ -30,6 +30,7 @@ type Container struct {
 	PlanHandler                  *httphandler.PlanHandler
 	BillingWebhookHandler        *httphandler.BillingWebhookHandler
 	SubscriptionHandler          *httphandler.SubscriptionHandler
+	InvoiceHandler               *httphandler.InvoiceHandler
 }
 
 type apiDeps struct {
@@ -43,6 +44,7 @@ type apiDeps struct {
 	scanRepo            repository.ScanRepository
 	planRepo            repository.PlanRepository
 	subscriptionRepo    repository.SubscriptionRepository
+	invoiceRepo         repository.InvoiceRepository
 	jwksProvider        port.TokenKeyProvider
 }
 
@@ -68,6 +70,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		scanRepo:            repoGorm.NewScanRepository(db),
 		planRepo:            repoGorm.NewPlanRepository(db),
 		subscriptionRepo:    repoGorm.NewSubscriptionRepository(db),
+		invoiceRepo:         repoGorm.NewInvoiceRepository(db),
 		jwksProvider:        jwksProvider,
 	}
 
@@ -90,5 +93,6 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		RealtimeHandler:              httphandler.NewRealtimeHandler(env),
 		PlanHandler:                  subscriptionBundle.planHandler,
 		SubscriptionHandler:          subscriptionBundle.subscriptionHandler,
+		InvoiceHandler:               subscriptionBundle.invoiceHandler,
 	}
 }

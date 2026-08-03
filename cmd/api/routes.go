@@ -39,6 +39,7 @@ func setupAPIRoutes(app *fiber.App, container *di.Container) {
 	api.Use(container.AuthenticateMiddleware.Protected())
 	setupUsersRoutes(api, container)
 	setupSubscriptionRoutes(api, container)
+	setupInvoiceRoutes(api, container)
 	setupScanRoutes(api, container)
 	setupMediaRoutes(api, container)
 	setupRealtimeRoutes(api, container)
@@ -48,6 +49,10 @@ func setupSubscriptionRoutes(api fiber.Router, container *di.Container) {
 	api.Get("/subscription", container.SubscriptionHandler.GetSubscription)
 	api.Post("/subscriptions", container.SubscriptionHandler.CreateSubscription)
 	api.Get("/subscriptions/portal", container.SubscriptionHandler.CreateBillingPortal)
+}
+
+func setupInvoiceRoutes(api fiber.Router, container *di.Container) {
+	api.Get("/invoices", container.InvoiceHandler.GetInvoices)
 }
 
 func setupRealtimeRoutes(api fiber.Router, container *di.Container) {

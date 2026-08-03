@@ -32,6 +32,7 @@ func NewMigrateCommand() *cobra.Command {
 					&entity.Scan{},
 					&entity.Media{},
 					&entity.Signal{},
+					&entity.Invoice{},
 				); err != nil {
 					return err
 				}
