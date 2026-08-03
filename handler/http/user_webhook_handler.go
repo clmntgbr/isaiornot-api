@@ -1,14 +1,17 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"log"
+	"time"
+
 	"go-api/handler/http/dto"
 	"go-api/usecase/user"
-	"log"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
-	"gorm.io/gorm"
 )
 
 type UserWebhookHandler struct {
@@ -49,13 +52,16 @@ func (h *UserWebhookHandler) Execute(c fiber.Ctx) error {
 			return err
 		}
 
-		if err := h.CreateUser(c, data); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": "Failed to create user",
-			})
-		}
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
 
-		return c.SendStatus(fiber.StatusCreated)
+			if err := h.createUser(ctx, data); err != nil {
+				log.Printf("failed to handle clerk user.created %s: %v", data.ID, err)
+			}
+		}()
+
+		return c.SendStatus(fiber.StatusOK)
 
 	case "user.updated":
 		var data dto.ClerkUserUpdated
@@ -69,13 +75,16 @@ func (h *UserWebhookHandler) Execute(c fiber.Ctx) error {
 			return err
 		}
 
-		if err := h.UpdateUser(c, data); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": "Failed to update user",
-			})
-		}
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
 
-		return c.SendStatus(fiber.StatusNoContent)
+			if err := h.updateUser(ctx, data); err != nil {
+				log.Printf("failed to handle clerk user.updated %s: %v", data.ID, err)
+			}
+		}()
+
+		return c.SendStatus(fiber.StatusOK)
 
 	case "user.deleted":
 		var data dto.ClerkUserDeleted
@@ -89,87 +98,61 @@ func (h *UserWebhookHandler) Execute(c fiber.Ctx) error {
 			return err
 		}
 
-		if err := h.DeleteUser(c, data); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": "Failed to delete user",
-			})
-		}
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
 
-		return c.SendStatus(fiber.StatusNoContent)
+			if err := h.deleteUser(ctx, data); err != nil {
+				log.Printf("failed to handle clerk user.deleted %s: %v", data.ID, err)
+			}
+		}()
+
+		return c.SendStatus(fiber.StatusOK)
 
 	default:
 		return c.SendStatus(fiber.StatusOK)
 	}
 }
 
-func (h *UserWebhookHandler) CreateUser(c fiber.Ctx, data dto.ClerkUserCreated) error {
-	user, err := h.getUserByExternalIDUseCase.Execute(c.Context(), data.ID)
+func (h *UserWebhookHandler) createUser(ctx context.Context, data dto.ClerkUserCreated) error {
+	existing, err := h.getUserByExternalIDUseCase.Execute(ctx, data.ID)
 	if err != nil {
-		log.Printf("Error finding user by Clerk ID %s: %v", data.ID, err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Failed to create user",
-		})
+		return err
 	}
-
-	if user != nil {
+	if existing != nil {
 		return nil
 	}
 
-	txFunc := func(_ *gorm.DB) error {
-		user, err = h.createUserUseCase.Execute(c.Context(), data.ID, data.FirstName, data.LastName, *data.Banned, data.Email)
-		if err != nil {
-			log.Printf("Error creating user with Clerk ID %s: %v", data.ID, err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": "Failed to create user",
-			})
-		}
-
-		return nil
+	banned := false
+	if data.Banned != nil {
+		banned = *data.Banned
 	}
 
-	return txFunc(nil)
+	_, err = h.createUserUseCase.Execute(ctx, data.ID, data.FirstName, data.LastName, banned, data.Email)
+	return err
 }
 
-func (h *UserWebhookHandler) UpdateUser(c fiber.Ctx, data dto.ClerkUserUpdated) error {
-	user, err := h.getUserByExternalIDUseCase.Execute(c.Context(), data.ID)
+func (h *UserWebhookHandler) updateUser(ctx context.Context, data dto.ClerkUserUpdated) error {
+	user, err := h.getUserByExternalIDUseCase.Execute(ctx, data.ID)
 	if err != nil {
-		log.Printf("Error finding user by Clerk ID %s: %v", data.ID, err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Failed to find user",
-		})
+		return err
 	}
-
 	if user == nil {
-		log.Printf("User with Clerk ID %s not found for update", data.ID)
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"message": "User not found",
-		})
+		return errors.New("user not found")
 	}
 
 	user.FirstName = data.FirstName
 	user.LastName = data.LastName
-	user.Banned = *data.Banned
+	if data.Banned != nil {
+		user.Banned = *data.Banned
+	}
 	if data.Email != "" {
 		user.Email = data.Email
 	}
 
-	if err := h.updateUserUseCase.Execute(c.Context(), user); err != nil {
-		log.Printf("Error updating user with Clerk ID %s: %v", data.ID, err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Failed to update user",
-		})
-	}
-
-	return nil
+	return h.updateUserUseCase.Execute(ctx, user)
 }
 
-func (h *UserWebhookHandler) DeleteUser(c fiber.Ctx, data dto.ClerkUserDeleted) error {
-	if err := h.deleteUserByExternalIDUseCase.Execute(c.Context(), data.ID); err != nil {
-		log.Printf("Error deleting user with Clerk ID %s: %v", data.ID, err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Failed to delete user",
-		})
-	}
-
-	return nil
+func (h *UserWebhookHandler) deleteUser(ctx context.Context, data dto.ClerkUserDeleted) error {
+	return h.deleteUserByExternalIDUseCase.Execute(ctx, data.ID)
 }

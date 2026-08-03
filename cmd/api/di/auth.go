@@ -20,8 +20,8 @@ func wireAuth(d *apiDeps) authBundle {
 	fetchUserUseCase := identity.NewFetchUserUseCase(infraClerk.NewUserGateway(d.env.ClerkSecretKey))
 	getUserByExternalIDUseCase := user.NewGetUserByExternalIDUseCase(d.userRepo)
 	createFreeSubscriptionUseCase := subscriptionFree(d)
-	createUserUseCase := user.NewCreateUserUseCase(d.userRepo, createFreeSubscriptionUseCase)
-	updateUserUseCase := user.NewUpdateUserUseCase(d.userRepo)
+	createUserUseCase := user.NewCreateUserUseCase(d.userRepo, createFreeSubscriptionUseCase, d.centrifugoPublisher)
+	updateUserUseCase := user.NewUpdateUserUseCase(d.userRepo, d.centrifugoPublisher)
 	deleteUserByExternalIDUseCase := user.NewDeleteUserByExternalIDUseCase(d.userRepo)
 
 	return authBundle{
