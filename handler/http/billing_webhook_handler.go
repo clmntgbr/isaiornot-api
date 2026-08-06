@@ -138,16 +138,26 @@ func (h *BillingWebhookHandler) handleSubscriptionDeleted(ctx context.Context, e
 func (h *BillingWebhookHandler) handleInvoicePaymentSucceeded(ctx context.Context, event stripe.Event) error {
 	var invoice stripe.Invoice
 	if err := json.Unmarshal(event.Data.Raw, &invoice); err != nil {
+		log.Printf("stripe webhook: failed to unmarshal invoice.payment_succeeded: %v", err)
 		return err
 	}
 
-	if err := h.upsertInvoiceUseCase.Execute(ctx, upsertInvoiceInputFromStripe(&invoice)); err != nil {
+	upsertInput := upsertInvoiceInputFromStripe(&invoice)
+	log.Printf(
+		"stripe webhook: invoice.payment_succeeded mapped invoiceID=%s subscriptionID=%s customerID=%s parent=%v",
+		upsertInput.StripeInvoiceID,
+		upsertInput.StripeSubscriptionID,
+		upsertInput.StripeCustomerID,
+		invoice.Parent != nil,
+	)
+
+	if err := h.upsertInvoiceUseCase.Execute(ctx, upsertInput); err != nil {
 		return err
 	}
 
 	return h.invoicePaymentSucceededUseCase.Execute(ctx, subscription.InvoicePaymentSucceededInput{
-		StripeSubscriptionID: subscriptionIDFromInvoice(&invoice),
-		StripeCustomerID:     customerIDFromInvoice(&invoice),
+		StripeSubscriptionID: upsertInput.StripeSubscriptionID,
+		StripeCustomerID:     upsertInput.StripeCustomerID,
 		BillingReason:        string(invoice.BillingReason),
 		PeriodStart:          unixToTime(invoice.PeriodStart),
 		PeriodEnd:            unixToTime(invoice.PeriodEnd),
@@ -210,14 +220,28 @@ func invoiceDescription(invoice *stripe.Invoice) string {
 func subscriptionIDFromInvoice(invoice *stripe.Invoice) string {
 	if invoice.Parent != nil &&
 		invoice.Parent.SubscriptionDetails != nil &&
-		invoice.Parent.SubscriptionDetails.Subscription != nil {
+		invoice.Parent.SubscriptionDetails.Subscription != nil &&
+		invoice.Parent.SubscriptionDetails.Subscription.ID != "" {
 		return invoice.Parent.SubscriptionDetails.Subscription.ID
 	}
+
+	// Fallback for API shapes where subscription only appears on line items.
+	if invoice.Lines != nil {
+		for _, line := range invoice.Lines.Data {
+			if line == nil || line.Parent == nil || line.Parent.SubscriptionItemDetails == nil {
+				continue
+			}
+			if line.Parent.SubscriptionItemDetails.Subscription != "" {
+				return line.Parent.SubscriptionItemDetails.Subscription
+			}
+		}
+	}
+
 	return ""
 }
 
 func customerIDFromInvoice(invoice *stripe.Invoice) string {
-	if invoice.Customer != nil {
+	if invoice.Customer != nil && invoice.Customer.ID != "" {
 		return invoice.Customer.ID
 	}
 	return ""

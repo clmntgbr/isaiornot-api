@@ -3,6 +3,7 @@ package subscription
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	"go-api/domain/entity"
@@ -51,17 +52,43 @@ type UpsertInvoiceInput struct {
 }
 
 func (u *UpsertInvoiceUseCase) Execute(ctx context.Context, input UpsertInvoiceInput) error {
+	log.Printf(
+		"upsert invoice: start stripeInvoiceID=%s stripeSubscriptionID=%s stripeCustomerID=%s status=%s total=%d",
+		input.StripeInvoiceID,
+		input.StripeSubscriptionID,
+		input.StripeCustomerID,
+		input.Status,
+		input.Total,
+	)
+
 	if input.StripeInvoiceID == "" {
+		log.Printf("upsert invoice: skip, missing stripeInvoiceID")
 		return nil
 	}
 
 	userID, subscriptionID, err := u.resolveOwner(ctx, input.StripeSubscriptionID, input.StripeCustomerID)
 	if err != nil {
+		log.Printf("upsert invoice: resolve owner failed: %v", err)
 		return err
 	}
 	if userID == uuid.Nil {
+		log.Printf(
+			"upsert invoice: skip, no local user/subscription for stripeSubscriptionID=%s stripeCustomerID=%s",
+			input.StripeSubscriptionID,
+			input.StripeCustomerID,
+		)
 		return nil
 	}
+
+	subscriptionIDValue := ""
+	if subscriptionID != nil {
+		subscriptionIDValue = subscriptionID.String()
+	}
+	log.Printf(
+		"upsert invoice: resolved userID=%s subscriptionID=%s",
+		userID,
+		subscriptionIDValue,
+	)
 
 	invoice := &entity.Invoice{
 		UserID:               userID,
@@ -87,9 +114,11 @@ func (u *UpsertInvoiceUseCase) Execute(ctx context.Context, input UpsertInvoiceI
 	}
 
 	if err := u.invoiceRepo.UpsertByStripeInvoiceID(ctx, invoice); err != nil {
+		log.Printf("upsert invoice: db upsert failed stripeInvoiceID=%s: %v", input.StripeInvoiceID, err)
 		return errors.New("failed to upsert invoice")
 	}
 
+	log.Printf("upsert invoice: ok id=%s stripeInvoiceID=%s", invoice.ID, invoice.StripeInvoiceID)
 	return nil
 }
 
@@ -108,12 +137,22 @@ func (u *UpsertInvoiceUseCase) resolveOwner(
 		if err != nil {
 			return uuid.Nil, nil, errors.New("failed to get subscription")
 		}
+		if subscription != nil {
+			log.Printf("upsert invoice: found subscription by stripeSubscriptionID=%s id=%s", stripeSubscriptionID, subscription.ID)
+		} else {
+			log.Printf("upsert invoice: no subscription for stripeSubscriptionID=%s", stripeSubscriptionID)
+		}
 	}
 
 	if subscription == nil && stripeCustomerID != "" {
 		subscription, err = u.subscriptionRepo.GetByStripeCustomerID(ctx, stripeCustomerID)
 		if err != nil {
 			return uuid.Nil, nil, errors.New("failed to get subscription by customer")
+		}
+		if subscription != nil {
+			log.Printf("upsert invoice: found subscription by stripeCustomerID=%s id=%s", stripeCustomerID, subscription.ID)
+		} else {
+			log.Printf("upsert invoice: no subscription for stripeCustomerID=%s", stripeCustomerID)
 		}
 	}
 
@@ -126,6 +165,7 @@ func (u *UpsertInvoiceUseCase) resolveOwner(
 		return uuid.Nil, nil, errors.New("failed to get user by subscription")
 	}
 	if user == nil {
+		log.Printf("upsert invoice: no user linked to subscriptionID=%s", subscription.ID)
 		return uuid.Nil, nil, nil
 	}
 

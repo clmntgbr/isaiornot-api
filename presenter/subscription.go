@@ -1,9 +1,10 @@
 package presenter
 
 import (
+	"time"
+
 	"go-api/domain/entity"
 	"go-api/usecase/subscription"
-	"time"
 )
 
 type CheckoutSessionResponse struct {
@@ -30,11 +31,8 @@ type QuotaUsageResponse struct {
 	FullPipeline     bool  `json:"fullPipeline"`
 }
 
-func NewQuotaUsageResponse(usage *subscription.QuotaUsage) *QuotaUsageResponse {
-	if usage == nil {
-		return nil
-	}
-	return &QuotaUsageResponse{
+func NewQuotaUsageResponse(usage *subscription.QuotaUsage) QuotaUsageResponse {
+	return QuotaUsageResponse{
 		PeriodStart:      usage.PeriodStart,
 		PeriodEnd:        usage.PeriodEnd,
 		ImagesUsed:       usage.ImagesUsed,
@@ -50,25 +48,23 @@ func NewQuotaUsageResponse(usage *subscription.QuotaUsage) *QuotaUsageResponse {
 }
 
 type SubscriptionResponse struct {
-	ID                   string              `json:"id"`
-	Status               string              `json:"status"`
-	StripeCustomerID     string              `json:"stripeCustomerId"`
-	StripeSubscriptionID string              `json:"stripeSubscriptionId"`
-	StartDate            time.Time           `json:"startDate"`
-	EndDate              time.Time           `json:"endDate"`
-	CancelAtPeriodEnd    bool                `json:"cancelAtPeriodEnd"`
-	QuotaPeriodStart     time.Time           `json:"quotaPeriodStart"`
-	Plan                 *PlanResponse       `json:"plan"`
-	EffectivePlan        *PlanResponse       `json:"effectivePlan"`
-	QuotaUsage           *QuotaUsageResponse `json:"quotaUsage"`
-	CreatedAt            time.Time           `json:"createdAt"`
-	UpdatedAt            time.Time           `json:"updatedAt"`
+	ID                   string        `json:"id"`
+	Status               string        `json:"status"`
+	StripeCustomerID     string        `json:"stripeCustomerId"`
+	StripeSubscriptionID string        `json:"stripeSubscriptionId"`
+	StartDate            time.Time     `json:"startDate"`
+	EndDate              time.Time     `json:"endDate"`
+	CancelAtPeriodEnd    bool          `json:"cancelAtPeriodEnd"`
+	QuotaPeriodStart     time.Time     `json:"quotaPeriodStart"`
+	Plan                 *PlanResponse `json:"plan"`
+	EffectivePlan        *PlanResponse `json:"effectivePlan"`
+	CreatedAt            time.Time     `json:"createdAt"`
+	UpdatedAt            time.Time     `json:"updatedAt"`
 }
 
 func NewSubscriptionResponse(
 	sub *entity.Subscription,
 	effectivePlan *entity.Plan,
-	quotaUsage *subscription.QuotaUsage,
 ) *SubscriptionResponse {
 	response := &SubscriptionResponse{
 		ID:                   sub.ID.String(),
@@ -80,7 +76,6 @@ func NewSubscriptionResponse(
 		CancelAtPeriodEnd:    sub.CancelAtPeriodEnd,
 		QuotaPeriodStart:     sub.QuotaPeriodStart,
 		Plan:                 NewPlanResponse(&sub.Plan),
-		QuotaUsage:           NewQuotaUsageResponse(quotaUsage),
 		CreatedAt:            sub.CreatedAt,
 		UpdatedAt:            sub.UpdatedAt,
 	}

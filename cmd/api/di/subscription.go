@@ -43,6 +43,10 @@ func wireSubscription(d *apiDeps, auth authBundle) subscriptionBundle {
 	getUserSubscriptionUseCase := subscription.NewGetUserSubscriptionUseCase(
 		d.subscriptionRepo,
 		resolveEffectivePlanUseCase,
+	)
+	getUserQuotaUsageUseCase := subscription.NewGetUserQuotaUsageUseCase(
+		d.subscriptionRepo,
+		resolveEffectivePlanUseCase,
 		getQuotaUsageUseCase,
 	)
 	getInvoicesUseCase := subscription.NewGetInvoicesUseCase(d.invoiceRepo)
@@ -67,6 +71,7 @@ func wireSubscription(d *apiDeps, auth authBundle) subscriptionBundle {
 			createSubscriptionUseCase,
 			createBillingPortalUseCase,
 			getUserSubscriptionUseCase,
+			getUserQuotaUsageUseCase,
 		),
 		invoiceHandler: httphandler.NewInvoiceHandler(getInvoicesUseCase),
 	}

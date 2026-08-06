@@ -150,7 +150,8 @@ Base URL (dev): `http://localhost:4000`
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/users/me` | Current user |
-| `GET` | `/api/subscription` | Subscription, effective plan, quota usage |
+| `GET` | `/api/subscription` | Subscription + effective plan |
+| `GET` | `/api/quota` | Current quota usage |
 | `POST` | `/api/subscriptions` | Create Stripe Checkout (`{ "planId": "…" }`) → `{ "url" }` |
 | `GET` | `/api/subscriptions/portal` | Stripe Customer Portal URL (requires `stripeCustomerId`) |
 | `GET` | `/api/invoices` | List invoices (paginated) |

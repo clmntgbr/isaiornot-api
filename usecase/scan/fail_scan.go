@@ -3,6 +3,7 @@ package scan
 import (
 	"context"
 	"errors"
+	"log"
 
 	"go-api/domain/entity"
 	"go-api/domain/enum"
@@ -83,6 +84,11 @@ func (u *FailScanUseCase) Execute(ctx context.Context, scanID uuid.UUID, message
 
 	if err := u.centrifugoPublisher.PublishToUser(ctx, scan.UserID, event); err != nil {
 		return errors.New("failed to publish scan failed event")
+	}
+
+	quotaEvent := realtime.NewQuotaUpdatedEvent(scan.UserID)
+	if err := u.centrifugoPublisher.PublishQuotaToUser(ctx, scan.UserID, quotaEvent); err != nil {
+		log.Printf("failed to publish quota_updated after scan failed %s: %v", scan.ID, err)
 	}
 
 	return nil

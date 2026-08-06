@@ -3,6 +3,7 @@ package pipeline
 import (
 	"context"
 	"errors"
+	"log"
 
 	"go-api/domain/aggregate"
 	"go-api/domain/entity"
@@ -122,6 +123,11 @@ func (u *AggregateScanUseCase) Execute(ctx context.Context, mediaID uuid.UUID) e
 
 	if err := u.centrifugoPublisher.PublishToUser(ctx, scan.UserID, realtimeEvent); err != nil {
 		return errors.New("failed to publish scan completed event")
+	}
+
+	quotaEvent := realtime.NewQuotaUpdatedEvent(scan.UserID)
+	if err := u.centrifugoPublisher.PublishQuotaToUser(ctx, scan.UserID, quotaEvent); err != nil {
+		log.Printf("failed to publish quota_updated after scan completed %s: %v", scan.ID, err)
 	}
 
 	return nil

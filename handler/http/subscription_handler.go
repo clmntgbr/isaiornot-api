@@ -2,6 +2,7 @@ package http
 
 import (
 	"errors"
+
 	"go-api/handler/http/context"
 	"go-api/handler/http/dto"
 	"go-api/presenter"
@@ -15,17 +16,20 @@ type SubscriptionHandler struct {
 	createSubscriptionUseCase  *subscription.CreateSubscriptionUseCase
 	createBillingPortalUseCase *subscription.CreateBillingPortalUseCase
 	getUserSubscriptionUseCase *subscription.GetUserSubscriptionUseCase
+	getUserQuotaUsageUseCase   *subscription.GetUserQuotaUsageUseCase
 }
 
 func NewSubscriptionHandler(
 	createSubscriptionUseCase *subscription.CreateSubscriptionUseCase,
 	createBillingPortalUseCase *subscription.CreateBillingPortalUseCase,
 	getUserSubscriptionUseCase *subscription.GetUserSubscriptionUseCase,
+	getUserQuotaUsageUseCase *subscription.GetUserQuotaUsageUseCase,
 ) *SubscriptionHandler {
 	return &SubscriptionHandler{
 		createSubscriptionUseCase:  createSubscriptionUseCase,
 		createBillingPortalUseCase: createBillingPortalUseCase,
 		getUserSubscriptionUseCase: getUserSubscriptionUseCase,
+		getUserQuotaUsageUseCase:   getUserQuotaUsageUseCase,
 	}
 }
 
@@ -53,8 +57,31 @@ func (h *SubscriptionHandler) GetSubscription(c fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(presenter.NewSubscriptionResponse(
 		result.Subscription,
 		result.EffectivePlan,
-		result.QuotaUsage,
 	))
+}
+
+func (h *SubscriptionHandler) GetQuota(c fiber.Ctx) error {
+	user, err := context.GetUser(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Unauthorized",
+		})
+	}
+
+	usage, err := h.getUserQuotaUsageUseCase.Execute(c.Context(), user)
+	if err != nil {
+		if errors.Is(err, subscription.ErrSubscriptionNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": "Subscription not found",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Internal server error",
+			"errors":  err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(presenter.NewQuotaUsageResponse(usage))
 }
 
 func (h *SubscriptionHandler) CreateSubscription(c fiber.Ctx) error {

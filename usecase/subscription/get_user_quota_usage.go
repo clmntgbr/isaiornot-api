@@ -8,29 +8,25 @@ import (
 	"go-api/domain/repository"
 )
 
-var ErrSubscriptionNotFound = errors.New("subscription not found")
-
-type GetUserSubscriptionUseCase struct {
+type GetUserQuotaUsageUseCase struct {
 	subscriptionRepo            repository.SubscriptionRepository
 	resolveEffectivePlanUseCase *ResolveEffectivePlanUseCase
+	getQuotaUsageUseCase        *GetQuotaUsageUseCase
 }
 
-func NewGetUserSubscriptionUseCase(
+func NewGetUserQuotaUsageUseCase(
 	subscriptionRepo repository.SubscriptionRepository,
 	resolveEffectivePlanUseCase *ResolveEffectivePlanUseCase,
-) *GetUserSubscriptionUseCase {
-	return &GetUserSubscriptionUseCase{
+	getQuotaUsageUseCase *GetQuotaUsageUseCase,
+) *GetUserQuotaUsageUseCase {
+	return &GetUserQuotaUsageUseCase{
 		subscriptionRepo:            subscriptionRepo,
 		resolveEffectivePlanUseCase: resolveEffectivePlanUseCase,
+		getQuotaUsageUseCase:        getQuotaUsageUseCase,
 	}
 }
 
-type UserSubscription struct {
-	Subscription  *entity.Subscription
-	EffectivePlan *entity.Plan
-}
-
-func (u *GetUserSubscriptionUseCase) Execute(ctx context.Context, user *entity.User) (*UserSubscription, error) {
+func (u *GetUserQuotaUsageUseCase) Execute(ctx context.Context, user *entity.User) (*QuotaUsage, error) {
 	if user == nil {
 		return nil, errors.New("user is required")
 	}
@@ -51,8 +47,5 @@ func (u *GetUserSubscriptionUseCase) Execute(ctx context.Context, user *entity.U
 		return nil, err
 	}
 
-	return &UserSubscription{
-		Subscription:  subscription,
-		EffectivePlan: effectivePlan,
-	}, nil
+	return u.getQuotaUsageUseCase.Execute(ctx, user, subscription, effectivePlan)
 }
