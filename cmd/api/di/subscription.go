@@ -33,8 +33,16 @@ func wireSubscription(d *apiDeps, auth authBundle) subscriptionBundle {
 
 	createSubscriptionUseCase := subscription.NewCreateSubscriptionUseCase(
 		d.planRepo,
+		d.subscriptionRepo,
 		auth.fetchUserUseCase,
 		checkoutSessionGateway,
+		subscriptionGateway,
+		subscriptionNotifier,
+	)
+	previewPlanChangeUseCase := subscription.NewPreviewPlanChangeUseCase(
+		d.planRepo,
+		d.subscriptionRepo,
+		subscriptionGateway,
 	)
 	createBillingPortalUseCase := subscription.NewCreateBillingPortalUseCase(
 		d.subscriptionRepo,
@@ -69,6 +77,7 @@ func wireSubscription(d *apiDeps, auth authBundle) subscriptionBundle {
 		),
 		subscriptionHandler: httphandler.NewSubscriptionHandler(
 			createSubscriptionUseCase,
+			previewPlanChangeUseCase,
 			createBillingPortalUseCase,
 			getUserSubscriptionUseCase,
 			getUserQuotaUsageUseCase,

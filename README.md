@@ -152,7 +152,8 @@ Base URL (dev): `http://localhost:4000`
 | `GET` | `/api/users/me` | Current user |
 | `GET` | `/api/subscription` | Subscription + effective plan |
 | `GET` | `/api/quota` | Current quota usage |
-| `POST` | `/api/subscriptions` | Create Stripe Checkout (`{ "planId": "…" }`) → `{ "url" }` |
+| `POST` | `/api/subscriptions/preview` | Preview plan change / proration (`{ planId }`) before confirm |
+| `POST` | `/api/subscriptions` | Confirm: checkout if new (`{ url, updated:false }`), or prorated update (`{ updated:true }`). Pass `prorationDate` from preview when upgrading. |
 | `GET` | `/api/subscriptions/portal` | Stripe Customer Portal URL (requires `stripeCustomerId`) |
 | `GET` | `/api/invoices` | List invoices (paginated) |
 | `GET` | `/api/realtime/connection` | Centrifugo connection info |

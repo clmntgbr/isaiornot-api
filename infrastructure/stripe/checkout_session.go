@@ -3,9 +3,10 @@ package stripe
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	"go-api/domain/entity"
 	"go-api/infrastructure/config"
-	"strconv"
 
 	"github.com/stripe/stripe-go/v82"
 	"github.com/stripe/stripe-go/v82/checkout/session"
@@ -30,6 +31,7 @@ func (g *CheckoutSessionGateway) Create(
 	plan *entity.Plan,
 	user *entity.User,
 	email string,
+	stripeCustomerID string,
 ) (string, error) {
 	if g.secretKey == "" {
 		return "", fmt.Errorf("stripe secret key is not configured")
@@ -64,7 +66,9 @@ func (g *CheckoutSessionGateway) Create(
 	}
 	params.Context = ctx
 
-	if email != "" {
+	if stripeCustomerID != "" {
+		params.Customer = stripe.String(stripeCustomerID)
+	} else if email != "" {
 		params.CustomerEmail = stripe.String(email)
 	}
 
