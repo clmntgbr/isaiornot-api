@@ -3,6 +3,8 @@ package subscription
 import (
 	"context"
 	"errors"
+	"log"
+
 	"go-api/domain/entity"
 	"go-api/domain/repository"
 )
@@ -45,7 +47,12 @@ func (u *InvoicePaymentFailedUseCase) Execute(ctx context.Context, input Invoice
 	}
 
 	if subscription == nil {
-		return nil
+		log.Printf(
+			"invoice payment failed: subscription not linked yet stripeSubscriptionID=%s stripeCustomerID=%s",
+			input.StripeSubscriptionID,
+			input.StripeCustomerID,
+		)
+		return ErrStripeSubscriptionNotLinked
 	}
 
 	subscription.StripeSubscriptionID = input.StripeSubscriptionID

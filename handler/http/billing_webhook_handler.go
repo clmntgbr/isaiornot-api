@@ -3,7 +3,9 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
+	"sync"
 	"time"
 
 	infraStripe "go-api/infrastructure/stripe"
@@ -15,6 +17,7 @@ import (
 )
 
 type BillingWebhookHandler struct {
+	mu                             sync.Mutex
 	checkoutCompletedUseCase       *subscription.CheckoutCompletedUseCase
 	subscriptionUpdatedUseCase     *subscription.SubscriptionUpdatedUseCase
 	subscriptionDeletedUseCase     *subscription.SubscriptionDeletedUseCase
@@ -43,20 +46,28 @@ func NewBillingWebhookHandler(
 
 func (h *BillingWebhookHandler) Execute(c fiber.Ctx) error {
 	event := c.Locals("payload").(stripe.Event)
-	log.Printf("stripe webhook: queueing event id=%s type=%s", event.ID, event.Type)
+	log.Printf("stripe webhook: received event id=%s type=%s", event.ID, event.Type)
 
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-		log.Printf("stripe webhook: processing event id=%s type=%s", event.ID, event.Type)
-		if err := h.dispatch(ctx, event); err != nil {
-			log.Printf("stripe webhook: failed event id=%s type=%s: %v", event.ID, event.Type, err)
-			return
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	log.Printf("stripe webhook: processing event id=%s type=%s", event.ID, event.Type)
+	if err := h.dispatch(ctx, event); err != nil {
+		log.Printf("stripe webhook: failed event id=%s type=%s: %v", event.ID, event.Type, err)
+		if errors.Is(err, subscription.ErrStripeSubscriptionNotLinked) {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "subscription not linked yet",
+			})
 		}
-		log.Printf("stripe webhook: processed event id=%s type=%s", event.ID, event.Type)
-	}()
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to process event",
+		})
+	}
 
+	log.Printf("stripe webhook: processed event id=%s type=%s", event.ID, event.Type)
 	return c.SendStatus(fiber.StatusOK)
 }
 
@@ -170,13 +181,14 @@ func (h *BillingWebhookHandler) handleInvoicePaymentFailed(ctx context.Context, 
 		return err
 	}
 
-	if err := h.upsertInvoiceUseCase.Execute(ctx, upsertInvoiceInputFromStripe(&invoice)); err != nil {
+	upsertInput := upsertInvoiceInputFromStripe(&invoice)
+	if err := h.upsertInvoiceUseCase.Execute(ctx, upsertInput); err != nil {
 		return err
 	}
 
 	return h.invoicePaymentFailedUseCase.Execute(ctx, subscription.InvoicePaymentFailedInput{
-		StripeSubscriptionID: subscriptionIDFromInvoice(&invoice),
-		StripeCustomerID:     customerIDFromInvoice(&invoice),
+		StripeSubscriptionID: upsertInput.StripeSubscriptionID,
+		StripeCustomerID:     upsertInput.StripeCustomerID,
 	})
 }
 
@@ -225,7 +237,6 @@ func subscriptionIDFromInvoice(invoice *stripe.Invoice) string {
 		return invoice.Parent.SubscriptionDetails.Subscription.ID
 	}
 
-	// Fallback for API shapes where subscription only appears on line items.
 	if invoice.Lines != nil {
 		for _, line := range invoice.Lines.Data {
 			if line == nil || line.Parent == nil || line.Parent.SubscriptionItemDetails == nil {

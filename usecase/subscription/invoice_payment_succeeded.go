@@ -52,7 +52,6 @@ func (u *InvoicePaymentSucceededUseCase) Execute(ctx context.Context, input Invo
 	}
 
 	if subscription == nil && input.StripeCustomerID != "" {
-		log.Printf("invoice payment succeeded: fallback lookup by stripeCustomerID=%s", input.StripeCustomerID)
 		subscription, err = u.subscriptionRepo.GetByStripeCustomerID(ctx, input.StripeCustomerID)
 		if err != nil {
 			return errors.New("failed to get subscription by customer")
@@ -61,11 +60,11 @@ func (u *InvoicePaymentSucceededUseCase) Execute(ctx context.Context, input Invo
 
 	if subscription == nil {
 		log.Printf(
-			"invoice payment succeeded: skip, no local subscription for stripeSubscriptionID=%s stripeCustomerID=%s",
+			"invoice payment succeeded: subscription not linked yet stripeSubscriptionID=%s stripeCustomerID=%s",
 			input.StripeSubscriptionID,
 			input.StripeCustomerID,
 		)
-		return nil
+		return ErrStripeSubscriptionNotLinked
 	}
 
 	subscription.StripeSubscriptionID = input.StripeSubscriptionID
