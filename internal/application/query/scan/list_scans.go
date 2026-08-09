@@ -7,6 +7,7 @@ import (
 	domainmedia "go-api/internal/domain/media"
 	"go-api/internal/domain/paginate"
 	domainscan "go-api/internal/domain/scan"
+	domainsignal "go-api/internal/domain/signal"
 
 	"github.com/google/uuid"
 )
@@ -17,17 +18,20 @@ type ListScansQuery struct {
 }
 
 type ListScansHandler struct {
-	scanRepo  domainscan.ScanReadRepository
-	mediaRepo domainmedia.MediaReadRepository
+	scanRepo   domainscan.ScanReadRepository
+	mediaRepo  domainmedia.MediaReadRepository
+	signalRepo domainsignal.SignalReadRepository
 }
 
 func NewListScansHandler(
 	scanRepo domainscan.ScanReadRepository,
 	mediaRepo domainmedia.MediaReadRepository,
+	signalRepo domainsignal.SignalReadRepository,
 ) *ListScansHandler {
 	return &ListScansHandler{
-		scanRepo:  scanRepo,
-		mediaRepo: mediaRepo,
+		scanRepo:   scanRepo,
+		mediaRepo:  mediaRepo,
+		signalRepo: signalRepo,
 	}
 }
 
@@ -49,6 +53,20 @@ func (h *ListScansHandler) Handle(ctx context.Context, q ListScansQuery) ([]*dom
 		return nil, 0, errors.New("failed to list scan medias")
 	}
 
+	mediaIDs := make([]uuid.UUID, 0)
+	for _, medias := range mediasByScan {
+		for _, media := range medias {
+			if media != nil {
+				mediaIDs = append(mediaIDs, media.ID)
+			}
+		}
+	}
+
+	signalsByMedia, err := h.signalRepo.FindByMediaIDs(ctx, mediaIDs)
+	if err != nil {
+		return nil, 0, errors.New("failed to list media signals")
+	}
+
 	for _, scan := range scans {
 		if scan == nil {
 			continue
@@ -56,6 +74,16 @@ func (h *ListScansHandler) Handle(ctx context.Context, q ListScansQuery) ([]*dom
 		medias := mediasByScan[scan.ID]
 		if medias == nil {
 			medias = []*domainmedia.MediaView{}
+		}
+		for _, media := range medias {
+			if media == nil {
+				continue
+			}
+			signals := signalsByMedia[media.ID]
+			if signals == nil {
+				signals = []*domainsignal.SignalView{}
+			}
+			media.Signals = signals
 		}
 		scan.Medias = medias
 	}

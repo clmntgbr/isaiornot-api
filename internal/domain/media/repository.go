@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	domainsignal "go-api/internal/domain/signal"
+
 	"github.com/google/uuid"
 )
 
@@ -31,6 +33,7 @@ type MediaView struct {
 	Size        int64
 	Status      Status
 	Statuses    []Status
+	Signals     []*domainsignal.SignalView
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

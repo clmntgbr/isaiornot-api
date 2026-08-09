@@ -6,6 +6,7 @@ import (
 
 	domainmedia "go-api/internal/domain/media"
 	domainscan "go-api/internal/domain/scan"
+	domainsignal "go-api/internal/domain/signal"
 
 	"github.com/google/uuid"
 )
@@ -18,17 +19,20 @@ type GetScanByIDQuery struct {
 }
 
 type GetScanByIDHandler struct {
-	scanRepo  domainscan.ScanReadRepository
-	mediaRepo domainmedia.MediaReadRepository
+	scanRepo   domainscan.ScanReadRepository
+	mediaRepo  domainmedia.MediaReadRepository
+	signalRepo domainsignal.SignalReadRepository
 }
 
 func NewGetScanByIDHandler(
 	scanRepo domainscan.ScanReadRepository,
 	mediaRepo domainmedia.MediaReadRepository,
+	signalRepo domainsignal.SignalReadRepository,
 ) *GetScanByIDHandler {
 	return &GetScanByIDHandler{
-		scanRepo:  scanRepo,
-		mediaRepo: mediaRepo,
+		scanRepo:   scanRepo,
+		mediaRepo:  mediaRepo,
+		signalRepo: signalRepo,
 	}
 }
 
@@ -48,7 +52,30 @@ func (h *GetScanByIDHandler) Handle(ctx context.Context, q GetScanByIDQuery) (*d
 	if medias == nil {
 		medias = []*domainmedia.MediaView{}
 	}
-	view.Medias = medias
 
+	mediaIDs := make([]uuid.UUID, 0, len(medias))
+	for _, media := range medias {
+		if media != nil {
+			mediaIDs = append(mediaIDs, media.ID)
+		}
+	}
+
+	signalsByMedia, err := h.signalRepo.FindByMediaIDs(ctx, mediaIDs)
+	if err != nil {
+		return nil, errors.New("failed to get media signals")
+	}
+
+	for _, media := range medias {
+		if media == nil {
+			continue
+		}
+		signals := signalsByMedia[media.ID]
+		if signals == nil {
+			signals = []*domainsignal.SignalView{}
+		}
+		media.Signals = signals
+	}
+
+	view.Medias = medias
 	return view, nil
 }

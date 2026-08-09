@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"go-api/internal/domain/event"
+	"go-api/internal/domain/signal"
 
 	"github.com/google/uuid"
 )
@@ -24,7 +25,8 @@ type Media struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 
-	events []event.DomainEvent
+	Signals []signal.Signal
+	events  []event.DomainEvent
 }
 
 func NewMedia(

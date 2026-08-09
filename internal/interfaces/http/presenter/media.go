@@ -7,22 +7,28 @@ import (
 )
 
 type MediaResponse struct {
-	ID          string    `json:"id"`
-	Key         string    `json:"key"`
-	Filename    string    `json:"filename"`
-	Thumbnail   *string   `json:"thumbnail"`
-	ContentType string    `json:"contentType"`
-	Status      string    `json:"status"`
-	Statuses    []string  `json:"statuses"`
-	Size        int64     `json:"size"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID          string           `json:"id"`
+	Key         string           `json:"key"`
+	Filename    string           `json:"filename"`
+	Thumbnail   *string          `json:"thumbnail"`
+	ContentType string           `json:"contentType"`
+	Status      string           `json:"status"`
+	Statuses    []string         `json:"statuses"`
+	Signals     []SignalResponse `json:"signals"`
+	Size        int64            `json:"size"`
+	CreatedAt   time.Time        `json:"createdAt"`
+	UpdatedAt   time.Time        `json:"updatedAt"`
 }
 
 func NewMediaResponse(view *domainmedia.MediaView) MediaResponse {
 	statuses := make([]string, 0, len(view.Statuses))
 	for _, status := range view.Statuses {
 		statuses = append(statuses, string(status))
+	}
+
+	signals := NewSignalResponses(view.Signals)
+	if signals == nil {
+		signals = []SignalResponse{}
 	}
 
 	return MediaResponse{
@@ -33,6 +39,7 @@ func NewMediaResponse(view *domainmedia.MediaView) MediaResponse {
 		ContentType: view.ContentType,
 		Status:      string(view.Status),
 		Statuses:    statuses,
+		Signals:     signals,
 		Size:        view.Size,
 		CreatedAt:   view.CreatedAt,
 		UpdatedAt:   view.UpdatedAt,

@@ -45,6 +45,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	scanReadRepo := read.NewScanReadRepository(db)
 	mediaWriteRepo := write.NewMediaWriteRepository(db)
 	mediaReadRepo := read.NewMediaReadRepository(db)
+	signalReadRepo := read.NewSignalReadRepository(db)
 	outboxRepo := outbox.NewRepository(db)
 
 	minioStorage, err := storage.NewMinIOStorage(env)
@@ -59,8 +60,8 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	validateTokenHandler := authcmd.NewValidateTokenHandler(jwksProvider, userWriteRepo)
 	fetchUserHandler := identitycmd.NewFetchUserHandler(infraClerk.NewUserGateway(env.ClerkSecretKey))
 	getUserByIDHandler := queryuser.NewGetUserByIDHandler(userReadRepo)
-	listScansHandler := queryscan.NewListScansHandler(scanReadRepo, mediaReadRepo)
-	getScanByIDHandler := queryscan.NewGetScanByIDHandler(scanReadRepo, mediaReadRepo)
+	listScansHandler := queryscan.NewListScansHandler(scanReadRepo, mediaReadRepo, signalReadRepo)
+	getScanByIDHandler := queryscan.NewGetScanByIDHandler(scanReadRepo, mediaReadRepo, signalReadRepo)
 	presignUploadHandler := scancmd.NewPresignUploadHandler(
 		scanWriteRepo,
 		mediaWriteRepo,
