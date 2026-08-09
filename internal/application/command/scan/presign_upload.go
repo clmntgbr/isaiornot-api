@@ -61,12 +61,12 @@ func (h *PresignUploadHandler) Handle(ctx context.Context, cmd PresignUploadComm
 		contentType = domainmedia.ContentTypeFromKey(input.Filename, "")
 	}
 
-	fileKey := domainmedia.NewFileKey(input.Filename)
-	objectKey := domainmedia.NewObjectKey(cmd.UserID, fileKey)
 	filename := filepath.Base(input.Filename)
+	fileKey := domainmedia.NewFileKey(input.Filename)
 
 	scanEntity := domainscan.NewScan(cmd.UserID)
 	mediaEntity := domainmedia.NewMedia(scanEntity.ID, fileKey, filename, contentType, 0)
+	objectKey := domainmedia.NewObjectKey(cmd.UserID, scanEntity.ID, fileKey)
 
 	err := h.scanRepo.WithTransaction(ctx, func(txCtx context.Context) error {
 		if err := h.scanRepo.Save(txCtx, scanEntity); err != nil {

@@ -12,10 +12,12 @@ import (
 	queryuser "go-api/internal/application/query/user"
 	infraClerk "go-api/internal/infrastructure/clerk"
 	"go-api/internal/infrastructure/config"
+	"go-api/internal/infrastructure/imaging"
 	"go-api/internal/infrastructure/persistence/outbox"
 	"go-api/internal/infrastructure/persistence/read"
 	"go-api/internal/infrastructure/persistence/write"
 	"go-api/internal/infrastructure/storage"
+	"go-api/internal/infrastructure/video"
 	httphandler "go-api/internal/interfaces/http/handler"
 	"go-api/internal/interfaces/http/middleware"
 
@@ -72,6 +74,9 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		scanWriteRepo,
 		mediaWriteRepo,
 		outboxRepo,
+		minioStorage,
+		video.NewFrameExtractor(),
+		imaging.NewThumbnailer(),
 	)
 
 	return &Container{

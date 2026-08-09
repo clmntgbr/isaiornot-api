@@ -88,20 +88,22 @@ func NewFileKey(filename string) string {
 	return uuid.NewString() + ext
 }
 
-func NewObjectKey(userID uuid.UUID, fileKey string) string {
-	return userID.String() + "/" + fileKey
+// NewObjectKey builds: {userID}/{scanID}/{fileKey}
+func NewObjectKey(userID, scanID uuid.UUID, fileKey string) string {
+	return userID.String() + "/" + scanID.String() + "/" + fileKey
 }
 
-func NewObjectKeyFromFilename(userID uuid.UUID, filename string) string {
-	return NewObjectKey(userID, NewFileKey(filename))
+func NewObjectKeyFromFilename(userID, scanID uuid.UUID, filename string) string {
+	return NewObjectKey(userID, scanID, NewFileKey(filename))
 }
 
 func NewThumbnailFileKey(mediaID uuid.UUID) string {
-	return mediaID.String() + ".jpg"
+	return "thumbnails/" + mediaID.String() + ".jpg"
 }
 
-func NewThumbnailObjectKey(userID uuid.UUID, mediaID uuid.UUID) string {
-	return NewObjectKey(userID, NewThumbnailFileKey(mediaID))
+// NewThumbnailObjectKey builds: {userID}/{scanID}/thumbnails/{mediaID}.jpg
+func NewThumbnailObjectKey(userID, scanID, mediaID uuid.UUID) string {
+	return NewObjectKey(userID, scanID, NewThumbnailFileKey(mediaID))
 }
 
 func DecodeObjectKey(key string) (string, error) {
@@ -127,16 +129,31 @@ func UserIDFromKey(encodedKey string) (uuid.UUID, error) {
 	return uuid.Parse(userID)
 }
 
+func ScanIDFromKey(encodedKey string) (uuid.UUID, error) {
+	key, err := DecodeObjectKey(encodedKey)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	parts := strings.SplitN(key, "/", 3)
+	if len(parts) < 3 {
+		return uuid.Nil, fmt.Errorf("invalid media key: %q", key)
+	}
+
+	return uuid.Parse(parts[1])
+}
+
+// FileKeyFromObjectKey returns the path relative to {userID}/{scanID}/.
 func FileKeyFromObjectKey(encodedKey string) (string, error) {
 	key, err := DecodeObjectKey(encodedKey)
 	if err != nil {
 		return "", err
 	}
 
-	_, fileKey, ok := strings.Cut(key, "/")
-	if !ok {
+	parts := strings.SplitN(key, "/", 3)
+	if len(parts) < 3 || parts[2] == "" {
 		return "", fmt.Errorf("invalid media key: %q", key)
 	}
 
-	return fileKey, nil
+	return parts[2], nil
 }

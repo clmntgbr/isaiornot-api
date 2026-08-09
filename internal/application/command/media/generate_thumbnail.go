@@ -71,7 +71,7 @@ func (h *GenerateThumbnailHandler) Handle(ctx context.Context, cmd GenerateThumb
 		return ErrThumbnailScanNotFound
 	}
 
-	original, err := h.storage.Get(ctx, domainmedia.NewObjectKey(scanEntity.UserID, mediaEntity.Key))
+	original, err := h.storage.Get(ctx, domainmedia.NewObjectKey(scanEntity.UserID, mediaEntity.ScanID, mediaEntity.Key))
 	if err != nil {
 		return errors.New("failed to fetch original")
 	}
@@ -85,7 +85,7 @@ func (h *GenerateThumbnailHandler) Handle(ctx context.Context, cmd GenerateThumb
 	thumbKey := domainmedia.NewThumbnailFileKey(mediaEntity.ID)
 	if err := h.storage.PutThumbnail(
 		ctx,
-		domainmedia.NewThumbnailObjectKey(scanEntity.UserID, mediaEntity.ID),
+		domainmedia.NewThumbnailObjectKey(scanEntity.UserID, mediaEntity.ScanID, mediaEntity.ID),
 		bytes.NewReader(thumbBytes),
 		int64(len(thumbBytes)),
 		"image/jpeg",

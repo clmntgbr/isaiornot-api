@@ -119,6 +119,16 @@ func (m *Media) RecordUpload(contentType string, size int64) {
 	m.MarkUploaded()
 }
 
+// ReplaceWithFrame rewrites the media to point at an extracted video frame image.
+func (m *Media) ReplaceWithFrame(key, filename string, size int64) {
+	m.Key = key
+	m.Filename = filename
+	m.ContentType = "image/jpeg"
+	m.Size = size
+	m.UpdatedAt = time.Now().UTC()
+	m.recordUpdated()
+}
+
 func (m *Media) MarkCompleted() {
 	if m.Status == StatusCompleted {
 		return
