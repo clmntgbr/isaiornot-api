@@ -6,6 +6,7 @@ import (
 	authcmd "go-api/internal/application/command/auth"
 	identitycmd "go-api/internal/application/command/identity"
 	usercmd "go-api/internal/application/command/user"
+	queryscan "go-api/internal/application/query/scan"
 	queryuser "go-api/internal/application/query/user"
 	infraClerk "go-api/internal/infrastructure/clerk"
 	"go-api/internal/infrastructure/config"
@@ -23,6 +24,7 @@ type Container struct {
 	UserWebhookMiddleware  *middleware.UserWebhookMiddleware
 	UserWebhookHandler     *httphandler.UserWebhookHandler
 	UserHandler            *httphandler.UserHandler
+	ScanHandler            *httphandler.ScanHandler
 }
 
 func NewContainer(db *gorm.DB, env *config.Config) *Container {
@@ -33,6 +35,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 
 	userWriteRepo := write.NewUserWriteRepository(db)
 	userReadRepo := read.NewUserReadRepository(db)
+	scanReadRepo := read.NewScanReadRepository(db)
 	outboxRepo := outbox.NewRepository(db)
 
 	createUserHandler := usercmd.NewCreateUserHandler(userWriteRepo, outboxRepo)
@@ -42,6 +45,8 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	validateTokenHandler := authcmd.NewValidateTokenHandler(jwksProvider, userWriteRepo)
 	fetchUserHandler := identitycmd.NewFetchUserHandler(infraClerk.NewUserGateway(env.ClerkSecretKey))
 	getUserByIDHandler := queryuser.NewGetUserByIDHandler(userReadRepo)
+	listScansHandler := queryscan.NewListScansHandler(scanReadRepo)
+	getScanByIDHandler := queryscan.NewGetScanByIDHandler(scanReadRepo)
 
 	return &Container{
 		AuthenticateMiddleware: middleware.NewAuthenticateMiddleware(
@@ -57,5 +62,6 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 			deleteUserByExternalIDHandler,
 		),
 		UserHandler: httphandler.NewUserHandler(getUserByIDHandler),
+		ScanHandler: httphandler.NewScanHandler(listScansHandler, getScanByIDHandler),
 	}
 }

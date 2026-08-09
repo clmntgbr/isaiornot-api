@@ -28,10 +28,17 @@ func setupAPIRoutes(app *fiber.App, container *di.Container) {
 	api := app.Group("/api")
 
 	setupUserRoutes(api, container)
+	setupScanRoutes(api, container)
 }
 
 func setupUserRoutes(api fiber.Router, container *di.Container) {
-	user := api.Group("/users")
-	user.Use(container.AuthenticateMiddleware.Protected())
-	user.Get("/me", container.UserHandler.GetUser)
+	users := api.Group("/users")
+	users.Use(container.AuthenticateMiddleware.Protected())
+	users.Get("/me", container.UserHandler.GetUser)
+}
+
+func setupScanRoutes(api fiber.Router, container *di.Container) {
+	auth := container.AuthenticateMiddleware.Protected()
+	api.Get("/scans", auth, container.ScanHandler.GetScans)
+	api.Get("/scan/:id", auth, container.ScanHandler.GetScan)
 }

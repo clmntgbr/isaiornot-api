@@ -14,6 +14,7 @@ import (
 func Models() []any {
 	return []any{
 		&write.UserModel{},
+		&write.ScanModel{},
 		&outbox.OutboxEvent{},
 		&processed.ProcessedEvent{},
 	}
