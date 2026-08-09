@@ -41,6 +41,11 @@ type Config struct {
 	StorageThumbnailBucket  string
 	StorageUsePathStyle     bool
 	MinIOWebhookSecret      string
+
+	CentrifugoURL         string
+	CentrifugoAPIKey      string
+	CentrifugoTokenSecret string
+	CentrifugoPublicWSURL string
 }
 
 func Load() *Config {
@@ -64,7 +69,7 @@ func Load() *Config {
 		RabbitMQURL:          getEnv("RABBITMQ_URL"),
 		RabbitMQExchange:     getEnvOrDefault("RABBITMQ_EXCHANGE", "domain.events"),
 		RabbitMQQueue:        getEnvOrDefault("RABBITMQ_QUEUE", "domain.events"),
-		RabbitMQRoutingKey:   getEnvOrDefault("RABBITMQ_ROUTING_KEY", "user.#,media.#"),
+		RabbitMQRoutingKey:   getEnvOrDefault("RABBITMQ_ROUTING_KEY", "user.#,media.#,scan.#"),
 		RabbitMQRetryTTLMS:   getEnvIntOrDefault("RABBITMQ_RETRY_TTL_MS", 30000),
 		WorkerMaxRetries:     getEnvIntOrDefault("WORKER_MAX_RETRIES", 3),
 		OutboxPollInterval:   getEnvDuration("OUTBOX_POLL_INTERVAL", 2*time.Second),
@@ -79,6 +84,11 @@ func Load() *Config {
 		StorageThumbnailBucket:  getEnvOrDefault("STORAGE_THUMBNAIL_BUCKET", "thumbnails"),
 		StorageUsePathStyle:     getEnvBoolOrDefault("STORAGE_USE_PATH_STYLE", true),
 		MinIOWebhookSecret:      getEnvOrDefault("MINIO_WEBHOOK_SECRET", ""),
+
+		CentrifugoURL:         getEnv("CENTRIFUGO_URL"),
+		CentrifugoAPIKey:      getEnv("CENTRIFUGO_API_KEY"),
+		CentrifugoTokenSecret: getEnv("CENTRIFUGO_TOKEN_SECRET"),
+		CentrifugoPublicWSURL: getEnvOrDefault("CENTRIFUGO_PUBLIC_WS_URL", ""),
 	}
 }
 
