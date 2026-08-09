@@ -62,10 +62,10 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	)
 
 	reg := registry.NewHandlerRegistry()
-	reg.Register(domainmedia.EventTypeMediaUploaded, dedup.With(
+	reg.Register(domainmedia.EventTypeMediaAnalyzeMetadata, dedup.With(
 		dedupRepo,
-		"analyze_metadata_on_media_uploaded",
-		eventmedia.NewAnalyzeMetadataOnUploadedHandler(analyzeMetadataHandler).Handle,
+		"analyze_metadata_on_requested",
+		eventmedia.NewAnalyzeMetadataOnRequestedHandler(analyzeMetadataHandler).Handle,
 	))
 
 	consumer := rabbitmq.NewConsumer(conn, reg, env.WorkerConcurrency, env.WorkerMaxRetries)

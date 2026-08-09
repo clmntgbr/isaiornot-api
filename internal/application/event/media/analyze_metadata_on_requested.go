@@ -13,26 +13,22 @@ import (
 	"github.com/google/uuid"
 )
 
-type AnalyzeMetadataOnUploadedHandler struct {
+type AnalyzeMetadataOnRequestedHandler struct {
 	analyzeMetadataHandler *mediacmd.AnalyzeMetadataHandler
 }
 
-func NewAnalyzeMetadataOnUploadedHandler(
+func NewAnalyzeMetadataOnRequestedHandler(
 	analyzeMetadataHandler *mediacmd.AnalyzeMetadataHandler,
-) *AnalyzeMetadataOnUploadedHandler {
-	return &AnalyzeMetadataOnUploadedHandler{
+) *AnalyzeMetadataOnRequestedHandler {
+	return &AnalyzeMetadataOnRequestedHandler{
 		analyzeMetadataHandler: analyzeMetadataHandler,
 	}
 }
 
-func (h *AnalyzeMetadataOnUploadedHandler) Handle(ctx context.Context, payload []byte) error {
-	var evt domainmedia.MediaUploaded
+func (h *AnalyzeMetadataOnRequestedHandler) Handle(ctx context.Context, payload []byte) error {
+	var evt domainmedia.MediaAnalyzeRequested
 	if err := json.Unmarshal(payload, &evt); err != nil {
 		return messaging.NonRetryable(err)
-	}
-
-	if !domainmedia.IsImageContentType(domainmedia.ContentTypeFromKey(evt.Key, evt.ContentType)) {
-		return nil
 	}
 
 	mediaID, err := uuid.Parse(evt.MediaID)
@@ -56,7 +52,7 @@ func (h *AnalyzeMetadataOnUploadedHandler) Handle(ctx context.Context, payload [
 
 	log.Printf(
 		"event handled %s eventId=%s mediaId=%s action=analyze_metadata",
-		domainmedia.EventTypeMediaUploaded,
+		domainmedia.EventTypeMediaAnalyzeMetadata,
 		evt.ID,
 		evt.MediaID,
 	)

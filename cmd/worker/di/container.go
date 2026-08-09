@@ -67,6 +67,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		minioStorage,
 		imaging.NewThumbnailer(),
 	)
+	enqueueAnalyze := eventmedia.NewEnqueueAnalyzeHandler(publisher)
 
 	publishUserRealtime := eventuser.NewPublishRealtimeHandler(realtimePublisher)
 	publishScanRealtime := eventscan.NewPublishRealtimeHandler(realtimePublisher)
@@ -146,6 +147,11 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	))
 	reg.Register(domainmedia.EventTypeMediaUploaded, dedup.With(
 		dedupRepo,
+		"enqueue_metadata_on_media_uploaded",
+		enqueueAnalyze.OnMediaUploaded,
+	))
+	reg.Register(domainmedia.EventTypeMediaUploaded, dedup.With(
+		dedupRepo,
 		"publish_media_uploaded_realtime",
 		publishMediaRealtime.OnUploaded,
 	))
@@ -158,6 +164,13 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		dedupRepo,
 		"publish_media_failed_realtime",
 		publishMediaRealtime.OnFailed,
+	))
+
+	// Pipeline orchestration: stage done → next analyze command.
+	reg.Register(domainmedia.EventTypeMediaAnalyzeMetadataDone, dedup.With(
+		dedupRepo,
+		"enqueue_heuristics_on_metadata_done",
+		enqueueAnalyze.OnMetadataDone,
 	))
 
 	consumer := rabbitmq.NewConsumer(conn, reg, env.WorkerConcurrency, env.WorkerMaxRetries)

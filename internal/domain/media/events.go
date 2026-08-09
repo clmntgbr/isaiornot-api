@@ -9,7 +9,11 @@ const (
 	EventTypeMediaCompleted = "media.completed.v1"
 	EventTypeMediaFailed    = "media.failed.v1"
 
-	// Pipeline stage events (dedicated analyze workers).
+	// Pipeline commands (main worker → analyze workers).
+	EventTypeMediaAnalyzeMetadata   = "media.analyze.metadata.v1"
+	EventTypeMediaAnalyzeHeuristics = "media.analyze.heuristics.v1"
+
+	// Pipeline stage results (analyze workers → main worker).
 	EventTypeMediaAnalyzeMetadataDone     = "media.analyze.metadata.done.v1"
 	EventTypeMediaAnalyzeMetadataFailed   = "media.analyze.metadata.failed.v1"
 	EventTypeMediaAnalyzeHeuristicsDone   = "media.analyze.heuristics.done.v1"
@@ -96,6 +100,15 @@ func (e MediaFailed) EventID() string       { return e.ID }
 func (e MediaFailed) EventType() string     { return EventTypeMediaFailed }
 func (e MediaFailed) AggregateID() string   { return e.MediaID }
 func (e MediaFailed) OccurredAt() time.Time { return e.Timestamp }
+
+// MediaAnalyzeRequested is published by the main worker to dispatch a pipeline stage.
+type MediaAnalyzeRequested struct {
+	ID        string    `json:"eventId"`
+	MediaID   string    `json:"mediaId"`
+	ScanID    string    `json:"scanId"`
+	Stage     string    `json:"stage"`
+	Timestamp time.Time `json:"timestamp"`
+}
 
 type MediaAnalyzeMetadataDone struct {
 	ID        string    `json:"eventId"`

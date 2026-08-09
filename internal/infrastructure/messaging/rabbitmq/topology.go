@@ -47,7 +47,26 @@ func (t Topology) declare(ch *amqp.Channel) error {
 	if _, err := ch.QueueDeclare(t.Queue, true, false, false, false, mainArgs); err != nil {
 		return fmt.Errorf("declare queue %s (delete existing queue if args changed): %w", t.Queue, err)
 	}
-	for _, routingKey := range splitRoutingKeys(t.RoutingKey) {
+	desiredKeys := splitRoutingKeys(t.RoutingKey)
+	desired := make(map[string]struct{}, len(desiredKeys))
+	for _, routingKey := range desiredKeys {
+		desired[routingKey] = struct{}{}
+	}
+	// Drop superseded bindings from earlier pipeline wiring (idempotent).
+	for _, stale := range []string{
+		"media.#",
+		"media.uploaded.v1",
+		"media.analyze.metadata.done.v1",
+		"media.analyze.heuristics.done.v1",
+		"media.analyze.metadata.v1",
+		"media.analyze.heuristics.v1",
+	} {
+		if _, ok := desired[stale]; ok {
+			continue
+		}
+		_ = ch.QueueUnbind(t.Queue, stale, t.Exchange, nil)
+	}
+	for _, routingKey := range desiredKeys {
 		if err := ch.QueueBind(t.Queue, routingKey, t.Exchange, false, nil); err != nil {
 			return fmt.Errorf("bind queue %s key %s: %w", t.Queue, routingKey, err)
 		}

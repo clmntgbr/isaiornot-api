@@ -75,17 +75,22 @@ func Load() *Config {
 		RabbitMQURL:          getEnv("RABBITMQ_URL"),
 		RabbitMQExchange:     getEnvOrDefault("RABBITMQ_EXCHANGE", "domain.events"),
 		RabbitMQQueue:        getEnvOrDefault("RABBITMQ_QUEUE", "domain.events"),
-		RabbitMQRoutingKey:   getEnvOrDefault("RABBITMQ_ROUTING_KEY", "user.#,media.#,scan.#"),
-		RabbitMQRetryTTLMS:   getEnvIntOrDefault("RABBITMQ_RETRY_TTL_MS", 30000),
-		WorkerMaxRetries:     getEnvIntOrDefault("WORKER_MAX_RETRIES", 3),
-		OutboxPollInterval:   getEnvDuration("OUTBOX_POLL_INTERVAL", 2*time.Second),
-		WorkerConcurrency:    getEnvIntOrDefault("WORKER_CONCURRENCY", 4),
+		// Main worker orchestrates the pipeline: domain events + stage *.done.
+		// Analyze workers bind only their command routing keys.
+		RabbitMQRoutingKey: getEnvOrDefault(
+			"RABBITMQ_ROUTING_KEY",
+			"user.#,media.*.v1,scan.#,media.analyze.metadata.done.v1,media.analyze.heuristics.done.v1",
+		),
+		RabbitMQRetryTTLMS: getEnvIntOrDefault("RABBITMQ_RETRY_TTL_MS", 30000),
+		WorkerMaxRetries:   getEnvIntOrDefault("WORKER_MAX_RETRIES", 3),
+		OutboxPollInterval: getEnvDuration("OUTBOX_POLL_INTERVAL", 2*time.Second),
+		WorkerConcurrency:  getEnvIntOrDefault("WORKER_CONCURRENCY", 4),
 
 		MetadataAnalyzeQueue:      getEnvOrDefault("METADATA_ANALYZE_QUEUE", "metadata.analyze"),
-		MetadataAnalyzeRoutingKey: getEnvOrDefault("METADATA_ANALYZE_ROUTING_KEY", "media.uploaded.v1"),
+		MetadataAnalyzeRoutingKey: getEnvOrDefault("METADATA_ANALYZE_ROUTING_KEY", "media.analyze.metadata.v1"),
 
 		HeuristicsAnalyzeQueue:      getEnvOrDefault("HEURISTICS_ANALYZE_QUEUE", "heuristics.analyze"),
-		HeuristicsAnalyzeRoutingKey: getEnvOrDefault("HEURISTICS_ANALYZE_ROUTING_KEY", "media.analyze.metadata.done.v1"),
+		HeuristicsAnalyzeRoutingKey: getEnvOrDefault("HEURISTICS_ANALYZE_ROUTING_KEY", "media.analyze.heuristics.v1"),
 
 		StorageEndpoint:         getEnv("STORAGE_ENDPOINT"),
 		StorageInternalEndpoint: getEnvOrDefault("STORAGE_INTERNAL_ENDPOINT", ""),

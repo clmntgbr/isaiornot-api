@@ -13,20 +13,20 @@ import (
 	"github.com/google/uuid"
 )
 
-type AnalyzeHeuristicsOnMetadataDoneHandler struct {
+type AnalyzeHeuristicsOnRequestedHandler struct {
 	analyzeHeuristicsHandler *mediacmd.AnalyzeHeuristicsHandler
 }
 
-func NewAnalyzeHeuristicsOnMetadataDoneHandler(
+func NewAnalyzeHeuristicsOnRequestedHandler(
 	analyzeHeuristicsHandler *mediacmd.AnalyzeHeuristicsHandler,
-) *AnalyzeHeuristicsOnMetadataDoneHandler {
-	return &AnalyzeHeuristicsOnMetadataDoneHandler{
+) *AnalyzeHeuristicsOnRequestedHandler {
+	return &AnalyzeHeuristicsOnRequestedHandler{
 		analyzeHeuristicsHandler: analyzeHeuristicsHandler,
 	}
 }
 
-func (h *AnalyzeHeuristicsOnMetadataDoneHandler) Handle(ctx context.Context, payload []byte) error {
-	var evt domainmedia.MediaAnalyzeMetadataDone
+func (h *AnalyzeHeuristicsOnRequestedHandler) Handle(ctx context.Context, payload []byte) error {
+	var evt domainmedia.MediaAnalyzeRequested
 	if err := json.Unmarshal(payload, &evt); err != nil {
 		return messaging.NonRetryable(err)
 	}
@@ -52,7 +52,7 @@ func (h *AnalyzeHeuristicsOnMetadataDoneHandler) Handle(ctx context.Context, pay
 
 	log.Printf(
 		"event handled %s eventId=%s mediaId=%s action=analyze_heuristics",
-		domainmedia.EventTypeMediaAnalyzeMetadataDone,
+		domainmedia.EventTypeMediaAnalyzeHeuristics,
 		evt.ID,
 		evt.MediaID,
 	)
