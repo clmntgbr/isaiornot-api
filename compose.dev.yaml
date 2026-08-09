@@ -59,6 +59,50 @@ services:
       - api
     restart: unless-stopped
 
+  metadata:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: metadata
+    command: ["go", "run", "./cmd/metadata"]
+    volumes:
+      - .:/app
+      - go-modules:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    env_file:
+      - .env
+    depends_on:
+      database:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - api
+    restart: unless-stopped
+
+  heuristic:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: heuristic
+    command: ["go", "run", "./cmd/heuristic"]
+    volumes:
+      - .:/app
+      - go-modules:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    env_file:
+      - .env
+    depends_on:
+      database:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - api
+    restart: unless-stopped
+
   database:
     container_name: datastore
     image: postgres:${POSTGRES_VERSION:-16}-alpine

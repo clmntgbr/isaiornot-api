@@ -47,6 +47,18 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -a -installsuffix cgo \
     -ldflags="-w -s" \
+    -o metadata \
+    ./cmd/metadata
+
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -a -installsuffix cgo \
+    -ldflags="-w -s" \
+    -o heuristic \
+    ./cmd/heuristic
+
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -a -installsuffix cgo \
+    -ldflags="-w -s" \
     -o cli \
     ./cmd/cli
 
@@ -65,6 +77,8 @@ WORKDIR /home/appuser
 
 COPY --from=builder --chown=appuser:appuser /app/api .
 COPY --from=builder --chown=appuser:appuser /app/worker .
+COPY --from=builder --chown=appuser:appuser /app/metadata .
+COPY --from=builder --chown=appuser:appuser /app/heuristic .
 COPY --from=builder --chown=appuser:appuser /app/cli .
 
 USER appuser

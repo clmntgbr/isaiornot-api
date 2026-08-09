@@ -18,6 +18,7 @@ type MediaModel struct {
 	Thumbnail   string       `gorm:"column:thumbnail"`
 	ContentType string       `gorm:"column:content_type"`
 	Size        int64        `gorm:"column:size"`
+	InsightID   *uuid.UUID   `gorm:"column:insight_id"`
 	Status      string       `gorm:"column:status"`
 	Statuses    dbtype.JSONB `gorm:"column:statuses"`
 	CreatedAt   time.Time    `gorm:"column:created_at"`

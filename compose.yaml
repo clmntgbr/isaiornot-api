@@ -22,3 +22,25 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+
+  metadata:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: metadata
+    command: ["./metadata"]
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  heuristic:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: heuristic
+    command: ["./heuristic"]
+    env_file:
+      - .env
+    restart: unless-stopped

@@ -32,6 +32,12 @@ type Config struct {
 	OutboxPollInterval   time.Duration
 	WorkerConcurrency    int
 
+	MetadataAnalyzeQueue      string
+	MetadataAnalyzeRoutingKey string
+
+	HeuristicsAnalyzeQueue      string
+	HeuristicsAnalyzeRoutingKey string
+
 	StorageEndpoint         string
 	StorageInternalEndpoint string
 	StorageRegion           string
@@ -74,6 +80,12 @@ func Load() *Config {
 		WorkerMaxRetries:     getEnvIntOrDefault("WORKER_MAX_RETRIES", 3),
 		OutboxPollInterval:   getEnvDuration("OUTBOX_POLL_INTERVAL", 2*time.Second),
 		WorkerConcurrency:    getEnvIntOrDefault("WORKER_CONCURRENCY", 4),
+
+		MetadataAnalyzeQueue:      getEnvOrDefault("METADATA_ANALYZE_QUEUE", "metadata.analyze"),
+		MetadataAnalyzeRoutingKey: getEnvOrDefault("METADATA_ANALYZE_ROUTING_KEY", "media.uploaded.v1"),
+
+		HeuristicsAnalyzeQueue:      getEnvOrDefault("HEURISTICS_ANALYZE_QUEUE", "heuristics.analyze"),
+		HeuristicsAnalyzeRoutingKey: getEnvOrDefault("HEURISTICS_ANALYZE_ROUTING_KEY", "media.analyze.metadata.done.v1"),
 
 		StorageEndpoint:         getEnv("STORAGE_ENDPOINT"),
 		StorageInternalEndpoint: getEnvOrDefault("STORAGE_INTERNAL_ENDPOINT", ""),

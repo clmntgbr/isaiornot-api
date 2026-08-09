@@ -8,6 +8,15 @@ const (
 	EventTypeMediaUploaded  = "media.uploaded.v1"
 	EventTypeMediaCompleted = "media.completed.v1"
 	EventTypeMediaFailed    = "media.failed.v1"
+
+	// Pipeline stage events (dedicated analyze workers).
+	EventTypeMediaAnalyzeMetadataDone     = "media.analyze.metadata.done.v1"
+	EventTypeMediaAnalyzeMetadataFailed   = "media.analyze.metadata.failed.v1"
+	EventTypeMediaAnalyzeHeuristicsDone   = "media.analyze.heuristics.done.v1"
+	EventTypeMediaAnalyzeHeuristicsFailed = "media.analyze.heuristics.failed.v1"
+
+	StageMetadata   = "metadata"
+	StageHeuristics = "heuristics"
 )
 
 type MediaCreated struct {
@@ -87,3 +96,59 @@ func (e MediaFailed) EventID() string       { return e.ID }
 func (e MediaFailed) EventType() string     { return EventTypeMediaFailed }
 func (e MediaFailed) AggregateID() string   { return e.MediaID }
 func (e MediaFailed) OccurredAt() time.Time { return e.Timestamp }
+
+type MediaAnalyzeMetadataDone struct {
+	ID        string    `json:"eventId"`
+	MediaID   string    `json:"mediaId"`
+	ScanID    string    `json:"scanId"`
+	Stage     string    `json:"stage"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+func (e MediaAnalyzeMetadataDone) EventID() string       { return e.ID }
+func (e MediaAnalyzeMetadataDone) EventType() string     { return EventTypeMediaAnalyzeMetadataDone }
+func (e MediaAnalyzeMetadataDone) AggregateID() string   { return e.MediaID }
+func (e MediaAnalyzeMetadataDone) OccurredAt() time.Time { return e.Timestamp }
+
+type MediaAnalyzeMetadataFailed struct {
+	ID        string    `json:"eventId"`
+	MediaID   string    `json:"mediaId"`
+	ScanID    string    `json:"scanId"`
+	Stage     string    `json:"stage"`
+	Error     string    `json:"error"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+func (e MediaAnalyzeMetadataFailed) EventID() string       { return e.ID }
+func (e MediaAnalyzeMetadataFailed) EventType() string     { return EventTypeMediaAnalyzeMetadataFailed }
+func (e MediaAnalyzeMetadataFailed) AggregateID() string   { return e.MediaID }
+func (e MediaAnalyzeMetadataFailed) OccurredAt() time.Time { return e.Timestamp }
+
+type MediaAnalyzeHeuristicsDone struct {
+	ID        string    `json:"eventId"`
+	MediaID   string    `json:"mediaId"`
+	ScanID    string    `json:"scanId"`
+	Stage     string    `json:"stage"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+func (e MediaAnalyzeHeuristicsDone) EventID() string       { return e.ID }
+func (e MediaAnalyzeHeuristicsDone) EventType() string     { return EventTypeMediaAnalyzeHeuristicsDone }
+func (e MediaAnalyzeHeuristicsDone) AggregateID() string   { return e.MediaID }
+func (e MediaAnalyzeHeuristicsDone) OccurredAt() time.Time { return e.Timestamp }
+
+type MediaAnalyzeHeuristicsFailed struct {
+	ID        string    `json:"eventId"`
+	MediaID   string    `json:"mediaId"`
+	ScanID    string    `json:"scanId"`
+	Stage     string    `json:"stage"`
+	Error     string    `json:"error"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+func (e MediaAnalyzeHeuristicsFailed) EventID() string { return e.ID }
+func (e MediaAnalyzeHeuristicsFailed) EventType() string {
+	return EventTypeMediaAnalyzeHeuristicsFailed
+}
+func (e MediaAnalyzeHeuristicsFailed) AggregateID() string   { return e.MediaID }
+func (e MediaAnalyzeHeuristicsFailed) OccurredAt() time.Time { return e.Timestamp }

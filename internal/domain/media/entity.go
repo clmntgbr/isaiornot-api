@@ -18,6 +18,7 @@ type Media struct {
 	Thumbnail   string
 	ContentType string
 	Size        int64
+	InsightID   *uuid.UUID
 
 	Status   Status
 	Statuses []Status
@@ -75,6 +76,13 @@ func (m *Media) recordEvent(e event.DomainEvent) {
 
 func (m *Media) SetThumbnail(thumbnail string) {
 	m.Thumbnail = thumbnail
+	m.UpdatedAt = time.Now().UTC()
+	m.recordUpdated()
+}
+
+func (m *Media) SetInsightID(insightID uuid.UUID) {
+	id := insightID
+	m.InsightID = &id
 	m.UpdatedAt = time.Now().UTC()
 	m.recordUpdated()
 }
