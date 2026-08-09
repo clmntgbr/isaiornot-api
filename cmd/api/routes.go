@@ -34,6 +34,12 @@ func setupAPIRoutes(app *fiber.App, container *di.Container) {
 
 	setupUserRoutes(api, container)
 	setupScanRoutes(api, container)
+	setupRealtimeRoutes(api, container)
+}
+
+func setupRealtimeRoutes(api fiber.Router, container *di.Container) {
+	auth := container.AuthenticateMiddleware.Protected()
+	api.Get("/realtime/connection", auth, container.RealtimeHandler.GetConnection)
 }
 
 func setupUserRoutes(api fiber.Router, container *di.Container) {

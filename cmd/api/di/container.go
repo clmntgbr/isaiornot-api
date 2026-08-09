@@ -30,6 +30,7 @@ type Container struct {
 	MediaUploadWebhookHandler    *httphandler.MediaUploadWebhookHandler
 	UserHandler                  *httphandler.UserHandler
 	ScanHandler                  *httphandler.ScanHandler
+	RealtimeHandler              *httphandler.RealtimeHandler
 }
 
 func NewContainer(db *gorm.DB, env *config.Config) *Container {
@@ -90,7 +91,8 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 			env.StorageBucket,
 			processUploadedMediaHandler,
 		),
-		UserHandler: httphandler.NewUserHandler(getUserByIDHandler),
-		ScanHandler: httphandler.NewScanHandler(listScansHandler, getScanByIDHandler, presignUploadHandler),
+		UserHandler:     httphandler.NewUserHandler(getUserByIDHandler),
+		ScanHandler:     httphandler.NewScanHandler(listScansHandler, getScanByIDHandler, presignUploadHandler),
+		RealtimeHandler: httphandler.NewRealtimeHandler(env),
 	}
 }
