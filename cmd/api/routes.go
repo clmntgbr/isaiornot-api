@@ -16,6 +16,11 @@ func setupRoutes(app *fiber.App, container *di.Container) {
 func setupWebhooks(app *fiber.App, container *di.Container) {
 	webhooks := app.Group("/webhooks")
 	webhooks.Post("/clerk", container.UserWebhookMiddleware.Protected(), container.UserWebhookHandler.Execute)
+	webhooks.Post(
+		"/minio/object-created",
+		container.MediaUploadWebhookMiddleware.Protected(),
+		container.MediaUploadWebhookHandler.ObjectCreated,
+	)
 }
 
 func setupHealthChecks(app *fiber.App) {
@@ -40,5 +45,6 @@ func setupUserRoutes(api fiber.Router, container *di.Container) {
 func setupScanRoutes(api fiber.Router, container *di.Container) {
 	auth := container.AuthenticateMiddleware.Protected()
 	api.Get("/scans", auth, container.ScanHandler.GetScans)
+	api.Post("/scans/presign-upload-url", auth, container.ScanHandler.PresignUpload)
 	api.Get("/scan/:id", auth, container.ScanHandler.GetScan)
 }

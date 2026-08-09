@@ -56,6 +56,19 @@ func (r *mediaReadRepository) FindByID(ctx context.Context, id uuid.UUID) (*doma
 }
 
 func (r *mediaReadRepository) FindByScanID(ctx context.Context, scanID uuid.UUID) ([]*domainmedia.MediaView, error) {
+	byScan, err := r.FindByScanIDs(ctx, []uuid.UUID{scanID})
+	if err != nil {
+		return nil, err
+	}
+	return byScan[scanID], nil
+}
+
+func (r *mediaReadRepository) FindByScanIDs(ctx context.Context, scanIDs []uuid.UUID) (map[uuid.UUID][]*domainmedia.MediaView, error) {
+	result := make(map[uuid.UUID][]*domainmedia.MediaView, len(scanIDs))
+	if len(scanIDs) == 0 {
+		return result, nil
+	}
+
 	var rows []mediaRow
 	err := r.db.WithContext(ctx).
 		Select(
@@ -63,22 +76,21 @@ func (r *mediaReadRepository) FindByScanID(ctx context.Context, scanID uuid.UUID
 			"content_type", "size", "status", "statuses",
 			"created_at", "updated_at",
 		).
-		Where("scan_id = ?", scanID).
+		Where("scan_id IN ?", scanIDs).
 		Order("created_at asc").
 		Find(&rows).Error
 	if err != nil {
 		return nil, err
 	}
 
-	views := make([]*domainmedia.MediaView, 0, len(rows))
 	for _, row := range rows {
 		view, err := toMediaView(row)
 		if err != nil {
 			return nil, err
 		}
-		views = append(views, view)
+		result[row.ScanID] = append(result[row.ScanID], view)
 	}
-	return views, nil
+	return result, nil
 }
 
 func toMediaView(row mediaRow) (*domainmedia.MediaView, error) {

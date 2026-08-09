@@ -3,9 +3,11 @@ package handler
 import (
 	"errors"
 
+	cmdscan "go-api/internal/application/command/scan"
 	queryscan "go-api/internal/application/query/scan"
 	"go-api/internal/domain/paginate"
 	httpctx "go-api/internal/interfaces/http/context"
+	"go-api/internal/interfaces/http/dto"
 	"go-api/internal/interfaces/http/presenter"
 
 	"github.com/gofiber/fiber/v3"
@@ -13,18 +15,57 @@ import (
 )
 
 type ScanHandler struct {
-	listScansHandler   *queryscan.ListScansHandler
-	getScanByIDHandler *queryscan.GetScanByIDHandler
+	listScansHandler     *queryscan.ListScansHandler
+	getScanByIDHandler   *queryscan.GetScanByIDHandler
+	presignUploadHandler *cmdscan.PresignUploadHandler
 }
 
 func NewScanHandler(
 	listScansHandler *queryscan.ListScansHandler,
 	getScanByIDHandler *queryscan.GetScanByIDHandler,
+	presignUploadHandler *cmdscan.PresignUploadHandler,
 ) *ScanHandler {
 	return &ScanHandler{
-		listScansHandler:   listScansHandler,
-		getScanByIDHandler: getScanByIDHandler,
+		listScansHandler:     listScansHandler,
+		getScanByIDHandler:   getScanByIDHandler,
+		presignUploadHandler: presignUploadHandler,
 	}
+}
+
+func (h *ScanHandler) PresignUpload(c fiber.Ctx) error {
+	user, err := httpctx.GetUser(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Unauthorized",
+		})
+	}
+
+	var req dto.PresignUploadRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid request body",
+			"errors":  err.Error(),
+		})
+	}
+
+	result, err := h.presignUploadHandler.Handle(c.Context(), cmdscan.PresignUploadCommand{
+		UserID:      user.ID,
+		Filename:    req.Filename,
+		ContentType: req.ContentType,
+	})
+	if err != nil {
+		if errors.Is(err, cmdscan.ErrUnsupportedMediaType) {
+			return c.Status(fiber.StatusUnsupportedMediaType).JSON(fiber.Map{
+				"message": "Unsupported media type",
+				"errors":  err.Error(),
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to generate upload url",
+		})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(presenter.NewPresignUploadResponse(result))
 }
 
 func (h *ScanHandler) GetScans(c fiber.Ctx) error {

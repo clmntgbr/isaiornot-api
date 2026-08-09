@@ -5,6 +5,7 @@ import "time"
 const (
 	EventTypeMediaCreated   = "media.created.v1"
 	EventTypeMediaUpdated   = "media.updated.v1"
+	EventTypeMediaUploaded  = "media.uploaded.v1"
 	EventTypeMediaCompleted = "media.completed.v1"
 	EventTypeMediaFailed    = "media.failed.v1"
 )
@@ -43,6 +44,23 @@ func (e MediaUpdated) EventID() string       { return e.ID }
 func (e MediaUpdated) EventType() string     { return EventTypeMediaUpdated }
 func (e MediaUpdated) AggregateID() string   { return e.MediaID }
 func (e MediaUpdated) OccurredAt() time.Time { return e.Timestamp }
+
+type MediaUploaded struct {
+	ID          string    `json:"eventId"`
+	MediaID     string    `json:"mediaId"`
+	ScanID      string    `json:"scanId"`
+	Key         string    `json:"key"`
+	Filename    string    `json:"filename"`
+	ContentType string    `json:"contentType"`
+	Size        int64     `json:"size"`
+	Status      string    `json:"status"`
+	Timestamp   time.Time `json:"timestamp"`
+}
+
+func (e MediaUploaded) EventID() string       { return e.ID }
+func (e MediaUploaded) EventType() string     { return EventTypeMediaUploaded }
+func (e MediaUploaded) AggregateID() string   { return e.MediaID }
+func (e MediaUploaded) OccurredAt() time.Time { return e.Timestamp }
 
 type MediaCompleted struct {
 	ID        string    `json:"eventId"`

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	domainmedia "go-api/internal/domain/media"
 	"go-api/internal/domain/paginate"
 
 	"github.com/google/uuid"
@@ -32,6 +33,7 @@ type ScanView struct {
 	Verdict    string
 	Duration   int
 	RetryCount int
+	Medias     []*domainmedia.MediaView
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }

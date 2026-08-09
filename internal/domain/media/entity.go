@@ -42,8 +42,8 @@ func NewMedia(
 		Filename:    filename,
 		ContentType: contentType,
 		Size:        size,
-		Status:      StatusUploaded,
-		Statuses:    []Status{StatusUploaded},
+		Status:      StatusProcessing,
+		Statuses:    []Status{StatusProcessing},
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -89,8 +89,32 @@ func (m *Media) MarkUploaded() {
 	if m.Status == StatusUploaded {
 		return
 	}
+	now := time.Now().UTC()
 	m.setStatus(StatusUploaded)
-	m.recordUpdated()
+	m.UpdatedAt = now
+	m.recordEvent(MediaUploaded{
+		ID:          uuid.New().String(),
+		MediaID:     m.ID.String(),
+		ScanID:      m.ScanID.String(),
+		Key:         m.Key,
+		Filename:    m.Filename,
+		ContentType: m.ContentType,
+		Size:        m.Size,
+		Status:      string(m.Status),
+		Timestamp:   now,
+	})
+}
+
+// RecordUpload updates metadata from the storage webhook and marks the media as uploaded.
+func (m *Media) RecordUpload(contentType string, size int64) {
+	m.ContentType = contentType
+	m.Size = size
+	if m.Status == StatusUploaded {
+		m.UpdatedAt = time.Now().UTC()
+		m.recordUpdated()
+		return
+	}
+	m.MarkUploaded()
 }
 
 func (m *Media) MarkCompleted() {

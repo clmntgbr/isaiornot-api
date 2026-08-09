@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"fmt"
+	"strings"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -46,8 +47,10 @@ func (t Topology) declare(ch *amqp.Channel) error {
 	if _, err := ch.QueueDeclare(t.Queue, true, false, false, false, mainArgs); err != nil {
 		return fmt.Errorf("declare queue %s (delete existing queue if args changed): %w", t.Queue, err)
 	}
-	if err := ch.QueueBind(t.Queue, t.RoutingKey, t.Exchange, false, nil); err != nil {
-		return fmt.Errorf("bind queue %s: %w", t.Queue, err)
+	for _, routingKey := range splitRoutingKeys(t.RoutingKey) {
+		if err := ch.QueueBind(t.Queue, routingKey, t.Exchange, false, nil); err != nil {
+			return fmt.Errorf("bind queue %s key %s: %w", t.Queue, routingKey, err)
+		}
 	}
 	if err := ch.QueueBind(t.Queue, "main", t.DLX, false, nil); err != nil {
 		return fmt.Errorf("bind queue %s to dlx main: %w", t.Queue, err)
@@ -73,4 +76,20 @@ func (t Topology) declare(ch *amqp.Channel) error {
 	}
 
 	return nil
+}
+
+func splitRoutingKeys(raw string) []string {
+	parts := strings.Split(raw, ",")
+	keys := make([]string, 0, len(parts))
+	for _, part := range parts {
+		key := strings.TrimSpace(part)
+		if key == "" {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	if len(keys) == 0 {
+		return []string{"#"}
+	}
+	return keys
 }

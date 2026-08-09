@@ -31,6 +31,16 @@ type Config struct {
 	WorkerMaxRetries     int
 	OutboxPollInterval   time.Duration
 	WorkerConcurrency    int
+
+	StorageEndpoint         string
+	StorageInternalEndpoint string
+	StorageRegion           string
+	StorageAccessKey        string
+	StorageSecretKey        string
+	StorageBucket           string
+	StorageThumbnailBucket  string
+	StorageUsePathStyle     bool
+	MinIOWebhookSecret      string
 }
 
 func Load() *Config {
@@ -53,12 +63,22 @@ func Load() *Config {
 		RateLimitMax:         getEnvInt("RATE_LIMIT_MAX"),
 		RabbitMQURL:          getEnv("RABBITMQ_URL"),
 		RabbitMQExchange:     getEnvOrDefault("RABBITMQ_EXCHANGE", "domain.events"),
-		RabbitMQQueue:        getEnvOrDefault("RABBITMQ_QUEUE", "user.events"),
-		RabbitMQRoutingKey:   getEnvOrDefault("RABBITMQ_ROUTING_KEY", "user.#"),
+		RabbitMQQueue:        getEnvOrDefault("RABBITMQ_QUEUE", "domain.events"),
+		RabbitMQRoutingKey:   getEnvOrDefault("RABBITMQ_ROUTING_KEY", "user.#,media.#"),
 		RabbitMQRetryTTLMS:   getEnvIntOrDefault("RABBITMQ_RETRY_TTL_MS", 30000),
 		WorkerMaxRetries:     getEnvIntOrDefault("WORKER_MAX_RETRIES", 3),
 		OutboxPollInterval:   getEnvDuration("OUTBOX_POLL_INTERVAL", 2*time.Second),
 		WorkerConcurrency:    getEnvIntOrDefault("WORKER_CONCURRENCY", 4),
+
+		StorageEndpoint:         getEnv("STORAGE_ENDPOINT"),
+		StorageInternalEndpoint: getEnvOrDefault("STORAGE_INTERNAL_ENDPOINT", ""),
+		StorageRegion:           getEnvOrDefault("STORAGE_REGION", "us-east-1"),
+		StorageAccessKey:        getEnv("STORAGE_ACCESS_KEY"),
+		StorageSecretKey:        getEnv("STORAGE_SECRET_KEY"),
+		StorageBucket:           getEnv("STORAGE_BUCKET"),
+		StorageThumbnailBucket:  getEnvOrDefault("STORAGE_THUMBNAIL_BUCKET", "thumbnails"),
+		StorageUsePathStyle:     getEnvBoolOrDefault("STORAGE_USE_PATH_STYLE", true),
+		MinIOWebhookSecret:      getEnvOrDefault("MINIO_WEBHOOK_SECRET", ""),
 	}
 }
 
@@ -84,6 +104,14 @@ func getEnvBool(key string) bool {
 		return false
 	}
 
+	return value == "true"
+}
+
+func getEnvBoolOrDefault(key string, defaultValue bool) bool {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
 	return value == "true"
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	domainmedia "go-api/internal/domain/media"
 	domainscan "go-api/internal/domain/scan"
 
 	"github.com/google/uuid"
@@ -17,20 +18,37 @@ type GetScanByIDQuery struct {
 }
 
 type GetScanByIDHandler struct {
-	readRepo domainscan.ScanReadRepository
+	scanRepo  domainscan.ScanReadRepository
+	mediaRepo domainmedia.MediaReadRepository
 }
 
-func NewGetScanByIDHandler(readRepo domainscan.ScanReadRepository) *GetScanByIDHandler {
-	return &GetScanByIDHandler{readRepo: readRepo}
+func NewGetScanByIDHandler(
+	scanRepo domainscan.ScanReadRepository,
+	mediaRepo domainmedia.MediaReadRepository,
+) *GetScanByIDHandler {
+	return &GetScanByIDHandler{
+		scanRepo:  scanRepo,
+		mediaRepo: mediaRepo,
+	}
 }
 
 func (h *GetScanByIDHandler) Handle(ctx context.Context, q GetScanByIDQuery) (*domainscan.ScanView, error) {
-	view, err := h.readRepo.FindByID(ctx, q.ScanID)
+	view, err := h.scanRepo.FindByID(ctx, q.ScanID)
 	if err != nil {
 		return nil, errors.New("failed to get scan")
 	}
 	if view == nil || view.UserID != q.UserID {
 		return nil, ErrScanNotFound
 	}
+
+	medias, err := h.mediaRepo.FindByScanID(ctx, view.ID)
+	if err != nil {
+		return nil, errors.New("failed to get scan medias")
+	}
+	if medias == nil {
+		medias = []*domainmedia.MediaView{}
+	}
+	view.Medias = medias
+
 	return view, nil
 }

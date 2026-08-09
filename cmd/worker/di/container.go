@@ -3,15 +3,21 @@ package di
 import (
 	"log"
 
+	mediacmd "go-api/internal/application/command/media"
 	"go-api/internal/application/event/dedup"
+	eventmedia "go-api/internal/application/event/media"
 	eventuser "go-api/internal/application/event/user"
 	"go-api/internal/application/registry"
+	domainmedia "go-api/internal/domain/media"
 	domainuser "go-api/internal/domain/user"
 	"go-api/internal/infrastructure/config"
+	"go-api/internal/infrastructure/imaging"
 	"go-api/internal/infrastructure/messaging/rabbitmq"
 	"go-api/internal/infrastructure/notification"
 	"go-api/internal/infrastructure/persistence/outbox"
 	"go-api/internal/infrastructure/persistence/processed"
+	"go-api/internal/infrastructure/persistence/write"
+	"go-api/internal/infrastructure/storage"
 
 	"gorm.io/gorm"
 )
@@ -43,6 +49,21 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	notifier := notification.NewLogNotifier()
 	reg := registry.NewHandlerRegistry()
 
+	minioStorage, err := storage.NewMinIOStorage(env)
+	if err != nil {
+		log.Fatalf("failed to create storage client: %v", err)
+	}
+
+	mediaWriteRepo := write.NewMediaWriteRepository(db)
+	scanWriteRepo := write.NewScanWriteRepository(db)
+	generateThumbnailHandler := mediacmd.NewGenerateThumbnailHandler(
+		mediaWriteRepo,
+		scanWriteRepo,
+		outboxRepo,
+		minioStorage,
+		imaging.NewThumbnailer(),
+	)
+
 	reg.Register(domainuser.EventTypeUserCreated, dedup.With(
 		dedupRepo,
 		"user_created",
@@ -62,6 +83,11 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		dedupRepo,
 		"user_deleted",
 		eventuser.NewUserDeletedHandler().Handle,
+	))
+	reg.Register(domainmedia.EventTypeMediaUploaded, dedup.With(
+		dedupRepo,
+		"generate_thumbnail_on_media_uploaded",
+		eventmedia.NewGenerateThumbnailOnUploadedHandler(generateThumbnailHandler).Handle,
 	))
 
 	consumer := rabbitmq.NewConsumer(conn, reg, env.WorkerConcurrency, env.WorkerMaxRetries)
