@@ -70,6 +70,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	getUserByIDHandler := queryuser.NewGetUserByIDHandler(userReadRepo)
 	listScansHandler := queryscan.NewListScansHandler(scanReadRepo, mediaReadRepo, signalReadRepo)
 	getScanByIDHandler := queryscan.NewGetScanByIDHandler(scanReadRepo, mediaReadRepo, signalReadRepo)
+	getStatisticsHandler := queryscan.NewGetStatisticsHandler(scanReadRepo)
 	getOwnedMediaHandler := querymedia.NewGetOwnedMediaHandler(mediaReadRepo, scanReadRepo)
 	listPlansHandler := queryplan.NewListPlansHandler(planReadRepo)
 	presignUploadHandler := scancmd.NewPresignUploadHandler(
@@ -105,8 +106,13 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 			env.StorageBucket,
 			processUploadedMediaHandler,
 		),
-		UserHandler:     httphandler.NewUserHandler(getUserByIDHandler),
-		ScanHandler:     httphandler.NewScanHandler(listScansHandler, getScanByIDHandler, presignUploadHandler),
+		UserHandler: httphandler.NewUserHandler(getUserByIDHandler),
+		ScanHandler: httphandler.NewScanHandler(
+			listScansHandler,
+			getScanByIDHandler,
+			getStatisticsHandler,
+			presignUploadHandler,
+		),
 		MediaHandler:    httphandler.NewMediaHandler(getOwnedMediaHandler, minioStorage),
 		PlanHandler:     httphandler.NewPlanHandler(listPlansHandler),
 		RealtimeHandler: httphandler.NewRealtimeHandler(env),

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"go-api/internal/domain/aggregate"
 	"go-api/internal/domain/paginate"
 	domainscan "go-api/internal/domain/scan"
 	"go-api/internal/infrastructure/persistence/dbtype"
@@ -98,6 +99,23 @@ func (r *scanReadRepository) FindByUserID(
 	}
 
 	return views, total, nil
+}
+
+func (r *scanReadRepository) GetStatisticsByUserID(ctx context.Context, userID uuid.UUID) (*domainscan.StatisticsView, error) {
+	var stats domainscan.StatisticsView
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT
+			COUNT(*) FILTER (WHERE verdict <> '') AS scans_count,
+			COUNT(*) FILTER (WHERE verdict = ?) AS real_image_count,
+			COUNT(*) FILTER (WHERE verdict = ?) AS ai_image_count,
+			COALESCE(AVG(final_score) FILTER (WHERE verdict <> '' AND final_score >= 0), 0) AS average_score
+		FROM scans
+		WHERE user_id = ?
+	`, aggregate.VerdictLikelyReal, aggregate.VerdictLikelyAI, userID).Scan(&stats).Error
+	if err != nil {
+		return nil, err
+	}
+	return &stats, nil
 }
 
 func toScanView(row scanRow) (*domainscan.ScanView, error) {

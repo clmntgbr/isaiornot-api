@@ -53,6 +53,7 @@ func setupUserRoutes(api fiber.Router, container *di.Container) {
 func setupScanRoutes(api fiber.Router, container *di.Container) {
 	auth := container.AuthenticateMiddleware.Protected()
 	api.Get("/scans", auth, container.ScanHandler.GetScans)
+	api.Get("/scans/statistics", auth, container.ScanHandler.GetStatistics)
 	api.Post("/scans/presign-upload-url", auth, container.ScanHandler.PresignUpload)
 	api.Get("/scans/:id", auth, container.ScanHandler.GetScan)
 }

@@ -20,6 +20,7 @@ type ScanWriteRepository interface {
 type ScanReadRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*ScanView, error)
 	FindByUserID(ctx context.Context, userID uuid.UUID, query paginate.PaginateQuery) ([]*ScanView, int64, error)
+	GetStatisticsByUserID(ctx context.Context, userID uuid.UUID) (*StatisticsView, error)
 }
 
 type ScanView struct {
@@ -36,4 +37,11 @@ type ScanView struct {
 	Medias     []*domainmedia.MediaView
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+}
+
+type StatisticsView struct {
+	ScansCount     int64
+	RealImageCount int64
+	AIImageCount   int64
+	AverageScore   float64
 }

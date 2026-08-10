@@ -17,17 +17,20 @@ import (
 type ScanHandler struct {
 	listScansHandler     *queryscan.ListScansHandler
 	getScanByIDHandler   *queryscan.GetScanByIDHandler
+	getStatisticsHandler *queryscan.GetStatisticsHandler
 	presignUploadHandler *cmdscan.PresignUploadHandler
 }
 
 func NewScanHandler(
 	listScansHandler *queryscan.ListScansHandler,
 	getScanByIDHandler *queryscan.GetScanByIDHandler,
+	getStatisticsHandler *queryscan.GetStatisticsHandler,
 	presignUploadHandler *cmdscan.PresignUploadHandler,
 ) *ScanHandler {
 	return &ScanHandler{
 		listScansHandler:     listScansHandler,
 		getScanByIDHandler:   getScanByIDHandler,
+		getStatisticsHandler: getStatisticsHandler,
 		presignUploadHandler: presignUploadHandler,
 	}
 }
@@ -143,4 +146,24 @@ func (h *ScanHandler) GetScan(c fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(presenter.NewScanResponse(view))
+}
+
+func (h *ScanHandler) GetStatistics(c fiber.Ctx) error {
+	user, err := httpctx.GetUser(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Unauthorized",
+		})
+	}
+
+	stats, err := h.getStatisticsHandler.Handle(c.Context(), queryscan.GetStatisticsQuery{
+		UserID: user.ID,
+	})
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to get scan statistics",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(presenter.NewScanStatisticsResponse(stats))
 }
