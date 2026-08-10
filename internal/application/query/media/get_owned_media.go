@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	queryscan "go-api/internal/application/query/scan"
 	domainmedia "go-api/internal/domain/media"
 	domainscan "go-api/internal/domain/scan"
 
@@ -18,17 +19,20 @@ type GetOwnedMediaQuery struct {
 }
 
 type GetOwnedMediaHandler struct {
-	mediaRepo domainmedia.MediaReadRepository
-	scanRepo  domainscan.ScanReadRepository
+	mediaRepo     domainmedia.MediaReadRepository
+	scanRepo      domainscan.ScanReadRepository
+	historyCutoff *queryscan.HistoryCutoffResolver
 }
 
 func NewGetOwnedMediaHandler(
 	mediaRepo domainmedia.MediaReadRepository,
 	scanRepo domainscan.ScanReadRepository,
+	historyCutoff *queryscan.HistoryCutoffResolver,
 ) *GetOwnedMediaHandler {
 	return &GetOwnedMediaHandler{
-		mediaRepo: mediaRepo,
-		scanRepo:  scanRepo,
+		mediaRepo:     mediaRepo,
+		scanRepo:      scanRepo,
+		historyCutoff: historyCutoff,
 	}
 }
 
@@ -46,6 +50,14 @@ func (h *GetOwnedMediaHandler) Handle(ctx context.Context, query GetOwnedMediaQu
 		return nil, err
 	}
 	if scanView == nil || scanView.UserID != query.UserID {
+		return nil, ErrThumbnailMediaNotFound
+	}
+
+	since, err := h.historyCutoff.ForUser(ctx, query.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if !since.IsZero() && scanView.CreatedAt.Before(since) {
 		return nil, ErrThumbnailMediaNotFound
 	}
 

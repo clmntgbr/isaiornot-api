@@ -19,8 +19,8 @@ type ScanWriteRepository interface {
 
 type ScanReadRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*ScanView, error)
-	FindByUserID(ctx context.Context, userID uuid.UUID, query paginate.PaginateQuery) ([]*ScanView, int64, error)
-	GetStatisticsByUserID(ctx context.Context, userID uuid.UUID) (*StatisticsView, error)
+	FindByUserID(ctx context.Context, userID uuid.UUID, query paginate.PaginateQuery, since time.Time) ([]*ScanView, int64, error)
+	GetStatisticsByUserID(ctx context.Context, userID uuid.UUID, since time.Time) (*StatisticsView, error)
 }
 
 type ScanView struct {

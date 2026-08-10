@@ -19,20 +19,23 @@ type GetScanByIDQuery struct {
 }
 
 type GetScanByIDHandler struct {
-	scanRepo   domainscan.ScanReadRepository
-	mediaRepo  domainmedia.MediaReadRepository
-	signalRepo domainsignal.SignalReadRepository
+	scanRepo      domainscan.ScanReadRepository
+	mediaRepo     domainmedia.MediaReadRepository
+	signalRepo    domainsignal.SignalReadRepository
+	historyCutoff *HistoryCutoffResolver
 }
 
 func NewGetScanByIDHandler(
 	scanRepo domainscan.ScanReadRepository,
 	mediaRepo domainmedia.MediaReadRepository,
 	signalRepo domainsignal.SignalReadRepository,
+	historyCutoff *HistoryCutoffResolver,
 ) *GetScanByIDHandler {
 	return &GetScanByIDHandler{
-		scanRepo:   scanRepo,
-		mediaRepo:  mediaRepo,
-		signalRepo: signalRepo,
+		scanRepo:      scanRepo,
+		mediaRepo:     mediaRepo,
+		signalRepo:    signalRepo,
+		historyCutoff: historyCutoff,
 	}
 }
 
@@ -43,6 +46,14 @@ func (h *GetScanByIDHandler) Handle(ctx context.Context, q GetScanByIDQuery) (*d
 	}
 	if view == nil || view.UserID != q.UserID {
 		return nil, ErrScanNotFound
+	}
+
+	since, err := h.historyCutoff.ForUser(ctx, q.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if !since.IsZero() && view.CreatedAt.Before(since) {
+		return nil, ErrHistoryOutsideRetention
 	}
 
 	medias, err := h.mediaRepo.FindByScanID(ctx, view.ID)

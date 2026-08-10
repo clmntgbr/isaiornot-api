@@ -117,6 +117,13 @@ func (m *Media) MarkUploaded() {
 	})
 }
 
+func (m *Media) ApplyContent(contentType string, size int64) {
+	m.ContentType = contentType
+	m.Size = size
+	m.UpdatedAt = time.Now().UTC()
+	m.recordUpdated()
+}
+
 func (m *Media) RecordUpload(contentType string, size int64) {
 	m.ContentType = contentType
 	m.Size = size

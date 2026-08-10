@@ -81,6 +81,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	publishUserRealtime := eventuser.NewPublishRealtimeHandler(realtimePublisher)
 	publishScanRealtime := eventscan.NewPublishRealtimeHandler(realtimePublisher)
 	publishMediaRealtime := eventmedia.NewPublishRealtimeHandler(realtimePublisher, scanWriteRepo)
+	cleanupOriginals := eventscan.NewCleanupOriginalsHandler(mediaWriteRepo, minioStorage)
 
 	reg.Register(domainuser.EventTypeUserCreated, dedup.With(
 		dedupRepo,
@@ -133,10 +134,20 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		"publish_scan_completed_realtime",
 		publishScanRealtime.OnCompleted,
 	))
+	reg.Register(domainscan.EventTypeScanCompleted, dedup.With(
+		dedupRepo,
+		"cleanup_originals_on_scan_completed",
+		cleanupOriginals.OnCompleted,
+	))
 	reg.Register(domainscan.EventTypeScanFailed, dedup.With(
 		dedupRepo,
 		"publish_scan_failed_realtime",
 		publishScanRealtime.OnFailed,
+	))
+	reg.Register(domainscan.EventTypeScanFailed, dedup.With(
+		dedupRepo,
+		"cleanup_originals_on_scan_failed",
+		cleanupOriginals.OnFailed,
 	))
 
 	reg.Register(domainmedia.EventTypeMediaCreated, dedup.With(

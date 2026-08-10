@@ -14,15 +14,27 @@ type GetStatisticsQuery struct {
 }
 
 type GetStatisticsHandler struct {
-	scanRepo domainscan.ScanReadRepository
+	scanRepo      domainscan.ScanReadRepository
+	historyCutoff *HistoryCutoffResolver
 }
 
-func NewGetStatisticsHandler(scanRepo domainscan.ScanReadRepository) *GetStatisticsHandler {
-	return &GetStatisticsHandler{scanRepo: scanRepo}
+func NewGetStatisticsHandler(
+	scanRepo domainscan.ScanReadRepository,
+	historyCutoff *HistoryCutoffResolver,
+) *GetStatisticsHandler {
+	return &GetStatisticsHandler{
+		scanRepo:      scanRepo,
+		historyCutoff: historyCutoff,
+	}
 }
 
 func (h *GetStatisticsHandler) Handle(ctx context.Context, q GetStatisticsQuery) (*domainscan.StatisticsView, error) {
-	stats, err := h.scanRepo.GetStatisticsByUserID(ctx, q.UserID)
+	since, err := h.historyCutoff.ForUser(ctx, q.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	stats, err := h.scanRepo.GetStatisticsByUserID(ctx, q.UserID, since)
 	if err != nil {
 		return nil, errors.New("failed to get scan statistics")
 	}

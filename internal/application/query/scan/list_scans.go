@@ -18,25 +18,33 @@ type ListScansQuery struct {
 }
 
 type ListScansHandler struct {
-	scanRepo   domainscan.ScanReadRepository
-	mediaRepo  domainmedia.MediaReadRepository
-	signalRepo domainsignal.SignalReadRepository
+	scanRepo      domainscan.ScanReadRepository
+	mediaRepo     domainmedia.MediaReadRepository
+	signalRepo    domainsignal.SignalReadRepository
+	historyCutoff *HistoryCutoffResolver
 }
 
 func NewListScansHandler(
 	scanRepo domainscan.ScanReadRepository,
 	mediaRepo domainmedia.MediaReadRepository,
 	signalRepo domainsignal.SignalReadRepository,
+	historyCutoff *HistoryCutoffResolver,
 ) *ListScansHandler {
 	return &ListScansHandler{
-		scanRepo:   scanRepo,
-		mediaRepo:  mediaRepo,
-		signalRepo: signalRepo,
+		scanRepo:      scanRepo,
+		mediaRepo:     mediaRepo,
+		signalRepo:    signalRepo,
+		historyCutoff: historyCutoff,
 	}
 }
 
 func (h *ListScansHandler) Handle(ctx context.Context, q ListScansQuery) ([]*domainscan.ScanView, int64, error) {
-	scans, total, err := h.scanRepo.FindByUserID(ctx, q.UserID, q.Query)
+	since, err := h.historyCutoff.ForUser(ctx, q.UserID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	scans, total, err := h.scanRepo.FindByUserID(ctx, q.UserID, q.Query, since)
 	if err != nil {
 		return nil, 0, errors.New("failed to list scans")
 	}

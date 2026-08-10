@@ -7,6 +7,7 @@ import (
 	identitycmd "go-api/internal/application/command/identity"
 	mediacmd "go-api/internal/application/command/media"
 	scancmd "go-api/internal/application/command/scan"
+	cmdsubscription "go-api/internal/application/command/subscription"
 	usercmd "go-api/internal/application/command/user"
 	querymedia "go-api/internal/application/query/media"
 	queryplan "go-api/internal/application/query/plan"
@@ -78,19 +79,28 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	validateTokenHandler := authcmd.NewValidateTokenHandler(jwksProvider, userWriteRepo)
 	fetchUserHandler := identitycmd.NewFetchUserHandler(infraClerk.NewUserGateway(env.ClerkSecretKey))
 	getUserByIDHandler := queryuser.NewGetUserByIDHandler(userReadRepo)
-	listScansHandler := queryscan.NewListScansHandler(scanReadRepo, mediaReadRepo, signalReadRepo)
-	getScanByIDHandler := queryscan.NewGetScanByIDHandler(scanReadRepo, mediaReadRepo, signalReadRepo)
-	getStatisticsHandler := queryscan.NewGetStatisticsHandler(scanReadRepo)
-	getOwnedMediaHandler := querymedia.NewGetOwnedMediaHandler(mediaReadRepo, scanReadRepo)
-	listPlansHandler := queryplan.NewListPlansHandler(planReadRepo)
 	getCurrentSubscriptionHandler := querysubscription.NewGetCurrentSubscriptionHandler(
 		userReadRepo,
 		subscriptionReadRepo,
 	)
+	historyCutoff := queryscan.NewHistoryCutoffResolver(getCurrentSubscriptionHandler)
+	listScansHandler := queryscan.NewListScansHandler(scanReadRepo, mediaReadRepo, signalReadRepo, historyCutoff)
+	getScanByIDHandler := queryscan.NewGetScanByIDHandler(scanReadRepo, mediaReadRepo, signalReadRepo, historyCutoff)
+	getStatisticsHandler := queryscan.NewGetStatisticsHandler(scanReadRepo, historyCutoff)
+	getOwnedMediaHandler := querymedia.NewGetOwnedMediaHandler(mediaReadRepo, scanReadRepo, historyCutoff)
+	listPlansHandler := queryplan.NewListPlansHandler(planReadRepo)
 	getQuotaUsageHandler := querysubscription.NewGetQuotaUsageHandler(
 		userReadRepo,
 		subscriptionReadRepo,
 		mediaReadRepo,
+	)
+	assertUploadAllowedHandler := cmdsubscription.NewAssertUploadAllowedHandler(getQuotaUsageHandler)
+	generateThumbnailHandler := mediacmd.NewGenerateThumbnailHandler(
+		mediaWriteRepo,
+		scanWriteRepo,
+		outboxRepo,
+		minioStorage,
+		imaging.NewThumbnailer(),
 	)
 	presignUploadHandler := scancmd.NewPresignUploadHandler(
 		scanWriteRepo,
@@ -105,6 +115,8 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		minioStorage,
 		video.NewFrameExtractor(),
 		imaging.NewThumbnailer(),
+		generateThumbnailHandler,
+		assertUploadAllowedHandler,
 	)
 
 	return &Container{

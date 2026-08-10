@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 
+	cmdsubscription "go-api/internal/application/command/subscription"
+	querysubscription "go-api/internal/application/query/subscription"
 	"go-api/internal/domain/event"
 	domainmedia "go-api/internal/domain/media"
 	"go-api/internal/domain/port"
@@ -29,12 +31,14 @@ type ProcessUploadedMediaCommand struct {
 }
 
 type ProcessUploadedMediaHandler struct {
-	scanRepo       domainscan.ScanWriteRepository
-	mediaRepo      domainmedia.MediaWriteRepository
-	outbox         port.OutboxRepository
-	storage        port.Storage
-	frameExtractor port.FrameExtractor
-	thumbnailer    port.ImageThumbnailer
+	scanRepo            domainscan.ScanWriteRepository
+	mediaRepo           domainmedia.MediaWriteRepository
+	outbox              port.OutboxRepository
+	storage             port.Storage
+	frameExtractor      port.FrameExtractor
+	thumbnailer         port.ImageThumbnailer
+	generateThumbnail   *GenerateThumbnailHandler
+	assertUploadAllowed *cmdsubscription.AssertUploadAllowedHandler
 }
 
 func NewProcessUploadedMediaHandler(
@@ -44,14 +48,18 @@ func NewProcessUploadedMediaHandler(
 	storage port.Storage,
 	frameExtractor port.FrameExtractor,
 	thumbnailer port.ImageThumbnailer,
+	generateThumbnail *GenerateThumbnailHandler,
+	assertUploadAllowed *cmdsubscription.AssertUploadAllowedHandler,
 ) *ProcessUploadedMediaHandler {
 	return &ProcessUploadedMediaHandler{
-		scanRepo:       scanRepo,
-		mediaRepo:      mediaRepo,
-		outbox:         outbox,
-		storage:        storage,
-		frameExtractor: frameExtractor,
-		thumbnailer:    thumbnailer,
+		scanRepo:            scanRepo,
+		mediaRepo:           mediaRepo,
+		outbox:              outbox,
+		storage:             storage,
+		frameExtractor:      frameExtractor,
+		thumbnailer:         thumbnailer,
+		generateThumbnail:   generateThumbnail,
+		assertUploadAllowed: assertUploadAllowed,
 	}
 }
 
@@ -78,10 +86,69 @@ func (h *ProcessUploadedMediaHandler) Handle(ctx context.Context, cmd ProcessUpl
 	}
 
 	if domainmedia.IsVideoContentType(contentType) {
-		return h.processVideo(ctx, scanEntity, mediaEntity)
+		return h.processVideo(ctx, scanEntity, mediaEntity, contentType, cmd.Size)
 	}
 
 	return h.processImage(ctx, scanEntity, mediaEntity, contentType, cmd.Size)
+}
+
+func (h *ProcessUploadedMediaHandler) assertBeforePipeline(
+	ctx context.Context,
+	userID uuid.UUID,
+	contentType string,
+	size int64,
+) (bool, string, error) {
+	err := h.assertUploadAllowed.Handle(ctx, cmdsubscription.AssertUploadAllowedCommand{
+		UserID:              userID,
+		ContentType:         contentType,
+		Size:                size,
+		MediaAlreadyCounted: true,
+	})
+	if err == nil {
+		return true, "", nil
+	}
+
+	message := err.Error()
+	if errors.Is(err, querysubscription.ErrSubscriptionNotFound) {
+		message = "no active subscription found"
+	}
+	return false, message, nil
+}
+
+func (h *ProcessUploadedMediaHandler) failUpload(
+	ctx context.Context,
+	scanEntity *domainscan.Scan,
+	mediaEntity *domainmedia.Media,
+	message string,
+) error {
+	return h.mediaRepo.WithTransaction(ctx, func(txCtx context.Context) error {
+		freshMedia, err := h.mediaRepo.GetByID(txCtx, mediaEntity.ID)
+		if err != nil {
+			return err
+		}
+		if freshMedia == nil {
+			return ErrMediaNotFound
+		}
+		freshMedia.MarkFailed()
+		if err := h.mediaRepo.Update(txCtx, freshMedia); err != nil {
+			return err
+		}
+
+		freshScan, err := h.scanRepo.GetByID(txCtx, scanEntity.ID)
+		if err != nil {
+			return err
+		}
+		if freshScan == nil {
+			return ErrScanNotFound
+		}
+		freshScan.MarkFailed(message)
+		if err := h.scanRepo.Update(txCtx, freshScan); err != nil {
+			return err
+		}
+
+		events := append(freshMedia.PullEvents(), freshScan.PullEvents()...)
+		return h.outbox.StoreEvents(txCtx, events)
+	})
 }
 
 func (h *ProcessUploadedMediaHandler) processImage(
@@ -91,18 +158,56 @@ func (h *ProcessUploadedMediaHandler) processImage(
 	contentType string,
 	size int64,
 ) error {
-	return h.mediaRepo.WithTransaction(ctx, func(txCtx context.Context) error {
-		mediaEntity.RecordUpload(contentType, size)
+	if err := h.mediaRepo.WithTransaction(ctx, func(txCtx context.Context) error {
+		mediaEntity.ApplyContent(contentType, size)
 		if err := h.mediaRepo.Update(txCtx, mediaEntity); err != nil {
 			return err
 		}
+		return h.outbox.StoreEvents(txCtx, mediaEntity.PullEvents())
+	}); err != nil {
+		return err
+	}
 
-		scanEntity.MarkProcessing()
-		if err := h.scanRepo.Update(txCtx, scanEntity); err != nil {
+	if err := h.generateThumbnail.Handle(ctx, GenerateThumbnailCommand{MediaID: mediaEntity.ID}); err != nil {
+		if !errors.Is(err, ErrUnsupportedContentType) {
+			return fmt.Errorf("failed to generate thumbnail: %w", err)
+		}
+	}
+
+	allowed, message, err := h.assertBeforePipeline(ctx, scanEntity.UserID, contentType, size)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return h.failUpload(ctx, scanEntity, mediaEntity, message)
+	}
+
+	return h.mediaRepo.WithTransaction(ctx, func(txCtx context.Context) error {
+		freshMedia, err := h.mediaRepo.GetByID(txCtx, mediaEntity.ID)
+		if err != nil {
+			return err
+		}
+		if freshMedia == nil {
+			return ErrMediaNotFound
+		}
+		freshMedia.RecordUpload(contentType, size)
+		if err := h.mediaRepo.Update(txCtx, freshMedia); err != nil {
 			return err
 		}
 
-		events := append(mediaEntity.PullEvents(), scanEntity.PullEvents()...)
+		freshScan, err := h.scanRepo.GetByID(txCtx, scanEntity.ID)
+		if err != nil {
+			return err
+		}
+		if freshScan == nil {
+			return ErrScanNotFound
+		}
+		freshScan.MarkProcessing()
+		if err := h.scanRepo.Update(txCtx, freshScan); err != nil {
+			return err
+		}
+
+		events := append(freshMedia.PullEvents(), freshScan.PullEvents()...)
 		return h.outbox.StoreEvents(txCtx, events)
 	})
 }
@@ -111,6 +216,8 @@ func (h *ProcessUploadedMediaHandler) processVideo(
 	ctx context.Context,
 	scanEntity *domainscan.Scan,
 	sourceMedia *domainmedia.Media,
+	contentType string,
+	size int64,
 ) error {
 	objectKey := domainmedia.NewObjectKey(scanEntity.UserID, sourceMedia.ScanID, sourceMedia.Key)
 	reader, err := h.storage.Get(ctx, objectKey)
@@ -183,6 +290,14 @@ func (h *ProcessUploadedMediaHandler) processVideo(
 		frameMedias = append(frameMedias, frameMedia)
 	}
 
+	allowed, message, err := h.assertBeforePipeline(ctx, scanEntity.UserID, contentType, size)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return h.failUpload(ctx, scanEntity, sourceMedia, message)
+	}
+
 	return h.mediaRepo.WithTransaction(ctx, func(txCtx context.Context) error {
 		allEvents := make([]event.DomainEvent, 0)
 		for i, frameMedia := range frameMedias {
@@ -200,11 +315,18 @@ func (h *ProcessUploadedMediaHandler) processVideo(
 			allEvents = append(allEvents, fresh.PullEvents()...)
 		}
 
-		scanEntity.MarkProcessing()
-		if err := h.scanRepo.Update(txCtx, scanEntity); err != nil {
+		freshScan, err := h.scanRepo.GetByID(txCtx, scanEntity.ID)
+		if err != nil {
 			return err
 		}
-		allEvents = append(allEvents, scanEntity.PullEvents()...)
+		if freshScan == nil {
+			return ErrScanNotFound
+		}
+		freshScan.MarkProcessing()
+		if err := h.scanRepo.Update(txCtx, freshScan); err != nil {
+			return err
+		}
+		allEvents = append(allEvents, freshScan.PullEvents()...)
 
 		return h.outbox.StoreEvents(txCtx, allEvents)
 	})

@@ -62,6 +62,7 @@ func (r *scanReadRepository) FindByUserID(
 	ctx context.Context,
 	userID uuid.UUID,
 	query paginate.PaginateQuery,
+	since time.Time,
 ) ([]*domainscan.ScanView, int64, error) {
 	query.Normalize()
 	if query.SortBy == "" {
@@ -72,6 +73,9 @@ func (r *scanReadRepository) FindByUserID(
 	}
 
 	db := r.db.WithContext(ctx).Model(&scanRow{}).Where("user_id = ?", userID)
+	if !since.IsZero() {
+		db = db.Where("created_at >= ?", since)
+	}
 
 	db, total, err := Paginate(db, query)
 	if err != nil {
@@ -101,9 +105,12 @@ func (r *scanReadRepository) FindByUserID(
 	return views, total, nil
 }
 
-func (r *scanReadRepository) GetStatisticsByUserID(ctx context.Context, userID uuid.UUID) (*domainscan.StatisticsView, error) {
-	var stats domainscan.StatisticsView
-	err := r.db.WithContext(ctx).Raw(`
+func (r *scanReadRepository) GetStatisticsByUserID(
+	ctx context.Context,
+	userID uuid.UUID,
+	since time.Time,
+) (*domainscan.StatisticsView, error) {
+	query := `
 		SELECT
 			COUNT(*) FILTER (WHERE verdict <> '') AS scans_count,
 			COUNT(*) FILTER (WHERE verdict = ?) AS real_image_count,
@@ -111,7 +118,19 @@ func (r *scanReadRepository) GetStatisticsByUserID(ctx context.Context, userID u
 			COALESCE(AVG(final_score) FILTER (WHERE verdict <> '' AND final_score >= 0), 0) AS average_score
 		FROM scans
 		WHERE user_id = ?
-	`, aggregate.VerdictLikelyReal, aggregate.VerdictLikelyAI, userID).Scan(&stats).Error
+	`
+	args := []any{
+		aggregate.VerdictLikelyReal,
+		aggregate.VerdictLikelyAI,
+		userID,
+	}
+	if !since.IsZero() {
+		query += ` AND created_at >= ?`
+		args = append(args, since)
+	}
+
+	var stats domainscan.StatisticsView
+	err := r.db.WithContext(ctx).Raw(query, args...).Scan(&stats).Error
 	if err != nil {
 		return nil, err
 	}

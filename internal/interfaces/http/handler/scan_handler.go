@@ -5,6 +5,7 @@ import (
 
 	cmdscan "go-api/internal/application/command/scan"
 	queryscan "go-api/internal/application/query/scan"
+	querysubscription "go-api/internal/application/query/subscription"
 	"go-api/internal/domain/paginate"
 	httpctx "go-api/internal/interfaces/http/context"
 	"go-api/internal/interfaces/http/dto"
@@ -102,6 +103,11 @@ func (h *ScanHandler) GetScans(c fiber.Ctx) error {
 		Query:  query,
 	})
 	if err != nil {
+		if errors.Is(err, querysubscription.ErrSubscriptionNotFound) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"message": "No active subscription found",
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to list scans",
 		})
@@ -135,9 +141,15 @@ func (h *ScanHandler) GetScan(c fiber.Ctx) error {
 	})
 
 	if err != nil {
-		if errors.Is(err, queryscan.ErrScanNotFound) {
+		if errors.Is(err, queryscan.ErrScanNotFound) ||
+			errors.Is(err, queryscan.ErrHistoryOutsideRetention) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"message": "Scan not found",
+			})
+		}
+		if errors.Is(err, querysubscription.ErrSubscriptionNotFound) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"message": "No active subscription found",
 			})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -160,6 +172,11 @@ func (h *ScanHandler) GetStatistics(c fiber.Ctx) error {
 		UserID: user.ID,
 	})
 	if err != nil {
+		if errors.Is(err, querysubscription.ErrSubscriptionNotFound) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"message": "No active subscription found",
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to get scan statistics",
 		})
