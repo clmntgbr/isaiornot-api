@@ -8,8 +8,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// ScanModel is the persistence mapping for table scans.
-// Schema is owned by SQL migrations — do not encode DDL in tags.
 type ScanModel struct {
 	ID         uuid.UUID    `gorm:"column:id;primaryKey"`
 	UserID     uuid.UUID    `gorm:"column:user_id"`

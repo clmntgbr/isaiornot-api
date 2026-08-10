@@ -10,6 +10,11 @@ services:
       - "3000:3000"
     env_file:
       - .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - api
     restart: unless-stopped
 
   worker:
@@ -21,6 +26,11 @@ services:
     command: ["./worker"]
     env_file:
       - .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - api
     restart: unless-stopped
 
   metadata:
@@ -32,6 +42,11 @@ services:
     command: ["./metadata"]
     env_file:
       - .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - api
     restart: unless-stopped
 
   heuristic:
@@ -43,4 +58,53 @@ services:
     command: ["./heuristic"]
     env_file:
       - .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - api
     restart: unless-stopped
+
+  aimodel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: aimodel
+    command: ["./aimodel"]
+    env_file:
+      - .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - api
+    restart: unless-stopped
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3.13-management-alpine
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-user}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-password}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - api
+    restart: unless-stopped
+
+volumes:
+  rabbitmq_data:
+
+networks:
+  api:
+    name: go

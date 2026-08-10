@@ -74,6 +74,23 @@ func (r *signalWriteRepository) GetByMediaIDAndName(
 	return signalDomainFromModel(&model)
 }
 
+func (r *signalWriteRepository) GetByMediaID(ctx context.Context, mediaID uuid.UUID) ([]*domainsignal.Signal, error) {
+	var models []SignalModel
+	err := DBWithContext(ctx, r.db).Where("media_id = ?", mediaID).Order("created_at asc").Find(&models).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*domainsignal.Signal, 0, len(models))
+	for i := range models {
+		signalEntity, err := signalDomainFromModel(&models[i])
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, signalEntity)
+	}
+	return result, nil
+}
+
 func signalModelFromDomain(s *domainsignal.Signal) (*SignalModel, error) {
 	details := s.Details
 	if details == nil {

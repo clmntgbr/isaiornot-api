@@ -66,6 +66,23 @@ func (r *mediaWriteRepository) GetByKey(ctx context.Context, key string) (*domai
 	return mediaDomainFromModel(&model)
 }
 
+func (r *mediaWriteRepository) GetByScanID(ctx context.Context, scanID uuid.UUID) ([]*domainmedia.Media, error) {
+	var models []MediaModel
+	err := DBWithContext(ctx, r.db).Where("scan_id = ?", scanID).Order("created_at asc").Find(&models).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*domainmedia.Media, 0, len(models))
+	for i := range models {
+		mediaEntity, err := mediaDomainFromModel(&models[i])
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, mediaEntity)
+	}
+	return result, nil
+}
+
 func mediaModelFromDomain(m *domainmedia.Media) (*MediaModel, error) {
 	statuses := make([]string, 0, len(m.Statuses))
 	for _, status := range m.Statuses {

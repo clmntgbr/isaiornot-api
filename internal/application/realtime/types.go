@@ -1,7 +1,5 @@
 package realtime
 
-// Client-facing CRUD actions published to Centrifugo.
-// Domain events may be richer (uploaded, completed, failed…); they map to these verbs.
 const (
 	ActionCreated = "created"
 	ActionUpdated = "updated"

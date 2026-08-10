@@ -52,14 +52,15 @@ func (t Topology) declare(ch *amqp.Channel) error {
 	for _, routingKey := range desiredKeys {
 		desired[routingKey] = struct{}{}
 	}
-	// Drop superseded bindings from earlier pipeline wiring (idempotent).
 	for _, stale := range []string{
 		"media.#",
 		"media.uploaded.v1",
 		"media.analyze.metadata.done.v1",
 		"media.analyze.heuristics.done.v1",
+		"media.analyze.ai_model.done.v1",
 		"media.analyze.metadata.v1",
 		"media.analyze.heuristics.v1",
+		"media.analyze.ai_model.v1",
 	} {
 		if _, ok := desired[stale]; ok {
 			continue

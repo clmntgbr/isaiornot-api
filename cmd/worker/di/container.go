@@ -4,6 +4,7 @@ import (
 	"log"
 
 	mediacmd "go-api/internal/application/command/media"
+	scancmd "go-api/internal/application/command/scan"
 	"go-api/internal/application/event/dedup"
 	eventmedia "go-api/internal/application/event/media"
 	eventscan "go-api/internal/application/event/scan"
@@ -60,12 +61,20 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 
 	mediaWriteRepo := write.NewMediaWriteRepository(db)
 	scanWriteRepo := write.NewScanWriteRepository(db)
+	signalWriteRepo := write.NewSignalWriteRepository(db)
 	generateThumbnailHandler := mediacmd.NewGenerateThumbnailHandler(
 		mediaWriteRepo,
 		scanWriteRepo,
 		outboxRepo,
 		minioStorage,
 		imaging.NewThumbnailer(),
+	)
+	completeMediaHandler := mediacmd.NewCompleteMediaHandler(mediaWriteRepo, outboxRepo, publisher)
+	finalizeScanHandler := scancmd.NewFinalizeScanHandler(
+		scanWriteRepo,
+		mediaWriteRepo,
+		signalWriteRepo,
+		outboxRepo,
 	)
 	enqueueAnalyze := eventmedia.NewEnqueueAnalyzeHandler(publisher)
 
@@ -166,11 +175,25 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		publishMediaRealtime.OnFailed,
 	))
 
-	// Pipeline orchestration: stage done → next analyze command.
 	reg.Register(domainmedia.EventTypeMediaAnalyzeMetadataDone, dedup.With(
 		dedupRepo,
 		"enqueue_heuristics_on_metadata_done",
 		enqueueAnalyze.OnMetadataDone,
+	))
+	reg.Register(domainmedia.EventTypeMediaAnalyzeHeuristicsDone, dedup.With(
+		dedupRepo,
+		"enqueue_ai_model_on_heuristics_done",
+		enqueueAnalyze.OnHeuristicsDone,
+	))
+	reg.Register(domainmedia.EventTypeMediaAnalyzeAIModelDone, dedup.With(
+		dedupRepo,
+		"complete_media_on_ai_model_done",
+		eventmedia.NewCompleteMediaOnAIModelDoneHandler(completeMediaHandler).Handle,
+	))
+	reg.Register(domainscan.EventTypeScanFinalize, dedup.With(
+		dedupRepo,
+		"finalize_scan_on_requested",
+		eventscan.NewFinalizeScanOnRequestedHandler(finalizeScanHandler).Handle,
 	))
 
 	consumer := rabbitmq.NewConsumer(conn, reg, env.WorkerConcurrency, env.WorkerMaxRetries)

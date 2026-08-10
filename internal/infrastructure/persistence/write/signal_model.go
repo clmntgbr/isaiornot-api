@@ -8,8 +8,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// SignalModel is the persistence mapping for table signals.
-// Schema is owned by SQL migrations — do not encode DDL in tags.
 type SignalModel struct {
 	ID         uuid.UUID    `gorm:"column:id;primaryKey"`
 	MediaID    uuid.UUID    `gorm:"column:media_id"`

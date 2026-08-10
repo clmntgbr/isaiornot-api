@@ -38,6 +38,13 @@ type Config struct {
 	HeuristicsAnalyzeQueue      string
 	HeuristicsAnalyzeRoutingKey string
 
+	AIModelAnalyzeQueue      string
+	AIModelAnalyzeRoutingKey string
+
+	SightengineAPIURL    string
+	SightengineAPIUser   string
+	SightengineAPISecret string
+
 	StorageEndpoint         string
 	StorageInternalEndpoint string
 	StorageRegion           string
@@ -75,11 +82,9 @@ func Load() *Config {
 		RabbitMQURL:          getEnv("RABBITMQ_URL"),
 		RabbitMQExchange:     getEnvOrDefault("RABBITMQ_EXCHANGE", "domain.events"),
 		RabbitMQQueue:        getEnvOrDefault("RABBITMQ_QUEUE", "domain.events"),
-		// Main worker orchestrates the pipeline: domain events + stage *.done.
-		// Analyze workers bind only their command routing keys.
 		RabbitMQRoutingKey: getEnvOrDefault(
 			"RABBITMQ_ROUTING_KEY",
-			"user.#,media.*.v1,scan.#,media.analyze.metadata.done.v1,media.analyze.heuristics.done.v1",
+			"user.#,media.*.v1,scan.#,media.analyze.metadata.done.v1,media.analyze.heuristics.done.v1,media.analyze.ai_model.done.v1",
 		),
 		RabbitMQRetryTTLMS: getEnvIntOrDefault("RABBITMQ_RETRY_TTL_MS", 30000),
 		WorkerMaxRetries:   getEnvIntOrDefault("WORKER_MAX_RETRIES", 3),
@@ -91,6 +96,13 @@ func Load() *Config {
 
 		HeuristicsAnalyzeQueue:      getEnvOrDefault("HEURISTICS_ANALYZE_QUEUE", "heuristics.analyze"),
 		HeuristicsAnalyzeRoutingKey: getEnvOrDefault("HEURISTICS_ANALYZE_ROUTING_KEY", "media.analyze.heuristics.v1"),
+
+		AIModelAnalyzeQueue:      getEnvOrDefault("AI_MODEL_ANALYZE_QUEUE", "ai_model.analyze"),
+		AIModelAnalyzeRoutingKey: getEnvOrDefault("AI_MODEL_ANALYZE_ROUTING_KEY", "media.analyze.ai_model.v1"),
+
+		SightengineAPIURL:    getEnvOrDefault("SIGHTENGINE_API_URL", "https://api.sightengine.com/1.0/check.json"),
+		SightengineAPIUser:   getEnvOrDefault("SIGHTENGINE_API_USER", ""),
+		SightengineAPISecret: getEnvOrDefault("SIGHTENGINE_API_SECRET", ""),
 
 		StorageEndpoint:         getEnv("STORAGE_ENDPOINT"),
 		StorageInternalEndpoint: getEnvOrDefault("STORAGE_INTERNAL_ENDPOINT", ""),

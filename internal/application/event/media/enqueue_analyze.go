@@ -39,6 +39,14 @@ func (h *EnqueueAnalyzeHandler) OnMetadataDone(ctx context.Context, payload []by
 	return h.enqueue(ctx, domainmedia.EventTypeMediaAnalyzeHeuristics, domainmedia.StageHeuristics, evt.MediaID, evt.ScanID)
 }
 
+func (h *EnqueueAnalyzeHandler) OnHeuristicsDone(ctx context.Context, payload []byte) error {
+	var evt domainmedia.MediaAnalyzeHeuristicsDone
+	if err := json.Unmarshal(payload, &evt); err != nil {
+		return messaging.NonRetryable(err)
+	}
+	return h.enqueue(ctx, domainmedia.EventTypeMediaAnalyzeAIModel, domainmedia.StageAIModel, evt.MediaID, evt.ScanID)
+}
+
 func (h *EnqueueAnalyzeHandler) enqueue(
 	ctx context.Context,
 	eventType string,

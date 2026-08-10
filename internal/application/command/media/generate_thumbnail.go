@@ -94,7 +94,6 @@ func (h *GenerateThumbnailHandler) Handle(ctx context.Context, cmd GenerateThumb
 	}
 
 	return h.mediaRepo.WithTransaction(ctx, func(txCtx context.Context) error {
-		// Reload to avoid overwriting concurrent status changes with a stale aggregate.
 		fresh, err := h.mediaRepo.GetByID(txCtx, mediaEntity.ID)
 		if err != nil {
 			return err

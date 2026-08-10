@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// InsightModel is the persistence mapping for table insights.
 type InsightModel struct {
 	ID          uuid.UUID `gorm:"column:id;primaryKey"`
 	Noise       float64   `gorm:"column:noise"`

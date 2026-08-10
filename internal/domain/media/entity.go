@@ -115,7 +115,6 @@ func (m *Media) MarkUploaded() {
 	})
 }
 
-// RecordUpload updates metadata from the storage webhook and marks the media as uploaded.
 func (m *Media) RecordUpload(contentType string, size int64) {
 	m.ContentType = contentType
 	m.Size = size
@@ -127,7 +126,6 @@ func (m *Media) RecordUpload(contentType string, size int64) {
 	m.MarkUploaded()
 }
 
-// ReplaceWithFrame rewrites the media to point at an extracted video frame image.
 func (m *Media) ReplaceWithFrame(key, filename string, size int64) {
 	m.Key = key
 	m.Filename = filename

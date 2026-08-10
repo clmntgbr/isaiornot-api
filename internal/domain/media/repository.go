@@ -15,6 +15,7 @@ type MediaWriteRepository interface {
 	Update(ctx context.Context, media *Media) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Media, error)
 	GetByKey(ctx context.Context, key string) (*Media, error)
+	GetByScanID(ctx context.Context, scanID uuid.UUID) ([]*Media, error)
 }
 
 type MediaReadRepository interface {

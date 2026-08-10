@@ -13,6 +13,7 @@ type SignalWriteRepository interface {
 	Update(ctx context.Context, signal *Signal) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Signal, error)
+	GetByMediaID(ctx context.Context, mediaID uuid.UUID) ([]*Signal, error)
 	GetByMediaIDAndName(ctx context.Context, mediaID uuid.UUID, name string) (*Signal, error)
 }
 

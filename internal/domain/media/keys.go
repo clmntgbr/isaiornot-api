@@ -88,7 +88,6 @@ func NewFileKey(filename string) string {
 	return uuid.NewString() + ext
 }
 
-// NewObjectKey builds: {userID}/{scanID}/{fileKey}
 func NewObjectKey(userID, scanID uuid.UUID, fileKey string) string {
 	return userID.String() + "/" + scanID.String() + "/" + fileKey
 }
@@ -101,7 +100,6 @@ func NewThumbnailFileKey(mediaID uuid.UUID) string {
 	return "thumbnails/" + mediaID.String() + ".jpg"
 }
 
-// NewThumbnailObjectKey builds: {userID}/{scanID}/thumbnails/{mediaID}.jpg
 func NewThumbnailObjectKey(userID, scanID, mediaID uuid.UUID) string {
 	return NewObjectKey(userID, scanID, NewThumbnailFileKey(mediaID))
 }
@@ -143,7 +141,6 @@ func ScanIDFromKey(encodedKey string) (uuid.UUID, error) {
 	return uuid.Parse(parts[1])
 }
 
-// FileKeyFromObjectKey returns the path relative to {userID}/{scanID}/.
 func FileKeyFromObjectKey(encodedKey string) (string, error) {
 	key, err := DecodeObjectKey(encodedKey)
 	if err != nil {

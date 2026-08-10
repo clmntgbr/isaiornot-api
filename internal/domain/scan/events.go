@@ -7,6 +7,7 @@ const (
 	EventTypeScanUpdated   = "scan.updated.v1"
 	EventTypeScanCompleted = "scan.completed.v1"
 	EventTypeScanFailed    = "scan.failed.v1"
+	EventTypeScanFinalize  = "scan.finalize.v1"
 )
 
 type ScanCreated struct {
@@ -68,3 +69,14 @@ func (e ScanFailed) EventID() string       { return e.ID }
 func (e ScanFailed) EventType() string     { return EventTypeScanFailed }
 func (e ScanFailed) AggregateID() string   { return e.ScanID }
 func (e ScanFailed) OccurredAt() time.Time { return e.Timestamp }
+
+type ScanFinalizeRequested struct {
+	ID        string    `json:"eventId"`
+	ScanID    string    `json:"scanId"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+func (e ScanFinalizeRequested) EventID() string       { return e.ID }
+func (e ScanFinalizeRequested) EventType() string     { return EventTypeScanFinalize }
+func (e ScanFinalizeRequested) AggregateID() string   { return e.ScanID }
+func (e ScanFinalizeRequested) OccurredAt() time.Time { return e.Timestamp }

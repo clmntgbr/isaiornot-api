@@ -8,8 +8,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// MediaModel is the persistence mapping for table medias.
-// Schema is owned by SQL migrations — do not encode DDL in tags.
 type MediaModel struct {
 	ID          uuid.UUID    `gorm:"column:id;primaryKey"`
 	ScanID      uuid.UUID    `gorm:"column:scan_id"`
