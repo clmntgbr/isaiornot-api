@@ -1,0 +1,275 @@
+---
+description: Architecture Review — File organization, layer compliance, structural issues
+alwaysApply: false
+---
+
+# Architecture Review — Conformité & Organisation
+
+Date: 2026-08-10
+Évaluation vs. `.cursor/rules/architecture.mdc` (hors tests)
+
+---
+
+## Résumé Exécutif
+
+**Conformité: 7/10** — Architecture CQRS/event-driven bien fondée. Layer isolation OK. Issues: placement de types, multiple workers vs guideline, nommage de dossier.
+
+**Actions immédiates:** 3 moves, 1 architectural decision.
+
+---
+
+## ✅ Points Forts
+
+### 1. Event Versioning
+**État:** Conforme
+Tous événements nommés `event.type.v1`: `media.created.v1`, `scan.created.v1`, `user.created.v1`, etc. Prêt pour v2.
+
+### 2. CQRS Séparation
+**État:** Conforme
+- Commands (`internal/application/command/`): synchrones, retournent IDs
+- Queries (`internal/application/query/`): lectures dédiées
+- Events (`internal/application/event/`): handlers asynchrones via RabbitMQ
+
+### 3. Domain Events & Aggregates
+**État:** Conforme
+- Chaque aggregate dans `internal/domain/<nom>/`: media, scan, user, signal, insight, invoice, plan, quota, subscription
+- Patterns `PullEvents()` / `recordEvent()` implémentés
+- Domain libre de DDL/GORM
+
+### 4. Layer Isolation (Core Dependency Rule)
+**État:** Conforme
+- Domain n'importe pas infrastructure/application/interfaces
+- Application dépend seulement de domain
+- DI containers isolés en `cmd/*/di/`
+
+### 5. Outbox & Idempotence
+**État:** Conforme
+- Dedup key: `(event_id, handler_name)`
+- `application/event/dedup.With()` wrapper implémenté
+- DLQ configuré (retry TTL + poison queue)
+
+### 6. Migrations & Schema
+**État:** Conforme
+- Goose utilisé: `migrations/00001_init.sql` → `00007_media_status_pending.sql`
+- Schema source of truth (pas AutoMigrate GORM)
+
+### 7. DI Containers
+**État:** Conforme
+- Wiring manuel en `cmd/*/di/container.go`
+- Composition lisible et typée
+
+---
+
+## ⚠️ Axes Critiques (Placement & Organisation)
+
+### 1. **Error Types Misplacement** (CRITIQUE)
+
+**Symptôme:** RetryableError/NonRetryableError dans `application/messaging/errors.go`
+
+**Problème:** Guidelines section "Where new code goes" + "Retry/DLQ" stipulent que ces types sont des **domain ports**. Actuellement en `application/messaging/` viole dependency rule.
+
+**Code actuel:**
+```
+internal/application/messaging/errors.go
+├── RetryableError
+├── NonRetryableError
+└── helpers: Retryable(err), NonRetryable(err)
+```
+
+**Fix:**
+1. Déplacer vers `internal/domain/port/errors.go`
+2. Mettre à jour imports (6+ files):
+   - `internal/application/event/dedup/with_dedup.go`
+   - `internal/application/command/media/enqueue_analyze.go`
+   - Tous event handlers qui wrappent errors
+
+**Avant:**
+```go
+import "go-api/internal/application/messaging"
+...
+return messaging.Retryable(err)
+```
+
+**Après:**
+```go
+import "go-api/internal/domain/port"
+...
+return port.Retryable(err)
+```
+
+**Impact:** Aucun changement comportemental. Breaking change: imports seulement.
+
+---
+
+### 2. **Realtime Types Placement** (MOYEN)
+
+**Symptôme:** `internal/application/realtime/types.go` contient constantes `ActionCreated`, `ActionUpdated`, etc.
+
+**Problème:** Constants d'événement realtime sont des contrats de **port**, pas logique application. RealtimePublisher interface est correctement en `domain/port/realtime.go`, mais types y sont éparpillés.
+
+**Code actuel:**
+```
+domain/port/realtime.go          ← RealtimePublisher interface
+application/realtime/types.go    ← ActionCreated, ActionUpdated, EventType constants
+```
+
+**Fix:**
+1. Fusionner `application/realtime/types.go` → `domain/port/realtime.go`
+2. Ou créer `domain/port/realtime_types.go`
+3. Mettre à jour imports en 3 event handlers
+
+**Avant:**
+```go
+import "go-api/internal/application/realtime"
+const action = realtime.ActionCreated
+```
+
+**Après:**
+```go
+import "go-api/internal/domain/port"
+const action = port.ActionCreated
+```
+
+**Impact:** Low risk. Constantes seulement; pas de logique comportementale.
+
+---
+
+### 3. **Multiple Workers Specialisés** (ARCHITECTURAL)
+
+**Symptôme:** 5 processus distincts au lieu de 1 scalable:
+```
+cmd/
+  api/       HTTP server
+  worker/    outbox relay + event handlers (RabbitMQ consumer)
+  cli/       migrations
+  heuristic/ dedicated worker (image heuristics)
+  aimodel/   dedicated worker (SightEngine API)
+  metadata/  dedicated worker (metadata extraction)
+```
+
+**Guideline:**
+> "One scalable worker process; internal dispatch via HandlerRegistry, not a giant switch."
+
+**Problème:**
+- Cada worker: DI container séparé, RabbitMQ consumer separé, logic specialisée
+- Déploiement/scaling fragmenté
+- Query: Comment heuristic/metadata/aimodel reçoivent événements? Via event handler Registry ou RabbitMQ direct?
+
+**Options:**
+
+**A) Consolidate (Preferred):**
+1. Fusionner `cmd/heuristic/`, `cmd/metadata/`, `cmd/aimodel/` → `cmd/worker/`
+2. Une seule RabbitMQ consumer registry
+3. Feature flags/config pour enable/disable stages
+4. Déploiement progressif via `WORKER_STAGES=metadata,heuristic,aimodel`
+
+**B) Document Exception:**
+1. Si workers externes intentionnel (déployés séparément):
+   - Documenter dans `docs/WORKERS.md` (topology, event flow, retry contract)
+   - Ajouter note en `.cursor/rules/architecture.mdc` ("Externe workers acceptable si bien documentés")
+   - Vérifier contrats événements (payload, routing keys)
+
+**Recommandation:** Option A (consolidate). Plus simple maintenance, moins d'infra.
+
+**Impact si consolidation:**
+- `cmd/api/di/`, `cmd/worker/di/` mettent à jour HandlerRegistry
+- `cmd/heuristic/di/`, `cmd/metadata/di/`, `cmd/aimodel/di/` fusionnent en `cmd/worker/di/`
+- Efforts: ~1j
+
+---
+
+### 4. **Utility Package Naming** (BAS)
+
+**Symptôme:** `internal/domain/aggregate/compute.go` contient `Compute()`, `AggregateMediaResults()`
+
+**Problème:** Package "aggregate" suggère une vraie aggregate (entity + events + repository). Contenu = utility cross-domain pour verdict computation. Nom misleading.
+
+**Code actuel:**
+```go
+package aggregate
+
+func Compute(signals []InputSignal) Result { ... }
+func AggregateMediaResults(results []Result) Result { ... }
+```
+
+**Fix:** Renommer `domain/aggregate/` → `domain/verdict/` ou `domain/signal/compute/`
+
+**Avant:**
+```go
+import "go-api/internal/domain/aggregate"
+verdict := aggregate.Compute(signals)
+```
+
+**Après:**
+```go
+import "go-api/internal/domain/verdict"
+verdict := verdict.Compute(signals)
+```
+
+**Impact:** Organisational clarity seulement; 2-3 fichiers imports.
+
+---
+
+## 🔄 Améliorations Mineures (À Considérer)
+
+1. **Schema Assertion** (section précédente REVIEW.md)
+   Ajouter `schema.AssertModelsMatchDB(db)` au boot (cli, api, worker)
+
+2. **Observabilité Manquante**
+   - Logs structurés event handlers
+   - Traces distribuées OpenTelemetry
+   - Métriques Prometheus (handler latency, events_processed, DLQ depth)
+
+3. **Documentation**
+   - `docs/EVENTS.md` — catalog événements, payloads
+   - `docs/PIPELINE.md` — mermaid diagram media upload → completion
+   - `docs/WORKERS.md` (si workers spécialisés documentés)
+   - `docs/RUNBOOK.md` — ops playbook
+
+---
+
+## 📋 Actionable Refactoring Checklist
+
+| Item | Severity | Work | Pré-req |
+|------|----------|------|---------|
+| Move error types → domain/port | 🔴 High | 1h | None |
+| Move realtime types → domain/port | 🟡 Medium | 30m | None |
+| Consolidate workers OR document multi-worker | 🟡 Medium | 1d (consolidate) / 2h (document) | Decision first |
+| Rename domain/aggregate → domain/verdict | 🟢 Low | 30m | After error types move |
+
+---
+
+## 🎯 Recommended Action Plan
+
+### Immediate (1 sprint)
+1. **Move error types:** `application/messaging/errors.go` → `domain/port/errors.go`
+   ↳ Update 6 imports
+2. **Move realtime types:** Merge `application/realtime/types.go` → `domain/port/realtime.go`
+   ↳ Update 3 imports
+3. **Decide on workers:** Consolidate or document as exception
+
+### Short-term (if consolidating)
+1. Merge `cmd/heuristic/`, `cmd/metadata/`, `cmd/aimodel/` → single worker
+2. Update HandlerRegistry in `cmd/worker/di/container.go`
+3. Add feature flags for stage enable/disable
+
+### Medium-term
+1. Add schema assertions at boot
+2. Structured logging + metrics (covered in prior REVIEW.md)
+3. Documentation (EVENTS, PIPELINE, RUNBOOK)
+
+---
+
+## 🏗️ No Layer Violations Detected
+
+Core dependency rule (domain → application → infrastructure → interfaces) is **clean**:
+- ✅ Domain imports only domain (small internal packages)
+- ✅ Application imports only domain + shared messaging helpers
+- ✅ Infrastructure adapters properly isolated
+- ✅ HTTP handlers in interfaces/http
+
+All aggregates correctly structured. No GORM tags in domain entities. Outbox pattern solid.
+
+---
+
+**Status:** Review complete. Refactoring items ready for scheduling.

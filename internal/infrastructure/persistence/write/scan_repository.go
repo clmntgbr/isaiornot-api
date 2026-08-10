@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	domainscan "go-api/internal/domain/scan"
 	"go-api/internal/infrastructure/persistence/dbtype"
@@ -52,6 +53,34 @@ func (r *scanWriteRepository) GetByID(ctx context.Context, id uuid.UUID) (*domai
 		return nil, err
 	}
 	return scanDomainFromModel(&model)
+}
+
+func (r *scanWriteRepository) ListInProgressCreatedBefore(
+	ctx context.Context,
+	before time.Time,
+) ([]*domainscan.Scan, error) {
+	var models []ScanModel
+	err := DBWithContext(ctx, r.db).
+		Where("status IN ?", []string{
+			string(domainscan.StatusUploaded),
+			string(domainscan.StatusProcessing),
+		}).
+		Where("created_at < ?", before).
+		Order("created_at ASC").
+		Find(&models).Error
+	if err != nil {
+		return nil, err
+	}
+
+	scans := make([]*domainscan.Scan, 0, len(models))
+	for i := range models {
+		scanEntity, err := scanDomainFromModel(&models[i])
+		if err != nil {
+			return nil, err
+		}
+		scans = append(scans, scanEntity)
+	}
+	return scans, nil
 }
 
 func scanModelFromDomain(s *domainscan.Scan) (*ScanModel, error) {

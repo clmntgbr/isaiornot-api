@@ -81,6 +81,19 @@ services:
       - api
     restart: unless-stopped
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: scheduler
+    container_name: scheduler
+    command: ["./scheduler"]
+    env_file:
+      - .env
+    networks:
+      - api
+    restart: unless-stopped
+
   rabbitmq:
     container_name: rabbitmq
     image: rabbitmq:3.13-management-alpine

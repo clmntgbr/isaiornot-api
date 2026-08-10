@@ -68,6 +68,12 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -o cli \
     ./cmd/cli
 
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -a -installsuffix cgo \
+    -ldflags="-w -s" \
+    -o scheduler \
+    ./cmd/scheduler
+
 
 # ============================================
 # Production stage - Minimal runtime
@@ -87,9 +93,29 @@ COPY --from=builder --chown=appuser:appuser /app/metadata .
 COPY --from=builder --chown=appuser:appuser /app/heuristic .
 COPY --from=builder --chown=appuser:appuser /app/aimodel .
 COPY --from=builder --chown=appuser:appuser /app/cli .
+COPY --from=builder --chown=appuser:appuser /app/scheduler .
 
 USER appuser
 
 EXPOSE 3000
 
 CMD ["./api"]
+
+
+# ============================================
+# Scheduler stage - Cron jobs only
+# ============================================
+FROM alpine:latest AS scheduler
+
+RUN apk --no-cache add ca-certificates tzdata
+
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser
+
+WORKDIR /home/appuser
+
+COPY --from=builder --chown=appuser:appuser /app/scheduler .
+
+USER appuser
+
+CMD ["./scheduler"]

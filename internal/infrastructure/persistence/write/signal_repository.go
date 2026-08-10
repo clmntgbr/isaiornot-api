@@ -46,6 +46,10 @@ func (r *signalWriteRepository) Delete(ctx context.Context, id uuid.UUID) error 
 	return DBWithContext(ctx, r.db).Delete(&SignalModel{}, "id = ?", id).Error
 }
 
+func (r *signalWriteRepository) DeleteByMediaID(ctx context.Context, mediaID uuid.UUID) error {
+	return DBWithContext(ctx, r.db).Where("media_id = ?", mediaID).Delete(&SignalModel{}).Error
+}
+
 func (r *signalWriteRepository) GetByID(ctx context.Context, id uuid.UUID) (*domainsignal.Signal, error) {
 	var model SignalModel
 	err := DBWithContext(ctx, r.db).First(&model, "id = ?", id).Error

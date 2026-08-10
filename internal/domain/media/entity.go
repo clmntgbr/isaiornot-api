@@ -117,6 +117,27 @@ func (m *Media) MarkUploaded() {
 	})
 }
 
+// ResetToUploadedForRetry forces media back to uploaded and emits MediaUploaded
+// so the analyze pipeline can be restarted via the outbox/worker.
+func (m *Media) ResetToUploadedForRetry() {
+	now := time.Now().UTC()
+	if m.Status != StatusUploaded {
+		m.setStatus(StatusUploaded)
+	}
+	m.UpdatedAt = now
+	m.recordEvent(MediaUploaded{
+		ID:          uuid.New().String(),
+		MediaID:     m.ID.String(),
+		ScanID:      m.ScanID.String(),
+		Key:         m.Key,
+		Filename:    m.Filename,
+		ContentType: m.ContentType,
+		Size:        m.Size,
+		Status:      string(m.Status),
+		Timestamp:   now,
+	})
+}
+
 func (m *Media) ApplyContent(contentType string, size int64) {
 	m.ContentType = contentType
 	m.Size = size

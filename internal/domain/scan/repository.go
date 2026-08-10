@@ -15,6 +15,7 @@ type ScanWriteRepository interface {
 	Save(ctx context.Context, scan *Scan) error
 	Update(ctx context.Context, scan *Scan) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Scan, error)
+	ListInProgressCreatedBefore(ctx context.Context, before time.Time) ([]*Scan, error)
 }
 
 type ScanReadRepository interface {
