@@ -21,6 +21,11 @@ func setupWebhooks(app *fiber.App, container *di.Container) {
 		container.MediaUploadWebhookMiddleware.Protected(),
 		container.MediaUploadWebhookHandler.ObjectCreated,
 	)
+	webhooks.Post(
+		"/stripe",
+		container.BillingWebhookMiddleware.Protected(),
+		container.BillingWebhookHandler.Execute,
+	)
 }
 
 func setupHealthChecks(app *fiber.App) {
@@ -37,6 +42,7 @@ func setupAPIRoutes(app *fiber.App, container *di.Container) {
 	setupMediaRoutes(api, container)
 	setupPlanRoutes(api, container)
 	setupSubscriptionRoutes(api, container)
+	setupInvoiceRoutes(api, container)
 	setupRealtimeRoutes(api, container)
 }
 
@@ -72,4 +78,11 @@ func setupSubscriptionRoutes(api fiber.Router, container *di.Container) {
 	auth := container.AuthenticateMiddleware.Protected()
 	api.Get("/subscription", auth, container.SubscriptionHandler.GetSubscription)
 	api.Get("/quota", auth, container.SubscriptionHandler.GetQuota)
+	api.Post("/subscriptions", auth, container.SubscriptionHandler.CreateSubscription)
+	api.Post("/subscriptions/preview", auth, container.SubscriptionHandler.PreviewSubscription)
+}
+
+func setupInvoiceRoutes(api fiber.Router, container *di.Container) {
+	auth := container.AuthenticateMiddleware.Protected()
+	api.Get("/invoices", auth, container.InvoiceHandler.GetInvoices)
 }

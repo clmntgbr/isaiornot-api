@@ -59,6 +59,12 @@ type Config struct {
 	CentrifugoAPIKey      string
 	CentrifugoTokenSecret string
 	CentrifugoPublicWSURL string
+
+	StripeSecretKey      string
+	StripeWebhookSecret  string
+	RedirectSuccessURL   string
+	RedirectCancelURL    string
+	RedirectPortalURL    string
 }
 
 func Load() *Config {
@@ -118,6 +124,12 @@ func Load() *Config {
 		CentrifugoAPIKey:      getEnv("CENTRIFUGO_API_KEY"),
 		CentrifugoTokenSecret: getEnv("CENTRIFUGO_TOKEN_SECRET"),
 		CentrifugoPublicWSURL: getEnvOrDefault("CENTRIFUGO_PUBLIC_WS_URL", ""),
+
+		StripeSecretKey:     getEnvOrDefault("STRIPE_SECRET_KEY", ""),
+		StripeWebhookSecret: getEnvOrDefault("STRIPE_WEBHOOK_SECRET", ""),
+		RedirectSuccessURL:  getEnvOrDefault("REDIRECT_SUCCESS_URL", "http://localhost:3001/subscription/success"),
+		RedirectCancelURL:   getEnvOrDefault("REDIRECT_CANCEL_URL", "http://localhost:3001/subscription/failed"),
+		RedirectPortalURL:   getEnvOrDefault("REDIRECT_PORTAL_URL", "http://localhost:3001/subscription"),
 	}
 }
 

@@ -135,3 +135,17 @@ func (s *Subscription) MarkCancelled(atPeriodEnd bool) {
 		Timestamp:            s.UpdatedAt,
 	})
 }
+
+func (s *Subscription) DowngradeToFree(freePlanID uuid.UUID) {
+	now := time.Now().UTC()
+	s.ApplyUpdate(
+		freePlanID,
+		StatusActive,
+		s.StripeCustomerID,
+		"",
+		now,
+		now.AddDate(100, 0, 0),
+		false,
+		now,
+	)
+}

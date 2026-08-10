@@ -3,25 +3,34 @@ package handler
 import (
 	"errors"
 
+	cmdsubscription "go-api/internal/application/command/subscription"
 	querysubscription "go-api/internal/application/query/subscription"
 	httpctx "go-api/internal/interfaces/http/context"
+	"go-api/internal/interfaces/http/dto"
 	"go-api/internal/interfaces/http/presenter"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 )
 
 type SubscriptionHandler struct {
 	getCurrentSubscriptionHandler *querysubscription.GetCurrentSubscriptionHandler
 	getQuotaUsageHandler          *querysubscription.GetQuotaUsageHandler
+	previewPlanChangeHandler      *querysubscription.PreviewPlanChangeHandler
+	createSubscriptionHandler     *cmdsubscription.CreateSubscriptionHandler
 }
 
 func NewSubscriptionHandler(
 	getCurrentSubscriptionHandler *querysubscription.GetCurrentSubscriptionHandler,
 	getQuotaUsageHandler *querysubscription.GetQuotaUsageHandler,
+	previewPlanChangeHandler *querysubscription.PreviewPlanChangeHandler,
+	createSubscriptionHandler *cmdsubscription.CreateSubscriptionHandler,
 ) *SubscriptionHandler {
 	return &SubscriptionHandler{
 		getCurrentSubscriptionHandler: getCurrentSubscriptionHandler,
 		getQuotaUsageHandler:          getQuotaUsageHandler,
+		previewPlanChangeHandler:      previewPlanChangeHandler,
+		createSubscriptionHandler:     createSubscriptionHandler,
 	}
 }
 
@@ -74,4 +83,107 @@ func (h *SubscriptionHandler) GetQuota(c fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(presenter.NewQuotaUsageResponse(usage))
+}
+
+func (h *SubscriptionHandler) PreviewSubscription(c fiber.Ctx) error {
+	user, err := httpctx.GetUser(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Unauthorized",
+		})
+	}
+
+	var request dto.PreviewSubscriptionRequest
+	if err := c.Bind().Body(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid request body",
+			"errors":  err.Error(),
+		})
+	}
+
+	planID, err := uuid.Parse(request.PlanID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid planId",
+		})
+	}
+
+	preview, err := h.previewPlanChangeHandler.Handle(c.Context(), querysubscription.PreviewPlanChangeQuery{
+		UserID: user.ID,
+		PlanID: planID,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, querysubscription.ErrPlanNotFound):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": "Plan not found",
+			})
+		case errors.Is(err, querysubscription.ErrPlanInactive),
+			errors.Is(err, querysubscription.ErrFreePlanCheckout),
+			errors.Is(err, querysubscription.ErrMissingStripePrice),
+			errors.Is(err, querysubscription.ErrAlreadyOnPlan):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"message": err.Error(),
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Failed to preview plan change",
+			})
+		}
+	}
+
+	return c.Status(fiber.StatusOK).JSON(presenter.NewPlanChangePreviewResponse(preview))
+}
+
+func (h *SubscriptionHandler) CreateSubscription(c fiber.Ctx) error {
+	user, err := httpctx.GetUser(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Unauthorized",
+		})
+	}
+
+	var request dto.CreateSubscriptionRequest
+	if err := c.Bind().Body(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid request body",
+			"errors":  err.Error(),
+		})
+	}
+
+	planID, err := uuid.Parse(request.PlanID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid planId",
+		})
+	}
+
+	result, err := h.createSubscriptionHandler.Handle(c.Context(), cmdsubscription.CreateSubscriptionCommand{
+		UserID:        user.ID,
+		PlanID:        planID,
+		ProrationDate: request.ProrationDate,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, querysubscription.ErrPlanNotFound),
+			errors.Is(err, querysubscription.ErrSubscriptionNotFound):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": err.Error(),
+			})
+		case errors.Is(err, querysubscription.ErrPlanInactive),
+			errors.Is(err, querysubscription.ErrFreePlanCheckout),
+			errors.Is(err, querysubscription.ErrMissingStripePrice),
+			errors.Is(err, querysubscription.ErrAlreadyOnPlan):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"message": err.Error(),
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Internal server error",
+				"errors":  err.Error(),
+			})
+		}
+	}
+
+	return c.Status(fiber.StatusOK).JSON(presenter.NewChangeSubscriptionResponse(result))
 }
