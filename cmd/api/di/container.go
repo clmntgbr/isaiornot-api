@@ -11,6 +11,7 @@ import (
 	querymedia "go-api/internal/application/query/media"
 	queryplan "go-api/internal/application/query/plan"
 	queryscan "go-api/internal/application/query/scan"
+	querysubscription "go-api/internal/application/query/subscription"
 	queryuser "go-api/internal/application/query/user"
 	infraClerk "go-api/internal/infrastructure/clerk"
 	"go-api/internal/infrastructure/config"
@@ -36,6 +37,7 @@ type Container struct {
 	ScanHandler                  *httphandler.ScanHandler
 	MediaHandler                 *httphandler.MediaHandler
 	PlanHandler                  *httphandler.PlanHandler
+	SubscriptionHandler          *httphandler.SubscriptionHandler
 	RealtimeHandler              *httphandler.RealtimeHandler
 }
 
@@ -53,7 +55,10 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	mediaReadRepo := read.NewMediaReadRepository(db)
 	signalReadRepo := read.NewSignalReadRepository(db)
 	quotaReadRepo := read.NewQuotaReadRepository(db)
+	planWriteRepo := write.NewPlanWriteRepository(db)
 	planReadRepo := read.NewPlanReadRepository(db, quotaReadRepo)
+	subscriptionWriteRepo := write.NewSubscriptionWriteRepository(db)
+	subscriptionReadRepo := read.NewSubscriptionReadRepository(db, planReadRepo)
 	outboxRepo := outbox.NewRepository(db)
 
 	minioStorage, err := storage.NewMinIOStorage(env)
@@ -61,7 +66,12 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		log.Fatalf("failed to create storage client: %v", err)
 	}
 
-	createUserHandler := usercmd.NewCreateUserHandler(userWriteRepo, outboxRepo)
+	createUserHandler := usercmd.NewCreateUserHandler(
+		userWriteRepo,
+		planWriteRepo,
+		subscriptionWriteRepo,
+		outboxRepo,
+	)
 	updateUserHandler := usercmd.NewUpdateUserHandler(userWriteRepo, outboxRepo)
 	getUserByExternalIDHandler := usercmd.NewGetUserByExternalIDHandler(userWriteRepo)
 	deleteUserByExternalIDHandler := usercmd.NewDeleteUserByExternalIDHandler(userWriteRepo, outboxRepo)
@@ -73,6 +83,10 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	getStatisticsHandler := queryscan.NewGetStatisticsHandler(scanReadRepo)
 	getOwnedMediaHandler := querymedia.NewGetOwnedMediaHandler(mediaReadRepo, scanReadRepo)
 	listPlansHandler := queryplan.NewListPlansHandler(planReadRepo)
+	getCurrentSubscriptionHandler := querysubscription.NewGetCurrentSubscriptionHandler(
+		userReadRepo,
+		subscriptionReadRepo,
+	)
 	presignUploadHandler := scancmd.NewPresignUploadHandler(
 		scanWriteRepo,
 		mediaWriteRepo,
@@ -113,8 +127,9 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 			getStatisticsHandler,
 			presignUploadHandler,
 		),
-		MediaHandler:    httphandler.NewMediaHandler(getOwnedMediaHandler, minioStorage),
-		PlanHandler:     httphandler.NewPlanHandler(listPlansHandler),
-		RealtimeHandler: httphandler.NewRealtimeHandler(env),
+		MediaHandler:        httphandler.NewMediaHandler(getOwnedMediaHandler, minioStorage),
+		PlanHandler:         httphandler.NewPlanHandler(listPlansHandler),
+		SubscriptionHandler: httphandler.NewSubscriptionHandler(getCurrentSubscriptionHandler),
+		RealtimeHandler:     httphandler.NewRealtimeHandler(env),
 	}
 }

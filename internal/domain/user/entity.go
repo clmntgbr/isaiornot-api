@@ -9,14 +9,15 @@ import (
 )
 
 type User struct {
-	ID        uuid.UUID
-	ClerkID   string
-	FirstName string
-	LastName  string
-	Banned    bool
-	Email     string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID             uuid.UUID
+	ClerkID        string
+	FirstName      string
+	LastName       string
+	Banned         bool
+	Email          string
+	SubscriptionID *uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 
 	events []event.DomainEvent
 }
@@ -74,6 +75,12 @@ func (u *User) ApplyUpdate(firstName, lastName, email string, banned bool) {
 		Banned:    u.Banned,
 		Timestamp: u.UpdatedAt,
 	})
+}
+
+func (u *User) AssignSubscription(subscriptionID uuid.UUID) {
+	id := subscriptionID
+	u.SubscriptionID = &id
+	u.UpdatedAt = time.Now().UTC()
 }
 
 func (u *User) MarkDeleted() {

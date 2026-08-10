@@ -23,12 +23,13 @@ type UserReadRepository interface {
 }
 
 type UserView struct {
-	ID        uuid.UUID
-	ClerkID   string
-	FirstName string
-	LastName  string
-	Email     string
-	Banned    bool
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID             uuid.UUID
+	ClerkID        string
+	FirstName      string
+	LastName       string
+	Email          string
+	Banned         bool
+	SubscriptionID *uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
