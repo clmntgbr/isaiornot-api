@@ -34,6 +34,7 @@ func setupAPIRoutes(app *fiber.App, container *di.Container) {
 
 	setupUserRoutes(api, container)
 	setupScanRoutes(api, container)
+	setupMediaRoutes(api, container)
 	setupRealtimeRoutes(api, container)
 }
 
@@ -52,5 +53,10 @@ func setupScanRoutes(api fiber.Router, container *di.Container) {
 	auth := container.AuthenticateMiddleware.Protected()
 	api.Get("/scans", auth, container.ScanHandler.GetScans)
 	api.Post("/scans/presign-upload-url", auth, container.ScanHandler.PresignUpload)
-	api.Get("/scan/:id", auth, container.ScanHandler.GetScan)
+	api.Get("/scans/:id", auth, container.ScanHandler.GetScan)
+}
+
+func setupMediaRoutes(api fiber.Router, container *di.Container) {
+	auth := container.AuthenticateMiddleware.Protected()
+	api.Get("/medias/:id/thumbnail", auth, container.MediaHandler.GetThumbnail)
 }

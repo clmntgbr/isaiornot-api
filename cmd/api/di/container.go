@@ -8,6 +8,7 @@ import (
 	mediacmd "go-api/internal/application/command/media"
 	scancmd "go-api/internal/application/command/scan"
 	usercmd "go-api/internal/application/command/user"
+	querymedia "go-api/internal/application/query/media"
 	queryscan "go-api/internal/application/query/scan"
 	queryuser "go-api/internal/application/query/user"
 	infraClerk "go-api/internal/infrastructure/clerk"
@@ -32,6 +33,7 @@ type Container struct {
 	MediaUploadWebhookHandler    *httphandler.MediaUploadWebhookHandler
 	UserHandler                  *httphandler.UserHandler
 	ScanHandler                  *httphandler.ScanHandler
+	MediaHandler                 *httphandler.MediaHandler
 	RealtimeHandler              *httphandler.RealtimeHandler
 }
 
@@ -64,6 +66,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	getUserByIDHandler := queryuser.NewGetUserByIDHandler(userReadRepo)
 	listScansHandler := queryscan.NewListScansHandler(scanReadRepo, mediaReadRepo, signalReadRepo)
 	getScanByIDHandler := queryscan.NewGetScanByIDHandler(scanReadRepo, mediaReadRepo, signalReadRepo)
+	getOwnedMediaHandler := querymedia.NewGetOwnedMediaHandler(mediaReadRepo, scanReadRepo)
 	presignUploadHandler := scancmd.NewPresignUploadHandler(
 		scanWriteRepo,
 		mediaWriteRepo,
@@ -99,6 +102,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		),
 		UserHandler:     httphandler.NewUserHandler(getUserByIDHandler),
 		ScanHandler:     httphandler.NewScanHandler(listScansHandler, getScanByIDHandler, presignUploadHandler),
+		MediaHandler:    httphandler.NewMediaHandler(getOwnedMediaHandler, minioStorage),
 		RealtimeHandler: httphandler.NewRealtimeHandler(env),
 	}
 }
