@@ -9,6 +9,7 @@ import (
 	scancmd "go-api/internal/application/command/scan"
 	usercmd "go-api/internal/application/command/user"
 	querymedia "go-api/internal/application/query/media"
+	queryplan "go-api/internal/application/query/plan"
 	queryscan "go-api/internal/application/query/scan"
 	queryuser "go-api/internal/application/query/user"
 	infraClerk "go-api/internal/infrastructure/clerk"
@@ -34,6 +35,7 @@ type Container struct {
 	UserHandler                  *httphandler.UserHandler
 	ScanHandler                  *httphandler.ScanHandler
 	MediaHandler                 *httphandler.MediaHandler
+	PlanHandler                  *httphandler.PlanHandler
 	RealtimeHandler              *httphandler.RealtimeHandler
 }
 
@@ -50,6 +52,8 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	mediaWriteRepo := write.NewMediaWriteRepository(db)
 	mediaReadRepo := read.NewMediaReadRepository(db)
 	signalReadRepo := read.NewSignalReadRepository(db)
+	quotaReadRepo := read.NewQuotaReadRepository(db)
+	planReadRepo := read.NewPlanReadRepository(db, quotaReadRepo)
 	outboxRepo := outbox.NewRepository(db)
 
 	minioStorage, err := storage.NewMinIOStorage(env)
@@ -67,6 +71,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	listScansHandler := queryscan.NewListScansHandler(scanReadRepo, mediaReadRepo, signalReadRepo)
 	getScanByIDHandler := queryscan.NewGetScanByIDHandler(scanReadRepo, mediaReadRepo, signalReadRepo)
 	getOwnedMediaHandler := querymedia.NewGetOwnedMediaHandler(mediaReadRepo, scanReadRepo)
+	listPlansHandler := queryplan.NewListPlansHandler(planReadRepo)
 	presignUploadHandler := scancmd.NewPresignUploadHandler(
 		scanWriteRepo,
 		mediaWriteRepo,
@@ -103,6 +108,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		UserHandler:     httphandler.NewUserHandler(getUserByIDHandler),
 		ScanHandler:     httphandler.NewScanHandler(listScansHandler, getScanByIDHandler, presignUploadHandler),
 		MediaHandler:    httphandler.NewMediaHandler(getOwnedMediaHandler, minioStorage),
+		PlanHandler:     httphandler.NewPlanHandler(listPlansHandler),
 		RealtimeHandler: httphandler.NewRealtimeHandler(env),
 	}
 }

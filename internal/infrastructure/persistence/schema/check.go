@@ -17,6 +17,8 @@ func Models() []any {
 		&write.MediaModel{},
 		&write.InsightModel{},
 		&write.SignalModel{},
+		&write.QuotaModel{},
+		&write.PlanModel{},
 		&outbox.OutboxEvent{},
 		&processed.ProcessedEvent{},
 	}
