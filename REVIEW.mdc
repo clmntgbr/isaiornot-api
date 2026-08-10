@@ -1,9 +1,9 @@
 ---
-description: Architecture Review — File organization, layer compliance, structural issues
+description: Architecture Review — Conformité design, state machines, observabilité, organisation fichiers
 alwaysApply: false
 ---
 
-# Architecture Review — Conformité & Organisation
+# Architecture Review — Analyse Complète
 
 Date: 2026-08-10
 Évaluation vs. `.cursor/rules/architecture.mdc` (hors tests)
@@ -12,9 +12,9 @@ Date: 2026-08-10
 
 ## Résumé Exécutif
 
-**Conformité: 7/10** — Architecture CQRS/event-driven bien fondée. Layer isolation OK. Issues: placement de types, multiple workers vs guideline, nommage de dossier.
+**Conformité: 7/10** — Architecture CQRS/event-driven bien fondée. Layer isolation propre. **Lacunes critiques:** pas de state machine validators, observabilité manquante, fichiers mal placés, transaction boundaries ambiguës.
 
-**Actions immédiates:** 3 moves, 1 architectural decision.
+**Work estimate:** Tests excl. = 10-12j pour fermer all items.
 
 ---
 
@@ -22,127 +22,411 @@ Date: 2026-08-10
 
 ### 1. Event Versioning
 **État:** Conforme
-Tous événements nommés `event.type.v1`: `media.created.v1`, `scan.created.v1`, `user.created.v1`, etc. Prêt pour v2.
+Tous événements nommés `event.type.v1`: `media.created.v1`, `scan.created.v1`, `user.created.v1`, `signal.created.v1`, etc. Extensible pour v2.
 
 ### 2. CQRS Séparation
 **État:** Conforme
 - Commands (`internal/application/command/`): synchrones, retournent IDs
 - Queries (`internal/application/query/`): lectures dédiées
 - Events (`internal/application/event/`): handlers asynchrones via RabbitMQ
+- Fiber handlers appellent commands/queries directement (pas de generic CommandBus)
 
 ### 3. Domain Events & Aggregates
 **État:** Conforme
 - Chaque aggregate dans `internal/domain/<nom>/`: media, scan, user, signal, insight, invoice, plan, quota, subscription
 - Patterns `PullEvents()` / `recordEvent()` implémentés
-- Domain libre de DDL/GORM
+- `eventId` généré à la création, pas au publish ✅
+- Domain libre de DDL/GORM, persistence models séparés en infrastructure ✅
 
 ### 4. Layer Isolation (Core Dependency Rule)
 **État:** Conforme
-- Domain n'importe pas infrastructure/application/interfaces
-- Application dépend seulement de domain
-- DI containers isolés en `cmd/*/di/`
+- Domain n'importe pas infrastructure/application/interfaces ✅
+- Application dépend seulement de domain (+ small shared helpers) ✅
+- Infrastructure adapters isolés par module (messaging, persistence, config, clerk, etc.) ✅
+- DI containers isolés en `cmd/*/di/`, composition lisible et typée ✅
 
 ### 5. Outbox & Idempotence
 **État:** Conforme
-- Dedup key: `(event_id, handler_name)`
-- `application/event/dedup.With()` wrapper implémenté
-- DLQ configuré (retry TTL + poison queue)
+- Table `outbox_events` avec pattern transactionnel ✅
+- Dedup key: `(event_id, handler_name)` correct ✅
+- `application/event/dedup.With()` wrapper implémenté ✅
+- DLQ configuré (retry TTL → DLX → DLQ) ✅
 
 ### 6. Migrations & Schema
 **État:** Conforme
-- Goose utilisé: `migrations/00001_init.sql` → `00007_media_status_pending.sql`
-- Schema source of truth (pas AutoMigrate GORM)
-
-### 7. DI Containers
-**État:** Conforme
-- Wiring manuel en `cmd/*/di/container.go`
-- Composition lisible et typée
+- Goose utilisé: `migrations/00001_init.sql` → migrations numérotées
+- Schema source of truth (pas AutoMigrate GORM) ✅
+- Persistence models match DB (présumé — pas d'assertions au boot)
 
 ---
 
-## ⚠️ Axes Critiques (Placement & Organisation)
+## ⚠️ Axes Critiques: Logique Métier & Qualité
+
+### 1. **State Machines Faibles** (ÉLEVÉ)
+
+**Symptôme:** Status transitions not validated at domain level.
+
+Media: `Pending → Uploaded → Processing → Completed | Failed`
+Scan: pas de graphe défini.
+
+**Code actuel:**
+```go
+func (m *Media) MarkProcessing() {
+  if m.Status == StatusProcessing {
+    return  // idempotent mais pas vraie validation
+  }
+  m.setStatus(StatusProcessing)
+}
+```
+
+**Problème:**
+- Pas de source of truth sur transitions légales
+- Permet transitions invalides si logique change
+- Idempotent mais permissif (any status → any status possible si pas de check explicite)
+
+**Fix:**
+1. Définir diagrammes état pour chaque aggregate (ASCII ou mermaid)
+2. Ajouter validateur: `func (m *Media) CanTransitionTo(newStatus Status) error`
+3. Rejeter violations dans domain
+
+**Exemple corrigé:**
+```go
+func (m *Media) MarkProcessing() error {
+  if !m.CanTransitionTo(StatusProcessing) {
+    return fmt.Errorf("invalid transition from %s to %s", m.Status, StatusProcessing)
+  }
+  m.setStatus(StatusProcessing)
+  m.recordEvent(MediaMarkedProcessing(...))
+  return nil
+}
+
+func (m *Media) CanTransitionTo(target Status) bool {
+  // Whitelist transitions
+  validTransitions := map[Status][]Status{
+    StatusPending: {StatusUploaded},
+    StatusUploaded: {StatusProcessing},
+    StatusProcessing: {StatusCompleted, StatusFailed},
+    StatusCompleted: {}, // terminal
+    StatusFailed: {StatusUploaded}, // retry allowed
+  }
+  allowed, exists := validTransitions[m.Status]
+  if !exists { return false }
+  for _, s := range allowed {
+    if s == target { return true }
+  }
+  return false
+}
+```
+
+**Impact:** Prévient states invalides; fail-fast au lieu de silent side-effect bugs.
+
+**Effort:** 1j (media + scan aggregates)
+
+---
+
+### 2. **Transaction Boundaries Ambigus** (MOYEN)
+
+**Symptôme:** Pas toujours clair où `outbox.StoreEvents()` s'appelle vs side-effects asynchrones.
+
+**Cas 1: Commands** (OK — transactionnel)
+```go
+func (h *CreateMediaHandler) Handle(ctx, cmd *CreateMediaCommand) (*Media, error) {
+  media := domain.NewMedia(cmd.ID, cmd.UserID, ...)
+  media.RecordEvent(MediaCreated{...})
+
+  if err := h.mediaRepo.Save(ctx, media); err != nil { return nil, err }  // TX: aggregate + events saved
+  if err := h.outbox.StoreEvents(ctx, media.PullEvents()); err != nil { return nil, err }
+
+  return media, nil  // 202 OK returned immediately
+}
+```
+
+**Cas 2: Event Handlers** (AMBIGUOUS)
+Exemple: `EnqueueAnalyzeHandler.OnMediaUploaded()` appelle `h.publisher.Publish()`.
+```go
+func (h *EnqueueAnalyzeHandler) OnMediaUploaded(ctx context.Context, payload []byte) error {
+  evt := parseEvent(payload)
+
+  // Side effect 1: Update media status
+  if err := h.mediaRepo.MarkProcessing(ctx, evt.MediaID); err != nil {
+    return messaging.Retryable(err)
+  }
+
+  // Side effect 2: Publish new event
+  if err := h.publisher.Publish(ctx, port.EventEnvelope{...}); err != nil {
+    return messaging.Retryable(err)  // But media status already updated!
+  }
+
+  return nil
+}
+```
+
+**Problème:**
+- Media status changed (1), mais si publish fails (2), on ne peut pas rollback (1)
+- Si handler crashes après (1), next retry skipped (dedup clé hit)
+- Asymétrie: outbox garanti exactly-once, mais side-effect (1) pas protégé
+
+**Fix Minimal (Low-hanging fruit):**
+1. Dans event handlers, **side effects avant publish:**
+   ```go
+   // Update
+   if err := h.mediaRepo.MarkProcessing(ctx, evt.MediaID); err != nil { return err }
+
+   // Publish only after updates committed
+   if err := h.publisher.Publish(ctx, ...); err != nil { return err }
+   ```
+
+2. Si publish fails → handler returns error → retry pulls event again → dedup prevents double-update ✅
+
+**Fix Ideal (Higher confidence):**
+1. Commands generate outbox entries (fire-and-forget)
+2. Event handlers **do not publish new events**; they only mutate aggregate state + publish events from **command** layer
+3. Separate concern: handlers as pure side-effects (emails, cache invalidation), not event publishers
+
+**Pattern:**
+```go
+// Event handler: update domain state, record events
+func (h *EnqueueAnalyzeHandler) OnMediaUploaded(ctx context.Context, payload []byte) error {
+  evt := parseEvent(payload)
+  media, err := h.mediaRepo.FindByID(ctx, evt.MediaID)
+  if err != nil { return err }
+
+  media.MarkProcessing()  // Domain method: records event
+
+  // Save aggregate + events in TX
+  return h.mediaRepo.Save(ctx, media)  // outbox.StoreEvents called within TX
+}
+```
+
+Command layer then polls events from outbox and publishes externally.
+
+**Effort:** 3-4h audit + fix pattern violations
+
+---
+
+### 3. **Observabilité Manquante** (MOYEN)
+
+**Symptôme:** Pas de logging/tracing/metrics visible dans event processing.
+
+**Manque:**
+1. **Logs structurés** — qui → quoi → résultat
+2. **Traces distribuées** — media upload → 3-5 stages → completed (wall-time?)
+3. **Métriques** — throughput, handler latency, retry rates, DLQ depth
+4. **Audit trail** — qui changed quoi, quand, pourquoi
+
+**Code actuel:** Silence. No context propagation for tracing.
+
+**Fix:**
+
+1. **Structured logging (zap/logrus)** in handlers:
+```go
+func (h *EnqueueAnalyzeHandler) OnMediaUploaded(ctx context.Context, payload []byte) error {
+  logger := log.WithContext(ctx)
+
+  evt := parseEvent(payload)
+  logger.Infow("handling media uploaded",
+    "eventID", evt.EventID,
+    "mediaID", evt.MediaID,
+    "contentType", evt.ContentType,
+  )
+
+  start := time.Now()
+  if err := h.doWork(ctx, evt); err != nil {
+    logger.Errorw("handler failed",
+      "error", err.Error(),
+      "duration_ms", time.Since(start).Milliseconds(),
+    )
+    return messaging.Retryable(err)
+  }
+
+  logger.Infow("handler succeeded",
+    "duration_ms", time.Since(start).Milliseconds(),
+  )
+  return nil
+}
+```
+
+2. **Distributed tracing (OpenTelemetry):**
+```go
+_, span := tracer.Start(ctx, "handle_media_uploaded",
+  trace.WithAttributes(
+    attribute.String("eventID", evt.EventID),
+    attribute.String("mediaID", evt.MediaID),
+  ),
+)
+defer span.End()
+```
+
+3. **Prometheus metrics:**
+```go
+handler_duration := prometheus.NewHistogramVec(...)
+events_processed := prometheus.NewCounterVec(...)
+
+start := time.Now()
+err := h.Handle(ctx, evt)
+handler_duration.WithLabelValues(evt.EventType(), err == nil ? "ok" : "error").Observe(...)
+events_processed.WithLabelValues(evt.EventType(), ...).Inc()
+```
+
+4. **DLQ alerting:** Queue depth > threshold → page oncall
+
+**Effort:** 2-3d (logging + metrics in key handlers + Prometheus export)
+
+---
+
+### 4. **Ports & Adapters Clarification** (MOYEN)
+
+**Symptôme:** Interfaces en `internal/domain/port/` not fully visible; unclear adapter count.
+
+**Questions:**
+- How many adapters for `EventPublisher`? (RabbitMQ only? HTTP? Memory for tests?)
+- `OutboxRepository`: single write DB or split read/write?
+- Where are read repos? (should be in `internal/application/query/`, not domain/port)
+- `RealtimePublisher`: only Centrifugo, or pluggable?
+- `MediaRepository` (write): Single adapter or multiple (Postgres + Redis cache)?
+
+**Code audit needed:**
+```bash
+grep -r "type.*interface" internal/domain/port/ | wc -l
+# Count: ~15 interfaces
+
+# For each, find adapters:
+grep -r "type.*struct" internal/infrastructure/messaging/rabbitmq/ | wc -l
+grep -r "type.*struct" internal/infrastructure/persistence/ | wc -l
+```
+
+**Expected structure:**
+```
+domain/port/
+├── event_publisher.go       interface{Publish(...) error}
+├── realtime_publisher.go    interface{Broadcast(...) error}
+├── media_repository.go      interface{Save, FindByID, List}
+├── outbox_repository.go     interface{Store, MarkPublished}
+└── ...
+
+infrastructure/
+├── messaging/rabbitmq/
+│   ├── publisher.go         impl EventPublisher
+│   ├── consumer.go
+│   └── topology.go
+├── persistence/
+│   ├── media_repository.go  impl MediaRepository (write)
+│   ├── outbox_repository.go impl OutboxRepository
+│   └── processed_events.go  impl ProcessedEventsRepository
+└── centrifugo/
+    └── realtime.go          impl RealtimePublisher
+```
+
+**Fix:**
+1. Audit all interfaces in `domain/port/`
+2. Ensure no adapter-specific logic leaks (e.g., RabbitMQ connection URL in port interface)
+3. Document in `docs/PORTS.md` which adapters exist per port
+
+**Effort:** 4-6h audit (no code changes needed if structure OK)
+
+---
+
+## ⚠️ Axes Critiques: Organisation Fichiers & Placement
 
 ### 1. **Error Types Misplacement** (CRITIQUE)
 
-**Symptôme:** RetryableError/NonRetryableError dans `application/messaging/errors.go`
+**Symptôme:** `RetryableError`/`NonRetryableError` dans `application/messaging/errors.go`
 
-**Problème:** Guidelines section "Where new code goes" + "Retry/DLQ" stipulent que ces types sont des **domain ports**. Actuellement en `application/messaging/` viole dependency rule.
+**Problème:** Guidelines section "Where new code goes" + "Retry/DLQ" stipulent que ces types sont des **domain ports**, pas application logic.
+
+**Violation:** Application layer imports from application/messaging; should be domain/port.
 
 **Code actuel:**
 ```
 internal/application/messaging/errors.go
-├── RetryableError
-├── NonRetryableError
-└── helpers: Retryable(err), NonRetryable(err)
+├── type RetryableError struct { Cause error }
+├── type NonRetryableError struct { Cause error }
+└── func Retryable(err error), func NonRetryable(err error)
 ```
+
+**Utilisé par:**
+- `internal/application/event/dedup/with_dedup.go`: `if err := h.handler(ctx, payload); err != nil { return messaging.Retryable(err) }`
+- Event handlers (6+ files)
+- Dedup wrapper
 
 **Fix:**
-1. Déplacer vers `internal/domain/port/errors.go`
-2. Mettre à jour imports (6+ files):
-   - `internal/application/event/dedup/with_dedup.go`
-   - `internal/application/command/media/enqueue_analyze.go`
-   - Tous event handlers qui wrappent errors
-
-**Avant:**
+1. Move: `internal/application/messaging/errors.go` → `internal/domain/port/errors.go`
+2. Update imports (6+ files):
 ```go
+// Before
 import "go-api/internal/application/messaging"
-...
 return messaging.Retryable(err)
-```
 
-**Après:**
-```go
+// After
 import "go-api/internal/domain/port"
-...
 return port.Retryable(err)
 ```
 
-**Impact:** Aucun changement comportemental. Breaking change: imports seulement.
+**Impact:** Zero behavioral change. Breaking change: imports only. Safe refactor.
+
+**Effort:** 30-45m (file move + grep/replace imports)
 
 ---
 
 ### 2. **Realtime Types Placement** (MOYEN)
 
-**Symptôme:** `internal/application/realtime/types.go` contient constantes `ActionCreated`, `ActionUpdated`, etc.
+**Symptôme:** `internal/application/realtime/types.go` contains event constants.
 
-**Problème:** Constants d'événement realtime sont des contrats de **port**, pas logique application. RealtimePublisher interface est correctement en `domain/port/realtime.go`, mais types y sont éparpillés.
+**Problème:** Realtime event constants (`ActionCreated`, `ActionUpdated`, `ActionDeleted`) are **port contracts**, not application logic.
+
+`domain/port/realtime.go` correctly defines `RealtimePublisher` interface, but event types are scattered.
 
 **Code actuel:**
 ```
-domain/port/realtime.go          ← RealtimePublisher interface
-application/realtime/types.go    ← ActionCreated, ActionUpdated, EventType constants
+internal/domain/port/realtime.go
+├── type RealtimePublisher interface { Broadcast(...) error }
+
+internal/application/realtime/types.go
+├── const ActionCreated = "created"
+├── const ActionUpdated = "updated"
+├── const ActionDeleted = "deleted"
+└── type EventType struct { Action, Entity string }
 ```
+
+**Utilisé par:**
+- 3 event handlers: `publish_media_realtime.go`, `publish_scan_realtime.go`, etc.
 
 **Fix:**
-1. Fusionner `application/realtime/types.go` → `domain/port/realtime.go`
-2. Ou créer `domain/port/realtime_types.go`
-3. Mettre à jour imports en 3 event handlers
+1. Merge: `internal/application/realtime/types.go` → `internal/domain/port/realtime.go`
+   ```go
+   // domain/port/realtime.go
+   type RealtimePublisher interface { Broadcast(ctx context.Context, evt EventEnvelope) error }
 
-**Avant:**
-```go
-import "go-api/internal/application/realtime"
-const action = realtime.ActionCreated
-```
+   const (
+     ActionCreated = "created"
+     ActionUpdated = "updated"
+     ActionDeleted = "deleted"
+   )
 
-**Après:**
-```go
-import "go-api/internal/domain/port"
-const action = port.ActionCreated
-```
+   type EventEnvelope struct { Action, Entity, ID string, Payload any }
+   ```
+2. Update imports (3 handlers):
+   ```go
+   import "go-api/internal/domain/port"
+   port.ActionCreated  // instead of realtime.ActionCreated
+   ```
+3. Remove `application/realtime/` directory if empty.
 
-**Impact:** Low risk. Constantes seulement; pas de logique comportementale.
+**Impact:** Low risk. Constants only; no behavioral logic.
+
+**Effort:** 15-20m (move + imports)
 
 ---
 
-### 3. **Multiple Workers Specialisés** (ARCHITECTURAL)
+### 3. **Multiple Workers Specialisés** (ARCHITECTURAL DECISION)
 
-**Symptôme:** 5 processus distincts au lieu de 1 scalable:
+**Symptôme:** 5 processus distincts at lugar of 1 scalable:
 ```
 cmd/
   api/       HTTP server
   worker/    outbox relay + event handlers (RabbitMQ consumer)
   cli/       migrations
-  heuristic/ dedicated worker (image heuristics)
+  heuristic/ dedicated worker (image analysis)
   aimodel/   dedicated worker (SightEngine API)
   metadata/  dedicated worker (metadata extraction)
 ```
@@ -150,126 +434,201 @@ cmd/
 **Guideline:**
 > "One scalable worker process; internal dispatch via HandlerRegistry, not a giant switch."
 
-**Problème:**
-- Cada worker: DI container séparé, RabbitMQ consumer separé, logic specialisée
-- Déploiement/scaling fragmenté
-- Query: Comment heuristic/metadata/aimodel reçoivent événements? Via event handler Registry ou RabbitMQ direct?
+**Current pattern:**
+- Each worker: separate DI container, separate RabbitMQ consumer, separate queue topology
+- Deployment: 5 binaries to deploy, scale, monitor separately
+- Question: How do heuristic/metadata/aimodel receive events? Via event handler Registry or RabbitMQ direct?
 
 **Options:**
 
-**A) Consolidate (Preferred):**
-1. Fusionner `cmd/heuristic/`, `cmd/metadata/`, `cmd/aimodel/` → `cmd/worker/`
-2. Une seule RabbitMQ consumer registry
-3. Feature flags/config pour enable/disable stages
-4. Déploiement progressif via `WORKER_STAGES=metadata,heuristic,aimodel`
+**A) Consolidate (Recommended):**
+1. Merge `cmd/heuristic/`, `cmd/metadata/`, `cmd/aimodel/` → single `cmd/worker/`
+2. Single RabbitMQ consumer registry
+3. Feature flags/config for stage enable/disable: `WORKER_STAGES=metadata,heuristic,aimodel,realtime`
+4. Progressive deployment: deploy with different stage configs per instance
+5. Scaling: `worker --stages metadata,heuristic` vs `worker --stages aimodel`
 
 **B) Document Exception:**
-1. Si workers externes intentionnel (déployés séparément):
-   - Documenter dans `docs/WORKERS.md` (topology, event flow, retry contract)
-   - Ajouter note en `.cursor/rules/architecture.mdc` ("Externe workers acceptable si bien documentés")
-   - Vérifier contrats événements (payload, routing keys)
+1. If external workers intentional (separate teams, different SLAs):
+   - Documenter dans `docs/WORKERS.md` (topology, event flow, retry contract, dependencies)
+   - Add exemption note to `.cursor/rules/architecture.mdc`
+   - Verify event contracts (payload schemas, routing keys, DLQ behavior)
+   - Ensure dedup works cross-worker (same processed_events table)
 
-**Recommandation:** Option A (consolidate). Plus simple maintenance, moins d'infra.
+**Recommendation:** **Option A (consolidate).** Simpler ops, clearer architecture, easier debugging.
 
-**Impact si consolidation:**
-- `cmd/api/di/`, `cmd/worker/di/` mettent à jour HandlerRegistry
-- `cmd/heuristic/di/`, `cmd/metadata/di/`, `cmd/aimodel/di/` fusionnent en `cmd/worker/di/`
-- Efforts: ~1j
+**Effort if consolidating:** 1-2d
+- Merge DI containers: `cmd/worker/di/container.go` registers all handlers
+- Update handler initialization
+- Add feature flag config
+- Test staging logic
+
+**Effort if documenting:** 2-3h
+- Write `docs/WORKERS.md`
+- Audit event contracts
+- Add note to architecture.mdc
 
 ---
 
 ### 4. **Utility Package Naming** (BAS)
 
-**Symptôme:** `internal/domain/aggregate/compute.go` contient `Compute()`, `AggregateMediaResults()`
+**Symptôme:** `internal/domain/aggregate/compute.go` not an aggregate.
 
-**Problème:** Package "aggregate" suggère une vraie aggregate (entity + events + repository). Contenu = utility cross-domain pour verdict computation. Nom misleading.
+**Problème:** Package name "aggregate" suggests DDD aggregate (entity + events + repository). Content = cross-domain utility for verdict computation. Misleading.
 
 **Code actuel:**
 ```go
 package aggregate
 
-func Compute(signals []InputSignal) Result { ... }
-func AggregateMediaResults(results []Result) Result { ... }
+func Compute(signals []InputSignal) Result { ... }  // Computes verdict from signals
+func AggregateMediaResults(results []Result) Result { ... }  // Aggregates multi-sample results
 ```
 
-**Fix:** Renommer `domain/aggregate/` → `domain/verdict/` ou `domain/signal/compute/`
+**Used by:**
+- `cmd/aimodel/di/container.go`
+- `cmd/worker/di/container.go`
+- Event handlers for verdict computation
 
-**Avant:**
+**Fix:** Rename `domain/aggregate/` → `domain/verdict/` or `domain/signal/compute/`
+
+**Before:**
 ```go
 import "go-api/internal/domain/aggregate"
 verdict := aggregate.Compute(signals)
 ```
 
-**Après:**
+**After:**
 ```go
 import "go-api/internal/domain/verdict"
 verdict := verdict.Compute(signals)
 ```
 
-**Impact:** Organisational clarity seulement; 2-3 fichiers imports.
+**Impact:** Pure organizational clarity. No behavioral change.
+
+**Effort:** 30m (mv + grep/replace imports)
 
 ---
 
 ## 🔄 Améliorations Mineures (À Considérer)
 
-1. **Schema Assertion** (section précédente REVIEW.md)
-   Ajouter `schema.AssertModelsMatchDB(db)` au boot (cli, api, worker)
+### 1. Schema Assertion (Boot-time Check)
+**Current:** Migrations exist + persistence models, but no drift verification at boot.
 
-2. **Observabilité Manquante**
-   - Logs structurés event handlers
-   - Traces distribuées OpenTelemetry
-   - Métriques Prometheus (handler latency, events_processed, DLQ depth)
+**Fix:** Add `internal/infrastructure/persistence/schema.go`:
+```go
+func AssertModelsMatchDB(db *gorm.DB) error {
+  // Check each persistence model fields ↔ DB table columns
+  // Fail if drift
+  return nil
+}
+```
 
-3. **Documentation**
-   - `docs/EVENTS.md` — catalog événements, payloads
-   - `docs/PIPELINE.md` — mermaid diagram media upload → completion
-   - `docs/WORKERS.md` (si workers spécialisés documentés)
-   - `docs/RUNBOOK.md` — ops playbook
+Call in `cmd/api/main.go`, `cmd/worker/main.go`, `cmd/cli/main.go` before startup.
+
+**Effort:** 2-4h (write assertions for each model)
 
 ---
 
-## 📋 Actionable Refactoring Checklist
+### 2. Handler Registry Introspection
+**Add:** `reg.Handlers()` → map for runtime inspection.
 
-| Item | Severity | Work | Pré-req |
-|------|----------|------|---------|
-| Move error types → domain/port | 🔴 High | 1h | None |
-| Move realtime types → domain/port | 🟡 Medium | 30m | None |
-| Consolidate workers OR document multi-worker | 🟡 Medium | 1d (consolidate) / 2h (document) | Decision first |
-| Rename domain/aggregate → domain/verdict | 🟢 Low | 30m | After error types move |
+Log at boot: "Registered X handlers for Y event types".
+
+Used for debugging (which handlers are wired?) and metrics.
+
+**Effort:** 1h
+
+---
+
+### 3. Event Payload Validation
+**Add:** JSONSchema per event type (in domain/port).
+
+Validate on consume (before calling handler). Invalid envelope → DLQ (non-retryable).
+
+**Effort:** 2-3h
+
+---
+
+### 4. Graceful Shutdown
+**Current:** Presumed but not visible.
+
+**Add:**
+- Worker: wait for in-flight handlers before exit
+- Relay: flush pending outbox entries
+- Timeout: hard exit after 30s
+
+**Effort:** 2-3h
+
+---
+
+### 5. Documentation
+- `docs/EVENTS.md` — event catalog, payloads, handlers per event
+- `docs/PIPELINE.md` — mermaid diagram media upload → metadata → heuristics → aimodel → completed (timings)
+- `docs/RUNBOOK.md` — restart worker, investigate DLQ, scaling strategy
+- `docs/WORKERS.md` — worker topology (if keeping multi-worker)
+- `docs/ADR/` — architectural decisions (why 5 workers? why not event sourcing read models?)
+
+**Effort:** 3-4d (content creation, diagrams)
+
+---
+
+## 📋 Full Actionable Checklist
+
+| Priorité | Item | Type | Effort | Impact |
+|----------|------|------|--------|--------|
+| 🔴 CRITIQUE | Move error types → domain/port | Refactor | 0.5h | Core layer rule violation |
+| 🔴 CRITIQUE | Move realtime types → domain/port | Refactor | 0.25h | Port contract mismatch |
+| 🟠 ÉLEVÉ | State machine validators (Media, Scan) | Feature | 1d | Prevent invalid states |
+| 🟠 ÉLEVÉ | Audit & fix transaction boundaries | Refactor | 4h | Exactly-once guarantees |
+| 🟠 ÉLEVÉ | Decide on worker consolidation | Decision | 2h | Architectural clarity |
+| 🟡 MOYEN | Implement if consolidating | Refactor | 1-2d | Ops simplification |
+| 🟡 MOYEN | Observabilité (logs + metrics) | Feature | 2-3d | Troubleshooting, scaling |
+| 🟡 MOYEN | Audit ports & adapters | Audit | 4-6h | No code changes needed |
+| 🟡 MOYEN | Rename domain/aggregate → domain/verdict | Refactor | 0.5h | Clarity only |
+| 🟢 BAS | Schema assertions | Feature | 2-4h | Drift prevention |
+| 🟢 BAS | Documentation (EVENTS, PIPELINE, RUNBOOK) | Docs | 3-4d | Onboarding, ops |
+| 🟢 BAS | Handler registry introspection | Feature | 1h | Debugging |
+
+---
+
+## 🏗️ Layer Isolation (Clean)
+
+Core dependency rule is **correct**:
+- ✅ Domain imports only domain
+- ✅ Application imports only domain + small shared messaging helpers
+- ✅ Infrastructure adapters properly isolated by concern (messaging, persistence, config, etc.)
+- ✅ HTTP handlers in interfaces/http
+- ✅ DI containers isolated in cmd/*/di/
+
+All aggregates properly structured. No GORM tags in domain entities. Outbox pattern solid.
+
+**No critical import violations detected.**
 
 ---
 
 ## 🎯 Recommended Action Plan
 
-### Immediate (1 sprint)
-1. **Move error types:** `application/messaging/errors.go` → `domain/port/errors.go`
-   ↳ Update 6 imports
-2. **Move realtime types:** Merge `application/realtime/types.go` → `domain/port/realtime.go`
-   ↳ Update 3 imports
-3. **Decide on workers:** Consolidate or document as exception
+### Immediate (This week)
+1. **Move error types** (0.5h) → domain/port
+2. **Move realtime types** (0.25h) → domain/port
+3. **Decide on workers** (2h) — consolidate vs. document
 
-### Short-term (if consolidating)
-1. Merge `cmd/heuristic/`, `cmd/metadata/`, `cmd/aimodel/` → single worker
-2. Update HandlerRegistry in `cmd/worker/di/container.go`
-3. Add feature flags for stage enable/disable
+### Short-term (1-2 sprints)
+1. **State machine validators** (1d) — Media, Scan aggregates
+2. **Transaction boundary audit** (4h) — ensure exactly-once
+3. **Rename domain/aggregate** (0.5h) → domain/verdict
+4. If consolidating workers: **merge DI containers** (1-2d)
 
-### Medium-term
-1. Add schema assertions at boot
-2. Structured logging + metrics (covered in prior REVIEW.md)
-3. Documentation (EVENTS, PIPELINE, RUNBOOK)
+### Medium-term (3-4 sprints)
+1. **Observability** (2-3d) — structured logs + metrics
+2. **Documentation** (3-4d) — EVENTS.md, PIPELINE.md, RUNBOOK.md
+3. **Schema assertions** (2-4h)
 
----
-
-## 🏗️ No Layer Violations Detected
-
-Core dependency rule (domain → application → infrastructure → interfaces) is **clean**:
-- ✅ Domain imports only domain (small internal packages)
-- ✅ Application imports only domain + shared messaging helpers
-- ✅ Infrastructure adapters properly isolated
-- ✅ HTTP handlers in interfaces/http
-
-All aggregates correctly structured. No GORM tags in domain entities. Outbox pattern solid.
+### Long-term
+1. Event sourcing read models (if scaling read path)
+2. CQRS projections (denormalize for fast queries)
+3. Circuit breakers for external APIs (SightEngine, Centrifugo)
 
 ---
 
-**Status:** Review complete. Refactoring items ready for scheduling.
+**Status:** Comprehensive review complete. No layer violations. Refactoring items ready for prioritization.
