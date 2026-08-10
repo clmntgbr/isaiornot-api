@@ -80,6 +80,7 @@ func setupSubscriptionRoutes(api fiber.Router, container *di.Container) {
 	api.Get("/quota", auth, container.SubscriptionHandler.GetQuota)
 	api.Post("/subscriptions", auth, container.SubscriptionHandler.CreateSubscription)
 	api.Post("/subscriptions/preview", auth, container.SubscriptionHandler.PreviewSubscription)
+	api.Get("/subscriptions/portal", auth, container.SubscriptionHandler.CreateBillingPortal)
 }
 
 func setupInvoiceRoutes(api fiber.Router, container *di.Container) {

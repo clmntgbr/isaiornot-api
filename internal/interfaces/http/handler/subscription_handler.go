@@ -18,6 +18,7 @@ type SubscriptionHandler struct {
 	getQuotaUsageHandler          *querysubscription.GetQuotaUsageHandler
 	previewPlanChangeHandler      *querysubscription.PreviewPlanChangeHandler
 	createSubscriptionHandler     *cmdsubscription.CreateSubscriptionHandler
+	createBillingPortalHandler    *cmdsubscription.CreateBillingPortalHandler
 }
 
 func NewSubscriptionHandler(
@@ -25,12 +26,14 @@ func NewSubscriptionHandler(
 	getQuotaUsageHandler *querysubscription.GetQuotaUsageHandler,
 	previewPlanChangeHandler *querysubscription.PreviewPlanChangeHandler,
 	createSubscriptionHandler *cmdsubscription.CreateSubscriptionHandler,
+	createBillingPortalHandler *cmdsubscription.CreateBillingPortalHandler,
 ) *SubscriptionHandler {
 	return &SubscriptionHandler{
 		getCurrentSubscriptionHandler: getCurrentSubscriptionHandler,
 		getQuotaUsageHandler:          getQuotaUsageHandler,
 		previewPlanChangeHandler:      previewPlanChangeHandler,
 		createSubscriptionHandler:     createSubscriptionHandler,
+		createBillingPortalHandler:    createBillingPortalHandler,
 	}
 }
 
@@ -186,4 +189,36 @@ func (h *SubscriptionHandler) CreateSubscription(c fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(presenter.NewChangeSubscriptionResponse(result))
+}
+
+func (h *SubscriptionHandler) CreateBillingPortal(c fiber.Ctx) error {
+	user, err := httpctx.GetUser(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Unauthorized",
+		})
+	}
+
+	url, err := h.createBillingPortalHandler.Handle(c.Context(), cmdsubscription.CreateBillingPortalCommand{
+		UserID: user.ID,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, querysubscription.ErrSubscriptionNotFound):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": "Subscription not found",
+			})
+		case errors.Is(err, cmdsubscription.ErrMissingStripeCustomer):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"message": "User has no Stripe customer",
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Internal server error",
+				"errors":  err.Error(),
+			})
+		}
+	}
+
+	return c.Status(fiber.StatusOK).JSON(presenter.NewCheckoutSessionResponse(url))
 }

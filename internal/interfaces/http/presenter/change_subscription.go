@@ -16,3 +16,11 @@ func NewChangeSubscriptionResponse(result *cmdsubscription.CreateSubscriptionRes
 		Updated: result.Updated,
 	}
 }
+
+type CheckoutSessionResponse struct {
+	URL string `json:"url"`
+}
+
+func NewCheckoutSessionResponse(url string) CheckoutSessionResponse {
+	return CheckoutSessionResponse{URL: url}
+}

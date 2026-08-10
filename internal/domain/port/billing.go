@@ -61,3 +61,7 @@ type CheckoutSessionGateway interface {
 		stripeCustomerID string,
 	) (string, error)
 }
+
+type BillingPortalGateway interface {
+	Create(ctx context.Context, stripeCustomerID string) (string, error)
+}

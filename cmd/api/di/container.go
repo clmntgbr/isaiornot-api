@@ -103,6 +103,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	)
 	subscriptionGateway := infraStripe.NewSubscriptionGateway(env)
 	checkoutSessionGateway := infraStripe.NewCheckoutSessionGateway(env)
+	billingPortalGateway := infraStripe.NewBillingPortalGateway(env)
 	previewPlanChangeHandler := querysubscription.NewPreviewPlanChangeHandler(
 		userReadRepo,
 		planReadRepo,
@@ -118,6 +119,11 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		fetchUserHandler,
 		checkoutSessionGateway,
 		subscriptionGateway,
+	)
+	createBillingPortalHandler := cmdsubscription.NewCreateBillingPortalHandler(
+		userReadRepo,
+		subscriptionReadRepo,
+		billingPortalGateway,
 	)
 	checkoutCompletedHandler := cmdsubscription.NewCheckoutCompletedHandler(
 		userWriteRepo,
@@ -216,6 +222,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 			getQuotaUsageHandler,
 			previewPlanChangeHandler,
 			createSubscriptionHandler,
+			createBillingPortalHandler,
 		),
 		InvoiceHandler:  httphandler.NewInvoiceHandler(listInvoicesHandler),
 		RealtimeHandler: httphandler.NewRealtimeHandler(env),
