@@ -87,6 +87,11 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		userReadRepo,
 		subscriptionReadRepo,
 	)
+	getQuotaUsageHandler := querysubscription.NewGetQuotaUsageHandler(
+		userReadRepo,
+		subscriptionReadRepo,
+		mediaReadRepo,
+	)
 	presignUploadHandler := scancmd.NewPresignUploadHandler(
 		scanWriteRepo,
 		mediaWriteRepo,
@@ -127,9 +132,12 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 			getStatisticsHandler,
 			presignUploadHandler,
 		),
-		MediaHandler:        httphandler.NewMediaHandler(getOwnedMediaHandler, minioStorage),
-		PlanHandler:         httphandler.NewPlanHandler(listPlansHandler),
-		SubscriptionHandler: httphandler.NewSubscriptionHandler(getCurrentSubscriptionHandler),
-		RealtimeHandler:     httphandler.NewRealtimeHandler(env),
+		MediaHandler: httphandler.NewMediaHandler(getOwnedMediaHandler, minioStorage),
+		PlanHandler:  httphandler.NewPlanHandler(listPlansHandler),
+		SubscriptionHandler: httphandler.NewSubscriptionHandler(
+			getCurrentSubscriptionHandler,
+			getQuotaUsageHandler,
+		),
+		RealtimeHandler: httphandler.NewRealtimeHandler(env),
 	}
 }

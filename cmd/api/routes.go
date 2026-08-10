@@ -71,4 +71,5 @@ func setupPlanRoutes(api fiber.Router, container *di.Container) {
 func setupSubscriptionRoutes(api fiber.Router, container *di.Container) {
 	auth := container.AuthenticateMiddleware.Protected()
 	api.Get("/subscription", auth, container.SubscriptionHandler.GetSubscription)
+	api.Get("/quota", auth, container.SubscriptionHandler.GetQuota)
 }

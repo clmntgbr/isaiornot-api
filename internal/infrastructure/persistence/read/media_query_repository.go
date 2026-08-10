@@ -120,3 +120,35 @@ func toMediaView(row mediaRow) (*domainmedia.MediaView, error) {
 		UpdatedAt:   row.UpdatedAt,
 	}, nil
 }
+
+func (r *mediaReadRepository) CountUsageInPeriod(
+	ctx context.Context,
+	userID uuid.UUID,
+	from, to time.Time,
+) (*domainmedia.UsageCounts, error) {
+	base := r.db.WithContext(ctx).
+		Table("medias").
+		Joins("JOIN scans ON scans.id = medias.scan_id").
+		Where("scans.user_id = ? AND medias.created_at >= ? AND medias.created_at < ?", userID, from, to).
+		Where("scans.status <> ?", "failed")
+
+	var images int64
+	if err := base.Session(&gorm.Session{}).
+		Where("medias.content_type LIKE ? AND medias.key NOT LIKE ?", "image/%", "%/frames/%").
+		Count(&images).Error; err != nil {
+		return nil, err
+	}
+
+	var videos int64
+	if err := base.Session(&gorm.Session{}).
+		Where("medias.key LIKE ? OR medias.content_type LIKE ?", "%/frames/%", "video/%").
+		Distinct("medias.scan_id").
+		Count(&videos).Error; err != nil {
+		return nil, err
+	}
+
+	return &domainmedia.UsageCounts{
+		Images: images,
+		Videos: videos,
+	}, nil
+}
