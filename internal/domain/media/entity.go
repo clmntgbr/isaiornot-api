@@ -45,8 +45,8 @@ func NewMedia(
 		Filename:    filename,
 		ContentType: contentType,
 		Size:        size,
-		Status:      StatusProcessing,
-		Statuses:    []Status{StatusProcessing},
+		Status:      StatusPending,
+		Statuses:    []Status{StatusPending},
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -91,7 +91,9 @@ func (m *Media) MarkProcessing() {
 	if m.Status == StatusProcessing {
 		return
 	}
+	now := time.Now().UTC()
 	m.setStatus(StatusProcessing)
+	m.UpdatedAt = now
 	m.recordUpdated()
 }
 

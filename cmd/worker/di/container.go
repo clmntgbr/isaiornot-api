@@ -76,7 +76,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		signalWriteRepo,
 		outboxRepo,
 	)
-	enqueueAnalyze := eventmedia.NewEnqueueAnalyzeHandler(publisher)
+	enqueueAnalyze := eventmedia.NewEnqueueAnalyzeHandler(publisher, mediaWriteRepo, outboxRepo)
 
 	publishUserRealtime := eventuser.NewPublishRealtimeHandler(realtimePublisher)
 	publishScanRealtime := eventscan.NewPublishRealtimeHandler(realtimePublisher)
