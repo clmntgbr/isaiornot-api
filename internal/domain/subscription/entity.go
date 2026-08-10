@@ -146,6 +146,6 @@ func (s *Subscription) DowngradeToFree(freePlanID uuid.UUID) {
 		now,
 		now.AddDate(100, 0, 0),
 		false,
-		now,
+		s.QuotaPeriodStart,
 	)
 }
