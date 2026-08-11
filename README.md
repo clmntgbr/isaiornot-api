@@ -1,14 +1,21 @@
-# Go API Template
+# IsAIorNot API
 
-Go/Fiber API template with **Clean Architecture**, **CQRS**, **Outbox pattern**, **RabbitMQ**, **PostgreSQL**, and **Clerk** authentication.
+Go API to detect whether content is AI-generated, with confidence scoring and a scalable event-driven workflow.
+
+## Project
+
+IsAIorNot API powers a detection platform that estimates whether submitted content is human-written or AI-generated.
+It provides a backend foundation for ingesting content, running analysis pipelines, producing confidence scores, and exposing results through secure API endpoints.
 
 ## Features
 
-- CQRS: command / query / event handlers under `internal/application`
-- Domain events (`user.created.v1`) + transactional outbox
-- RabbitMQ worker (outbox relay + consumer + handler registry)
-- Clerk JWT auth + webhook sync (Svix)
-- Docker Compose local stack (API, worker, Postgres, RabbitMQ, ngrok)
+- AI-generated content detection workflow with confidence scoring
+- Modular architecture for detection services and asynchronous processing workers
+- CQRS separation: command / query / event handlers under `internal/application`
+- Event-driven pipeline with transactional outbox and RabbitMQ consumers
+- Secure auth layer with Clerk JWT verification and Svix webhook synchronization
+- PostgreSQL persistence with migration and schema drift checks
+- Local developer stack with Docker Compose (API, worker, Postgres, RabbitMQ, ngrok)
 
 ## Tech Stack
 
