@@ -22,12 +22,6 @@ type MediaReadRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*MediaView, error)
 	FindByScanID(ctx context.Context, scanID uuid.UUID) ([]*MediaView, error)
 	FindByScanIDs(ctx context.Context, scanIDs []uuid.UUID) (map[uuid.UUID][]*MediaView, error)
-	CountUsageInPeriod(ctx context.Context, userID uuid.UUID, from, to time.Time) (*UsageCounts, error)
-}
-
-type UsageCounts struct {
-	Images int64
-	Videos int64
 }
 
 type MediaView struct {

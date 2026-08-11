@@ -14,6 +14,7 @@ type ScanCreated struct {
 	ID        string    `json:"eventId"`
 	ScanID    string    `json:"scanId"`
 	UserID    string    `json:"userId"`
+	Type      string    `json:"type"`
 	Status    string    `json:"status"`
 	Timestamp time.Time `json:"timestamp"`
 }

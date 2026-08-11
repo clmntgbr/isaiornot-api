@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	querysubscription "go-api/internal/application/query/subscription"
-	domainmedia "go-api/internal/domain/media"
+	domainscan "go-api/internal/domain/scan"
 
 	"github.com/google/uuid"
 )
@@ -21,7 +21,7 @@ var (
 
 type AssertUploadAllowedCommand struct {
 	UserID              uuid.UUID
-	ContentType         string
+	ScanType            domainscan.ScanType
 	Size                int64
 	MediaAlreadyCounted bool
 }
@@ -42,10 +42,10 @@ func (h *AssertUploadAllowedHandler) Handle(ctx context.Context, cmd AssertUploa
 		return err
 	}
 
-	switch {
-	case domainmedia.IsVideoContentType(cmd.ContentType):
+	switch cmd.ScanType {
+	case domainscan.ScanTypeVideo:
 		return assertVideoAllowed(usage, cmd)
-	case domainmedia.IsImageContentType(cmd.ContentType):
+	case domainscan.ScanTypeImage:
 		return assertImageAllowed(usage, cmd)
 	default:
 		return nil

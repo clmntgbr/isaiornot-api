@@ -95,12 +95,12 @@ func (h *ProcessUploadedMediaHandler) Handle(ctx context.Context, cmd ProcessUpl
 func (h *ProcessUploadedMediaHandler) assertBeforePipeline(
 	ctx context.Context,
 	userID uuid.UUID,
-	contentType string,
+	scanType domainscan.ScanType,
 	size int64,
 ) (bool, string, error) {
 	err := h.assertUploadAllowed.Handle(ctx, cmdsubscription.AssertUploadAllowedCommand{
 		UserID:              userID,
-		ContentType:         contentType,
+		ScanType:            scanType,
 		Size:                size,
 		MediaAlreadyCounted: true,
 	})
@@ -174,7 +174,7 @@ func (h *ProcessUploadedMediaHandler) processImage(
 		}
 	}
 
-	allowed, message, err := h.assertBeforePipeline(ctx, scanEntity.UserID, contentType, size)
+	allowed, message, err := h.assertBeforePipeline(ctx, scanEntity.UserID, scanEntity.Type, size)
 	if err != nil {
 		return err
 	}
@@ -290,7 +290,7 @@ func (h *ProcessUploadedMediaHandler) processVideo(
 		frameMedias = append(frameMedias, frameMedia)
 	}
 
-	allowed, message, err := h.assertBeforePipeline(ctx, scanEntity.UserID, contentType, size)
+	allowed, message, err := h.assertBeforePipeline(ctx, scanEntity.UserID, scanEntity.Type, size)
 	if err != nil {
 		return err
 	}

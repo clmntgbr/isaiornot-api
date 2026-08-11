@@ -8,6 +8,7 @@ import (
 
 type ScanResponse struct {
 	ID         string          `json:"id"`
+	Type       string          `json:"type"`
 	Status     string          `json:"status"`
 	Statuses   []string        `json:"statuses"`
 	Message    *string         `json:"message"`
@@ -34,6 +35,7 @@ func NewScanResponse(view *domainscan.ScanView) ScanResponse {
 
 	return ScanResponse{
 		ID:         view.ID.String(),
+		Type:       string(view.Type),
 		Status:     string(view.Status),
 		Statuses:   statuses,
 		Message:    optionalString(view.Message),

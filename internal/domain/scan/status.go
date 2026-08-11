@@ -1,5 +1,7 @@
 package scan
 
+import "strings"
+
 type Status string
 
 const (
@@ -8,6 +10,25 @@ const (
 	StatusCompleted  Status = "completed"
 	StatusFailed     Status = "failed"
 )
+
+type ScanType string
+
+const (
+	ScanTypeImage ScanType = "image"
+	ScanTypeVideo ScanType = "video"
+)
+
+func TypeFromContentType(contentType string) (ScanType, bool) {
+	normalized := strings.ToLower(contentType)
+	switch {
+	case strings.HasPrefix(normalized, "image/"):
+		return ScanTypeImage, true
+	case strings.HasPrefix(normalized, "video/"):
+		return ScanTypeVideo, true
+	default:
+		return "", false
+	}
+}
 
 type ConfidenceLevel string
 

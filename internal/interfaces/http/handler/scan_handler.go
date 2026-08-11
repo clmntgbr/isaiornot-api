@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	cmdscan "go-api/internal/application/command/scan"
+	cmdsubscription "go-api/internal/application/command/subscription"
 	queryscan "go-api/internal/application/query/scan"
 	querysubscription "go-api/internal/application/query/subscription"
 	"go-api/internal/domain/paginate"
@@ -62,6 +63,19 @@ func (h *ScanHandler) PresignUpload(c fiber.Ctx) error {
 			return c.Status(fiber.StatusUnsupportedMediaType).JSON(fiber.Map{
 				"message": "Unsupported media type",
 				"errors":  err.Error(),
+			})
+		}
+		if errors.Is(err, querysubscription.ErrSubscriptionNotFound) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"message": "No active subscription found",
+			})
+		}
+		if errors.Is(err, cmdsubscription.ErrImageQuotaExceeded) ||
+			errors.Is(err, cmdsubscription.ErrVideoQuotaExceeded) ||
+			errors.Is(err, cmdsubscription.ErrImagesNotAllowed) ||
+			errors.Is(err, cmdsubscription.ErrVideosNotAllowed) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"message": err.Error(),
 			})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

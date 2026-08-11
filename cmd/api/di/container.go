@@ -99,7 +99,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 	getQuotaUsageHandler := querysubscription.NewGetQuotaUsageHandler(
 		userReadRepo,
 		subscriptionReadRepo,
-		mediaReadRepo,
+		scanReadRepo,
 	)
 	subscriptionGateway := infraStripe.NewSubscriptionGateway(env)
 	checkoutSessionGateway := infraStripe.NewCheckoutSessionGateway(env)
@@ -170,6 +170,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		mediaWriteRepo,
 		outboxRepo,
 		minioStorage,
+		assertUploadAllowedHandler,
 	)
 	processUploadedMediaHandler := mediacmd.NewProcessUploadedMediaHandler(
 		scanWriteRepo,

@@ -12,6 +12,7 @@ type Scan struct {
 	ID     uuid.UUID
 	UserID uuid.UUID
 
+	Type     ScanType
 	Status   Status
 	Statuses []Status
 	Message  string
@@ -29,11 +30,12 @@ type Scan struct {
 	events []event.DomainEvent
 }
 
-func NewScan(userID uuid.UUID) *Scan {
+func NewScan(userID uuid.UUID, scanType ScanType) *Scan {
 	now := time.Now().UTC()
 	s := &Scan{
 		ID:        uuid.New(),
 		UserID:    userID,
+		Type:      scanType,
 		Status:    StatusUploaded,
 		Statuses:  []Status{StatusUploaded},
 		CreatedAt: now,
@@ -43,6 +45,7 @@ func NewScan(userID uuid.UUID) *Scan {
 		ID:        uuid.New().String(),
 		ScanID:    s.ID.String(),
 		UserID:    userID.String(),
+		Type:      string(s.Type),
 		Status:    string(s.Status),
 		Timestamp: now,
 	})

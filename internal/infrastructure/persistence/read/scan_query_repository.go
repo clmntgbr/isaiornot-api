@@ -18,6 +18,7 @@ import (
 type scanRow struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID
+	Type       string
 	Status     string
 	Statuses   dbtype.JSONB
 	Message    string
@@ -44,7 +45,7 @@ func (r *scanReadRepository) FindByID(ctx context.Context, id uuid.UUID) (*domai
 	var row scanRow
 	err := r.db.WithContext(ctx).
 		Select(
-			"id", "user_id", "status", "statuses", "message",
+			"id", "user_id", "type", "status", "statuses", "message",
 			"final_score", "confidence", "verdict", "duration", "retry_count",
 			"created_at", "updated_at",
 		).
@@ -85,7 +86,7 @@ func (r *scanReadRepository) FindByUserID(
 	var rows []scanRow
 	if err := db.
 		Select(
-			"id", "user_id", "status", "statuses", "message",
+			"id", "user_id", "type", "status", "statuses", "message",
 			"final_score", "confidence", "verdict", "duration", "retry_count",
 			"created_at", "updated_at",
 		).
@@ -103,6 +104,36 @@ func (r *scanReadRepository) FindByUserID(
 	}
 
 	return views, total, nil
+}
+
+func (r *scanReadRepository) CountUsageInPeriod(
+	ctx context.Context,
+	userID uuid.UUID,
+	from, to time.Time,
+) (*domainscan.UsageCounts, error) {
+	type row struct {
+		Images int64
+		Videos int64
+	}
+
+	var result row
+	err := r.db.WithContext(ctx).
+		Table("scans").
+		Select(`
+			COUNT(*) FILTER (WHERE type = ?) AS images,
+			COUNT(*) FILTER (WHERE type = ?) AS videos
+		`, string(domainscan.ScanTypeImage), string(domainscan.ScanTypeVideo)).
+		Where("user_id = ? AND created_at >= ? AND created_at < ?", userID, from, to).
+		Where("status <> ?", string(domainscan.StatusFailed)).
+		Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &domainscan.UsageCounts{
+		Images: result.Images,
+		Videos: result.Videos,
+	}, nil
 }
 
 func (r *scanReadRepository) GetStatisticsByUserID(
@@ -153,6 +184,7 @@ func toScanView(row scanRow) (*domainscan.ScanView, error) {
 	return &domainscan.ScanView{
 		ID:         row.ID,
 		UserID:     row.UserID,
+		Type:       domainscan.ScanType(row.Type),
 		Status:     domainscan.Status(row.Status),
 		Statuses:   statuses,
 		Message:    row.Message,

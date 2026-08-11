@@ -96,6 +96,7 @@ func scanModelFromDomain(s *domainscan.Scan) (*ScanModel, error) {
 	return &ScanModel{
 		ID:         s.ID,
 		UserID:     s.UserID,
+		Type:       string(s.Type),
 		Status:     string(s.Status),
 		Statuses:   dbtype.JSONB(payload),
 		Message:    s.Message,
@@ -125,6 +126,7 @@ func scanDomainFromModel(m *ScanModel) (*domainscan.Scan, error) {
 	return &domainscan.Scan{
 		ID:         m.ID,
 		UserID:     m.UserID,
+		Type:       domainscan.ScanType(m.Type),
 		Status:     domainscan.Status(m.Status),
 		Statuses:   statuses,
 		Message:    m.Message,

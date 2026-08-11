@@ -11,6 +11,7 @@ import (
 type ScanModel struct {
 	ID         uuid.UUID    `gorm:"column:id;primaryKey"`
 	UserID     uuid.UUID    `gorm:"column:user_id"`
+	Type       string       `gorm:"column:type"`
 	Status     string       `gorm:"column:status"`
 	Statuses   dbtype.JSONB `gorm:"column:statuses"`
 	Message    string       `gorm:"column:message"`

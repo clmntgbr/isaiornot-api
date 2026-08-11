@@ -15,11 +15,14 @@ type PresignUploadInput struct {
 	ContentType string
 }
 
-var allowedExtensions = map[string]struct{}{
+var imageExtensions = map[string]struct{}{
 	"jpg":  {},
 	"jpeg": {},
 	"png":  {},
 	"webp": {},
+}
+
+var videoExtensions = map[string]struct{}{
 	"mp4":  {},
 	"mov":  {},
 	"avi":  {},
@@ -36,17 +39,31 @@ var allowedExtensions = map[string]struct{}{
 	"mka":  {},
 }
 
+func fileExtension(filename string) string {
+	return strings.ToLower(strings.TrimPrefix(filepath.Ext(filename), "."))
+}
+
 func ValidatePresignUploadInput(input PresignUploadInput) error {
-	ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(input.Filename), "."))
+	ext := fileExtension(input.Filename)
 	if ext == "" {
 		return fmt.Errorf("filename must have a supported extension")
 	}
 
-	if _, ok := allowedExtensions[ext]; !ok {
+	if !IsImageFilename(input.Filename) && !IsVideoFilename(input.Filename) {
 		return fmt.Errorf("unsupported file type: .%s", ext)
 	}
 
 	return nil
+}
+
+func IsImageFilename(filename string) bool {
+	_, ok := imageExtensions[fileExtension(filename)]
+	return ok
+}
+
+func IsVideoFilename(filename string) bool {
+	_, ok := videoExtensions[fileExtension(filename)]
+	return ok
 }
 
 func ContentTypeFromKey(key string, fallback string) string {

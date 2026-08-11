@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	domainmedia "go-api/internal/domain/media"
+	domainscan "go-api/internal/domain/scan"
 	domainsubscription "go-api/internal/domain/subscription"
 	domainuser "go-api/internal/domain/user"
 
@@ -33,18 +33,18 @@ type QuotaUsageView struct {
 type GetQuotaUsageHandler struct {
 	userRepo         domainuser.UserReadRepository
 	subscriptionRepo domainsubscription.SubscriptionReadRepository
-	mediaRepo        domainmedia.MediaReadRepository
+	scanRepo         domainscan.ScanReadRepository
 }
 
 func NewGetQuotaUsageHandler(
 	userRepo domainuser.UserReadRepository,
 	subscriptionRepo domainsubscription.SubscriptionReadRepository,
-	mediaRepo domainmedia.MediaReadRepository,
+	scanRepo domainscan.ScanReadRepository,
 ) *GetQuotaUsageHandler {
 	return &GetQuotaUsageHandler{
 		userRepo:         userRepo,
 		subscriptionRepo: subscriptionRepo,
-		mediaRepo:        mediaRepo,
+		scanRepo:         scanRepo,
 	}
 }
 
@@ -78,9 +78,9 @@ func (h *GetQuotaUsageHandler) Handle(ctx context.Context, q GetQuotaUsageQuery)
 
 	periodStart, periodEnd := domainsubscription.CurrentQuotaPeriod(anchor, time.Now().UTC())
 
-	counts, err := h.mediaRepo.CountUsageInPeriod(ctx, q.UserID, periodStart, periodEnd)
+	counts, err := h.scanRepo.CountUsageInPeriod(ctx, q.UserID, periodStart, periodEnd)
 	if err != nil {
-		return nil, errors.New("failed to count media usage")
+		return nil, errors.New("failed to count scan usage")
 	}
 
 	quota := sub.Plan.Quota
