@@ -3,17 +3,17 @@ package dto
 import "encoding/json"
 
 type ClerkEmailAddress struct {
-	ID           string `json:"id"`
-	EmailAddress string `json:"email_address"`
+	ID           string `json:"id" validate:"omitempty"`
+	EmailAddress string `json:"email_address" validate:"omitempty,email"`
 }
 
 type ClerkUserCreated struct {
 	ID             string              `json:"id" validate:"required"`
-	FirstName      string              `json:"first_name" validate:"omitempty"`
-	LastName       string              `json:"last_name" validate:"omitempty"`
+	FirstName      string              `json:"first_name" validate:"omitempty,max=255"`
+	LastName       string              `json:"last_name" validate:"omitempty,max=255"`
 	Banned         *bool               `json:"banned" validate:"required"`
-	EmailAddresses []ClerkEmailAddress `json:"email_addresses"`
-	Email          string              `json:"-"`
+	EmailAddresses []ClerkEmailAddress `json:"email_addresses" validate:"omitempty,dive"`
+	Email          string              `json:"-" validate:"omitempty,email"`
 }
 
 func (u *ClerkUserCreated) UnmarshalJSON(data []byte) error {
@@ -31,11 +31,11 @@ func (u *ClerkUserCreated) UnmarshalJSON(data []byte) error {
 
 type ClerkUserUpdated struct {
 	ID             string              `json:"id" validate:"required"`
-	FirstName      string              `json:"first_name" validate:"omitempty"`
-	LastName       string              `json:"last_name" validate:"omitempty"`
+	FirstName      string              `json:"first_name" validate:"omitempty,max=255"`
+	LastName       string              `json:"last_name" validate:"omitempty,max=255"`
 	Banned         *bool               `json:"banned" validate:"required"`
-	EmailAddresses []ClerkEmailAddress `json:"email_addresses"`
-	Email          string              `json:"-"`
+	EmailAddresses []ClerkEmailAddress `json:"email_addresses" validate:"omitempty,dive"`
+	Email          string              `json:"-" validate:"omitempty,email"`
 }
 
 func (u *ClerkUserUpdated) UnmarshalJSON(data []byte) error {

@@ -5,6 +5,7 @@ import (
 	"go-api/internal/domain/paginate"
 	httpctx "go-api/internal/interfaces/http/context"
 	"go-api/internal/interfaces/http/presenter"
+	"go-api/internal/interfaces/http/validation"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -26,11 +27,8 @@ func (h *InvoiceHandler) GetInvoices(c fiber.Ctx) error {
 	}
 
 	var query paginate.PaginateQuery
-	if err := c.Bind().Query(&query); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid query parameters",
-			"errors":  err.Error(),
-		})
+	if err := validation.BindAndValidateQuery(c, &query); err != nil {
+		return err
 	}
 
 	orderBy := query.OrderBy

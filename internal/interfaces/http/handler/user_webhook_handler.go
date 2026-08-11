@@ -6,8 +6,8 @@ import (
 
 	usercmd "go-api/internal/application/command/user"
 	"go-api/internal/interfaces/http/dto"
+	"go-api/internal/interfaces/http/validation"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -34,7 +34,6 @@ func NewUserWebhookHandler(
 
 func (h *UserWebhookHandler) Execute(c fiber.Ctx) error {
 	clerkEvent := c.Locals("payload").(dto.ClerkEvent)
-	validate := validator.New()
 
 	switch clerkEvent.Type {
 	case "user.created":
@@ -44,8 +43,8 @@ func (h *UserWebhookHandler) Execute(c fiber.Ctx) error {
 				"message": "Invalid request body",
 			})
 		}
-		if err := validate.Struct(data); err != nil {
-			return err
+		if err := validation.Struct(data); err != nil {
+			return validation.ValidationFailed(c, err)
 		}
 		if err := h.createUser(c, data); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -61,8 +60,8 @@ func (h *UserWebhookHandler) Execute(c fiber.Ctx) error {
 				"message": "Invalid request body",
 			})
 		}
-		if err := validate.Struct(data); err != nil {
-			return err
+		if err := validation.Struct(data); err != nil {
+			return validation.ValidationFailed(c, err)
 		}
 		if err := h.updateUser(c, data); err != nil {
 			return err
@@ -76,8 +75,8 @@ func (h *UserWebhookHandler) Execute(c fiber.Ctx) error {
 				"message": "Invalid request body",
 			})
 		}
-		if err := validate.Struct(data); err != nil {
-			return err
+		if err := validation.Struct(data); err != nil {
+			return validation.ValidationFailed(c, err)
 		}
 		if err := h.deleteUser(c, data); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

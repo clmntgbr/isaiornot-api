@@ -8,6 +8,7 @@ import (
 	httpctx "go-api/internal/interfaces/http/context"
 	"go-api/internal/interfaces/http/dto"
 	"go-api/internal/interfaces/http/presenter"
+	"go-api/internal/interfaces/http/validation"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -97,11 +98,8 @@ func (h *SubscriptionHandler) PreviewSubscription(c fiber.Ctx) error {
 	}
 
 	var request dto.PreviewSubscriptionRequest
-	if err := c.Bind().Body(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid request body",
-			"errors":  err.Error(),
-		})
+	if err := validation.BindAndValidateBody(c, &request); err != nil {
+		return err
 	}
 
 	planID, err := uuid.Parse(request.PlanID)
@@ -147,11 +145,8 @@ func (h *SubscriptionHandler) CreateSubscription(c fiber.Ctx) error {
 	}
 
 	var request dto.CreateSubscriptionRequest
-	if err := c.Bind().Body(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid request body",
-			"errors":  err.Error(),
-		})
+	if err := validation.BindAndValidateBody(c, &request); err != nil {
+		return err
 	}
 
 	planID, err := uuid.Parse(request.PlanID)

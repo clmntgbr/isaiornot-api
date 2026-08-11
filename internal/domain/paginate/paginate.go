@@ -9,11 +9,11 @@ const (
 )
 
 type PaginateQuery struct {
-	Page    int    `query:"page"`
-	Limit   int    `query:"limit"`
-	SortBy  string `query:"sortBy"`
-	OrderBy string `query:"orderBy"`
-	Search  string `query:"search"`
+	Page    int    `query:"page" validate:"omitempty,min=1"`
+	Limit   int    `query:"limit" validate:"omitempty,min=1,max=100"`
+	SortBy  string `query:"sortBy" validate:"omitempty,max=64"`
+	OrderBy string `query:"orderBy" validate:"omitempty,oneof=asc desc"`
+	Search  string `query:"search" validate:"omitempty,max=200"`
 }
 
 type PaginateResponse struct {

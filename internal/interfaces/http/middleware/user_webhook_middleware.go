@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"go-api/internal/interfaces/http/dto"
+	"go-api/internal/interfaces/http/validation"
 
 	"github.com/gofiber/fiber/v3"
 	svix "github.com/svix/svix-webhooks/go"
@@ -40,9 +41,12 @@ func (m *UserWebhookMiddleware) Protected() fiber.Handler {
 
 		var clerkEvent dto.ClerkEvent
 		if err := json.Unmarshal(payload, &clerkEvent); err != nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "invalid payload",
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"message": "Invalid request body",
 			})
+		}
+		if err := validation.Struct(clerkEvent); err != nil {
+			return validation.ValidationFailed(c, err)
 		}
 
 		c.Locals("payload", clerkEvent)

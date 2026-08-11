@@ -10,6 +10,7 @@ import (
 	mediacmd "go-api/internal/application/command/media"
 	domainmedia "go-api/internal/domain/media"
 	"go-api/internal/interfaces/http/dto"
+	"go-api/internal/interfaces/http/validation"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -38,6 +39,10 @@ func (h *MediaUploadWebhookHandler) ObjectCreated(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "invalid payload",
 		})
+	}
+	if err := validation.Struct(event); err != nil {
+		log.Printf("MinIO webhook: validation failed: %v", err)
+		return validation.ValidationFailed(c, err)
 	}
 
 	go func() {

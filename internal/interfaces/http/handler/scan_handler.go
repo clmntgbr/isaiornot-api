@@ -11,6 +11,7 @@ import (
 	httpctx "go-api/internal/interfaces/http/context"
 	"go-api/internal/interfaces/http/dto"
 	"go-api/internal/interfaces/http/presenter"
+	"go-api/internal/interfaces/http/validation"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -46,11 +47,8 @@ func (h *ScanHandler) PresignUpload(c fiber.Ctx) error {
 	}
 
 	var req dto.PresignUploadRequest
-	if err := c.Bind().Body(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid request body",
-			"errors":  err.Error(),
-		})
+	if err := validation.BindAndValidateBody(c, &req); err != nil {
+		return err
 	}
 
 	result, err := h.presignUploadHandler.Handle(c.Context(), cmdscan.PresignUploadCommand{
@@ -95,11 +93,8 @@ func (h *ScanHandler) GetScans(c fiber.Ctx) error {
 	}
 
 	var query paginate.PaginateQuery
-	if err := c.Bind().Query(&query); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid query parameters",
-			"errors":  err.Error(),
-		})
+	if err := validation.BindAndValidateQuery(c, &query); err != nil {
+		return err
 	}
 
 	orderBy := query.OrderBy
