@@ -90,7 +90,7 @@ func Load() *Config {
 		RabbitMQQueue:        getEnvOrDefault("RABBITMQ_QUEUE", "domain.events"),
 		RabbitMQRoutingKey: getEnvOrDefault(
 			"RABBITMQ_ROUTING_KEY",
-			"user.#,media.*.v1,scan.#,media.analyze.metadata.done.v1,media.analyze.heuristics.done.v1,media.analyze.ai_model.done.v1",
+			"user.#,media.*.v1,scan.#,subscription.#,invoice.#,media.analyze.metadata.done.v1,media.analyze.heuristics.done.v1,media.analyze.ai_model.done.v1",
 		),
 		RabbitMQRetryTTLMS: getEnvIntOrDefault("RABBITMQ_RETRY_TTL_MS", 30000),
 		WorkerMaxRetries:   getEnvIntOrDefault("WORKER_MAX_RETRIES", 3),

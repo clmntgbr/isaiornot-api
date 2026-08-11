@@ -7,6 +7,7 @@ import (
 	"time"
 
 	domaininvoice "go-api/internal/domain/invoice"
+	"go-api/internal/domain/port"
 	domainsubscription "go-api/internal/domain/subscription"
 	domainuser "go-api/internal/domain/user"
 
@@ -38,17 +39,20 @@ type UpsertInvoiceHandler struct {
 	invoiceRepo      domaininvoice.InvoiceWriteRepository
 	subscriptionRepo domainsubscription.SubscriptionWriteRepository
 	userRepo         domainuser.UserWriteRepository
+	outbox           port.OutboxRepository
 }
 
 func NewUpsertInvoiceHandler(
 	invoiceRepo domaininvoice.InvoiceWriteRepository,
 	subscriptionRepo domainsubscription.SubscriptionWriteRepository,
 	userRepo domainuser.UserWriteRepository,
+	outbox port.OutboxRepository,
 ) *UpsertInvoiceHandler {
 	return &UpsertInvoiceHandler{
 		invoiceRepo:      invoiceRepo,
 		subscriptionRepo: subscriptionRepo,
 		userRepo:         userRepo,
+		outbox:           outbox,
 	}
 }
 
@@ -91,7 +95,9 @@ func (h *UpsertInvoiceHandler) Handle(ctx context.Context, cmd UpsertInvoiceComm
 	if err != nil {
 		return errors.New("failed to get invoice")
 	}
-	if invoiceEntity == nil {
+
+	isNew := invoiceEntity == nil
+	if isNew {
 		invoiceEntity = domaininvoice.NewInvoice(userID, subscriptionID, cmd.StripeInvoiceID)
 	} else {
 		invoiceEntity.UserID = userID
@@ -117,8 +123,19 @@ func (h *UpsertInvoiceHandler) Handle(ctx context.Context, cmd UpsertInvoiceComm
 		cmd.PaidAt,
 		cmd.StripeCreatedAt,
 	)
+	if isNew {
+		invoiceEntity.RaiseCreated()
+	} else {
+		invoiceEntity.RaiseUpdated()
+	}
 
-	if err := h.invoiceRepo.UpsertByStripeInvoiceID(ctx, invoiceEntity); err != nil {
+	err = h.invoiceRepo.WithTransaction(ctx, func(txCtx context.Context) error {
+		if err := h.invoiceRepo.UpsertByStripeInvoiceID(txCtx, invoiceEntity); err != nil {
+			return err
+		}
+		return h.outbox.StoreEvents(txCtx, invoiceEntity.PullEvents())
+	})
+	if err != nil {
 		log.Printf("upsert invoice: db upsert failed stripeInvoiceID=%s: %v", cmd.StripeInvoiceID, err)
 		return errors.New("failed to upsert invoice")
 	}

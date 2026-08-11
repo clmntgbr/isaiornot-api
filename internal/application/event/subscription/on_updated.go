@@ -1,0 +1,34 @@
+package subscription
+
+import (
+	"context"
+	"encoding/json"
+	"log"
+
+	"go-api/internal/application/messaging"
+	domainsubscription "go-api/internal/domain/subscription"
+)
+
+type SubscriptionUpdatedHandler struct{}
+
+func NewSubscriptionUpdatedHandler() *SubscriptionUpdatedHandler {
+	return &SubscriptionUpdatedHandler{}
+}
+
+func (h *SubscriptionUpdatedHandler) Handle(ctx context.Context, payload []byte) error {
+	var evt domainsubscription.SubscriptionUpdated
+	if err := json.Unmarshal(payload, &evt); err != nil {
+		return messaging.NonRetryable(err)
+	}
+	log.Printf(
+		"event handled %s eventId=%s subscriptionId=%s planId=%s status=%s cancelAtPeriodEnd=%v stripeSub=%s",
+		domainsubscription.EventTypeSubscriptionUpdated,
+		evt.ID,
+		evt.SubscriptionID,
+		evt.PlanID,
+		evt.Status,
+		evt.CancelAtPeriodEnd,
+		evt.StripeSubscriptionID,
+	)
+	return nil
+}

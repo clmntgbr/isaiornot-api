@@ -3,6 +3,8 @@ package invoice
 import (
 	"time"
 
+	"go-api/internal/domain/event"
+
 	"github.com/google/uuid"
 )
 
@@ -38,6 +40,8 @@ type Invoice struct {
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
+
+	events []event.DomainEvent
 }
 
 func NewInvoice(userID uuid.UUID, subscriptionID *uuid.UUID, stripeInvoiceID string) *Invoice {
@@ -50,6 +54,16 @@ func NewInvoice(userID uuid.UUID, subscriptionID *uuid.UUID, stripeInvoiceID str
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
+}
+
+func (i *Invoice) PullEvents() []event.DomainEvent {
+	events := i.events
+	i.events = nil
+	return events
+}
+
+func (i *Invoice) recordEvent(e event.DomainEvent) {
+	i.events = append(i.events, e)
 }
 
 func (i *Invoice) ApplyStripeSnapshot(
@@ -89,4 +103,56 @@ func (i *Invoice) ApplyStripeSnapshot(
 	i.PaidAt = paidAt
 	i.StripeCreatedAt = stripeCreatedAt
 	i.UpdatedAt = time.Now().UTC()
+}
+
+func (i *Invoice) RaiseCreated() {
+	i.recordEvent(InvoiceCreated{
+		ID:                   uuid.New().String(),
+		InvoiceID:            i.ID.String(),
+		UserID:               i.UserID.String(),
+		SubscriptionID:       subscriptionIDString(i.SubscriptionID),
+		StripeInvoiceID:      i.StripeInvoiceID,
+		StripeCustomerID:     i.StripeCustomerID,
+		StripeSubscriptionID: i.StripeSubscriptionID,
+		Number:               i.Number,
+		Status:               i.Status,
+		Currency:             i.Currency,
+		AmountDue:            i.AmountDue,
+		AmountPaid:           i.AmountPaid,
+		Total:                i.Total,
+		BillingReason:        i.BillingReason,
+		PaidAt:               i.PaidAt,
+		StripeCreatedAt:      i.StripeCreatedAt,
+		Timestamp:            i.UpdatedAt,
+	})
+}
+
+func (i *Invoice) RaiseUpdated() {
+	i.recordEvent(InvoiceUpdated{
+		ID:                   uuid.New().String(),
+		InvoiceID:            i.ID.String(),
+		UserID:               i.UserID.String(),
+		SubscriptionID:       subscriptionIDString(i.SubscriptionID),
+		StripeInvoiceID:      i.StripeInvoiceID,
+		StripeCustomerID:     i.StripeCustomerID,
+		StripeSubscriptionID: i.StripeSubscriptionID,
+		Number:               i.Number,
+		Status:               i.Status,
+		Currency:             i.Currency,
+		AmountDue:            i.AmountDue,
+		AmountPaid:           i.AmountPaid,
+		Total:                i.Total,
+		BillingReason:        i.BillingReason,
+		PaidAt:               i.PaidAt,
+		StripeCreatedAt:      i.StripeCreatedAt,
+		Timestamp:            i.UpdatedAt,
+	})
+}
+
+func subscriptionIDString(id *uuid.UUID) *string {
+	if id == nil {
+		return nil
+	}
+	value := id.String()
+	return &value
 }

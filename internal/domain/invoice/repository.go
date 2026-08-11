@@ -10,6 +10,7 @@ import (
 )
 
 type InvoiceWriteRepository interface {
+	WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error
 	GetByStripeInvoiceID(ctx context.Context, stripeInvoiceID string) (*Invoice, error)
 	UpsertByStripeInvoiceID(ctx context.Context, invoice *Invoice) error
 }

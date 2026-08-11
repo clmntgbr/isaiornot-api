@@ -18,6 +18,12 @@ func NewInvoiceWriteRepository(db *gorm.DB) domaininvoice.InvoiceWriteRepository
 	return &invoiceWriteRepository{db: db}
 }
 
+func (r *invoiceWriteRepository) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return fn(ContextWithTx(ctx, tx))
+	})
+}
+
 func (r *invoiceWriteRepository) GetByStripeInvoiceID(
 	ctx context.Context,
 	stripeInvoiceID string,

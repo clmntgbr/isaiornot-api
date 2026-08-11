@@ -154,6 +154,7 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		invoiceWriteRepo,
 		subscriptionWriteRepo,
 		userWriteRepo,
+		outboxRepo,
 	)
 	listInvoicesHandler := queryinvoice.NewListInvoicesHandler(invoiceReadRepo)
 	assertUploadAllowedHandler := cmdsubscription.NewAssertUploadAllowedHandler(getQuotaUsageHandler)

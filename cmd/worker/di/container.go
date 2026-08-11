@@ -8,10 +8,14 @@ import (
 	"go-api/internal/application/event/dedup"
 	eventmedia "go-api/internal/application/event/media"
 	eventscan "go-api/internal/application/event/scan"
+	eventsubscription "go-api/internal/application/event/subscription"
+	eventinvoice "go-api/internal/application/event/invoice"
 	eventuser "go-api/internal/application/event/user"
 	"go-api/internal/application/registry"
 	domainmedia "go-api/internal/domain/media"
 	domainscan "go-api/internal/domain/scan"
+	domainsubscription "go-api/internal/domain/subscription"
+	domaininvoice "go-api/internal/domain/invoice"
 	domainuser "go-api/internal/domain/user"
 	"go-api/internal/infrastructure/centrifugo"
 	"go-api/internal/infrastructure/config"
@@ -205,6 +209,27 @@ func NewContainer(db *gorm.DB, env *config.Config) *Container {
 		dedupRepo,
 		"finalize_scan_on_requested",
 		eventscan.NewFinalizeScanOnRequestedHandler(finalizeScanHandler).Handle,
+	))
+
+	reg.Register(domainsubscription.EventTypeSubscriptionCreated, dedup.With(
+		dedupRepo,
+		"subscription_created",
+		eventsubscription.NewSubscriptionCreatedHandler().Handle,
+	))
+	reg.Register(domainsubscription.EventTypeSubscriptionUpdated, dedup.With(
+		dedupRepo,
+		"subscription_updated",
+		eventsubscription.NewSubscriptionUpdatedHandler().Handle,
+	))
+	reg.Register(domaininvoice.EventTypeInvoiceCreated, dedup.With(
+		dedupRepo,
+		"invoice_created",
+		eventinvoice.NewInvoiceCreatedHandler().Handle,
+	))
+	reg.Register(domaininvoice.EventTypeInvoiceUpdated, dedup.With(
+		dedupRepo,
+		"invoice_updated",
+		eventinvoice.NewInvoiceUpdatedHandler().Handle,
 	))
 
 	consumer := rabbitmq.NewConsumer(conn, reg, env.WorkerConcurrency, env.WorkerMaxRetries)
